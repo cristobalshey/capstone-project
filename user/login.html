@@ -14,8 +14,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="../supabase_config.js"></script>
-    <script src="../auth_guard.js"></script>
+    <script src="supabase_config.js"></script>
+    <script src="auth_guard.js"></script>
 
     <style>
         :root {
@@ -502,7 +502,7 @@
             const { data, error } = await window.supabaseClient.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: window.location.origin + '/user/menu.html',
+                    redirectTo: window.location.origin + '/menu.html',
                     queryParams: {
                         prompt: 'select_account'
                     }
