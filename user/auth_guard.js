@@ -40,19 +40,19 @@ async function checkAccess() {
     const isPinPage = currentPath.includes('set_pin.html');
 
     if (!isAdmin && !profile.accepted_terms && !isTermsPage) {
-        window.location.href = '../user/accept_terms.html';
+        window.location.href = 'accept_terms.html';
         return;
     }
 
     // 2.6 Check for PIN Setup (Skip for Admin)
     if (!isAdmin && (profile.has_pin === false || profile.has_pin === null || profile.has_pin === undefined) && !isPinPage && !isTermsPage) {
-        window.location.href = '../user/set_pin.html';
+        window.location.href = 'set_pin.html';
         return;
     }
 
     // 2.7 Check for First-Time Password (Skip for Admin)
     if (!isAdmin && (profile.has_password === false || profile.has_password === null || profile.has_password === undefined) && !isPasswordPage && !isPinPage && !isTermsPage) {
-        window.location.href = '../user/set_password.html';
+        window.location.href = 'set_password.html';
         return;
     }
 
@@ -72,13 +72,13 @@ async function checkAccess() {
     if (role === 'resident' || role === 'user') {
         // Verification Check for Residents
         if (isRestrictedPage && profile.status !== 'verified') {
-            window.location.href = '../user/menu.html?error=unverified';
+            window.location.href = 'menu.html?error=unverified';
             return;
         }
 
         if (isAdminPath || isCollectorPath) {
             alert("Unauthorized Access: You do not have permission to view this section.");
-            window.location.href = '../user/menu.html';
+            window.location.href = 'menu.html';
         }
     } 
     else if (role === 'collector') {
@@ -97,7 +97,7 @@ async function checkAccess() {
 function redirectToLogin(path) {
     if (path.includes('/admin/')) window.location.href = '../admin/index.html';
     else if (path.includes('/collector/')) window.location.href = '../collector/index.html';
-    else window.location.href = '../user/login.html';
+    else window.location.href = 'login.html';
 }
 
 // Run the check on load
