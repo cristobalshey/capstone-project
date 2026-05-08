@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>EcoTrack - Collector Profile</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --primary-green: #02451A;
+            --emerald: #10b981;
+            --bg-color: #ffffff;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(2, 69, 26, 0.1);
+            --card-shadow: 0 8px 32px -8px rgba(2, 69, 26, 0.1);
+            --text-main: #02451A;
+            --text-muted: rgba(2, 69, 26, 0.6);
+            --danger-red: #e53935;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100svh; overflow: hidden; position: relative;
+        }
+
+        .ambient-layer {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none;
+            background: radial-gradient(circle at 15% 50%, rgba(2, 69, 26, 0.05), transparent 50%),
+                        radial-gradient(circle at 85% 30%, rgba(2, 69, 26, 0.08), transparent 50%);
+        }
+
+        .app-container {
+            width: 100%; max-width: 480px; height: 100svh; display: flex; flex-direction: column;
+            position: relative; background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px); box-shadow: 0 0 50px rgba(0,0,0,0.05); overflow: hidden;
+        }
+
+        /* --- HEADER --- */
+        .header { padding: 24px 24px 15px 24px; z-index: 10; display: flex; justify-content: space-between; align-items: center; }
+        .page-title { font-family: 'Baloo Da 2', cursive; color: var(--primary-green); font-size: 1.4rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* --- CONTENT --- */
+        .content-area { flex-grow: 1; overflow-y: auto; padding: 10px 24px 120px 24px; scrollbar-width: none; }
+        .content-area::-webkit-scrollbar { display: none; }
+
+        /* Profile Header */
+        .profile-header {
+            display: flex; flex-direction: column; align-items: center; text-align: center;
+            background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 24px;
+            padding: 30px 20px; margin-bottom: 25px; box-shadow: var(--card-shadow); backdrop-filter: blur(12px);
+            position: relative; overflow: hidden;
+        }
+        
+        .profile-header::before {
+            content: ''; position: absolute; top: -50px; left: -50px; width: 150px; height: 150px;
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, transparent 70%); border-radius: 50%;
+        }
+
+        .profile-pic-container { position: relative; margin-bottom: 15px; }
+        .profile-pic { width: 90px; height: 90px; border-radius: 50%; border: 3px solid white; box-shadow: 0 8px 20px rgba(2, 69, 26, 0.15); object-fit: cover; background: #eee; }
+        .badge-verified { position: absolute; bottom: 0; right: 0; background: var(--emerald); color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; justify-content: center; align-items: center; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        
+        .profile-name { font-family: 'Baloo Da 2', cursive; font-size: 1.6rem; font-weight: 800; color: var(--primary-green); line-height: 1.2; }
+        .profile-role { font-size: 0.85rem; color: var(--emerald); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; }
+        .profile-email { font-size: 0.9rem; color: var(--text-muted); font-weight: 500; margin-top: 5px; }
+
+
+
+        /* Menu List */
+        .menu-list { display: flex; flex-direction: column; gap: 10px; }
+        
+        .menu-item {
+            background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px;
+            padding: 16px 20px; display: flex; align-items: center; justify-content: space-between;
+            color: var(--text-main); font-weight: 700; text-decoration: none; transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(2, 69, 26, 0.02);
+        }
+        .menu-item:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(2, 69, 26, 0.08); background: white; }
+        
+        .menu-item-left { display: flex; align-items: center; gap: 15px; }
+        .menu-icon { width: 36px; height: 36px; border-radius: 12px; background: rgba(2, 69, 26, 0.05); display: flex; justify-content: center; align-items: center; color: var(--primary-green); }
+        
+        .menu-item.logout { color: var(--danger-red); margin-top: 10px; }
+        .menu-item.logout .menu-icon { background: rgba(229, 57, 53, 0.1); color: var(--danger-red); }
+
+        /* --- LOGOUT MODAL --- */
+        .modal { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.3); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); justify-content: center; align-items: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; border-radius: 24px; padding: 30px; width: 85%; max-width: 340px; text-align: center; box-shadow: 0 20px 50px rgba(2, 69, 26, 0.15); border: 1px solid rgba(255,255,255,1); animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        
+        @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .modal-icon { width: 60px; height: 60px; background: rgba(229, 57, 53, 0.1); border-radius: 50%; display: flex; justify-content: center; align-items: center; margin: 0 auto 20px auto; color: var(--danger-red); }
+        .modal-title { font-size: 1.3rem; font-weight: 800; color: var(--text-main); margin-bottom: 10px; font-family: 'Baloo Da 2'; }
+        .modal-text { font-size: 0.9rem; color: var(--text-muted); font-weight: 500; margin-bottom: 25px; line-height: 1.5; }
+        
+        .modal-actions { display: flex; gap: 10px; }
+        .btn-modal { flex: 1; padding: 14px; border-radius: 14px; font-weight: 800; cursor: pointer; transition: all 0.2s ease; border: none; font-size: 0.9rem; }
+        .btn-cancel { background: #f0f0f0; color: var(--text-main); }
+        .btn-cancel:hover { background: #e0e0e0; }
+        .btn-confirm { background: var(--danger-red); color: white; box-shadow: 0 4px 15px rgba(229, 57, 53, 0.3); }
+        .btn-confirm:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(229, 57, 53, 0.4); }
+
+        /* --- BOTTOM NAV --- */
+        .bottom-nav {
+            position: absolute; bottom: 0; left: 0; width: 100%; padding: 15px 30px 25px 30px;
+            background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(25px); border-top: 1px solid rgba(2, 69, 26, 0.1);
+            display: flex; justify-content: space-between; align-items: center; border-radius: 35px 35px 0 0;
+            box-shadow: 0 -5px 40px rgba(2, 69, 26, 0.08); z-index: 20;
+        }
+        .nav-btn {
+            background: transparent; border: none; display: flex; flex-direction: column; align-items: center; gap: 6px;
+            font-family: inherit; color: var(--text-muted); cursor: pointer; transition: all 0.3s ease; position: relative; text-decoration: none;
+        }
+        .nav-btn.active { color: var(--primary-green); }
+        .nav-icon { width: 24px; height: 24px; stroke-width: 2.2px; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .nav-btn:hover .nav-icon, .nav-btn.active .nav-icon { transform: translateY(-3px); }
+        .nav-btn.active::after { content: ''; position: absolute; bottom: -8px; width: 5px; height: 5px; background: var(--primary-green); border-radius: 50%; }
+
+    </style>
+</head>
+<body>
+
+    <div class="ambient-layer"></div>
+
+    <div class="app-container">
+        
+        <header class="header">
+            <div class="page-title">Profile</div>
+        </header>
+
+        <main class="content-area">
+            
+            <div class="profile-header">
+                <div class="profile-pic-container">
+                    <img src="https://ui-avatars.com/api/?name=Mod+Admin&background=02451A&color=fff" alt="Profile" class="profile-pic" id="userAvatar">
+                    <div class="badge-verified"><i data-lucide="shield-check" style="width: 16px; height: 16px;"></i></div>
+                </div>
+                
+                <div class="profile-name" id="userName">Collector Admin</div>
+                <div class="profile-role">Verified Collector</div>
+                <div class="profile-email" id="userEmail">collector@ecotrack.ph</div>
+            </div>
+
+            <div class="menu-list">
+                
+                <a href="verification.html" class="menu-item">
+                    <div class="menu-item-left">
+                        <div class="menu-icon" style="background: rgba(2, 69, 26, 0.1);"><i data-lucide="shield-check"></i></div>
+                        <span>Collector Verification</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="background: var(--primary-green); color: white; font-size: 10px; padding: 4px 8px; border-radius: 8px; font-weight: 800;">GET VERIFIED</span>
+                        <i data-lucide="chevron-right" style="color:var(--text-muted);"></i>
+                    </div>
+                </a>
+
+                <a href="privacy.html" class="menu-item">
+                    <div class="menu-item-left">
+                        <div class="menu-icon"><i data-lucide="file-text"></i></div>
+                        <span>Terms & Policy</span>
+                    </div>
+                    <i data-lucide="chevron-right" style="color:var(--text-muted);"></i>
+                </a>
+
+                <a href="#" class="menu-item logout" onclick="openLogoutModal()">
+                    <div class="menu-item-left">
+                        <div class="menu-icon"><i data-lucide="log-out"></i></div>
+                        <span>Log Out</span>
+                    </div>
+                </a>
+
+            </div>
+
+        </main>
+
+        <!-- Logout Modal -->
+        <div id="logoutModal" class="modal" onclick="closeModalOnOutsideClick(event)">
+            <div class="modal-content">
+                <div class="modal-icon">
+                    <i data-lucide="log-out" style="width:30px; height:30px;"></i>
+                </div>
+                <div class="modal-title">Log Out?</div>
+                <div class="modal-text">Are you sure you want to log out of your collector account?</div>
+                <div class="modal-actions">
+                    <button class="btn-modal btn-cancel" onclick="closeLogoutModal()">Cancel</button>
+                    <button class="btn-modal btn-confirm" onclick="confirmLogout()">Log Out</button>
+                </div>
+            </div>
+        </div>
+
+        <nav class="bottom-nav">
+            <a href="collector_dashboard.html" class="nav-btn">
+                <i data-lucide="layout-dashboard" class="nav-icon"></i>
+            </a>
+            <a href="collector_tasks.html" class="nav-btn">
+                <i data-lucide="clipboard-list" class="nav-icon"></i>
+            </a>
+            <a href="collector_profile.html" class="nav-btn active">
+                <i data-lucide="user" class="nav-icon"></i>
+            </a>
+        </nav>
+
+    </div>
+
+<script>
+    lucide.createIcons();
+
+    function openLogoutModal() {
+        document.getElementById('logoutModal').classList.add('active');
+    }
+
+    function closeLogoutModal() {
+        document.getElementById('logoutModal').classList.remove('active');
+    }
+
+    function closeModalOnOutsideClick(e) {
+        if (e.target.id === 'logoutModal') {
+            closeLogoutModal();
+        }
+    }
+
+    function confirmLogout() {
+        const btn = document.querySelector('.btn-confirm');
+        btn.innerHTML = `<i data-lucide="loader" class="spin" style="width:18px;height:18px;vertical-align:middle;"></i>`;
+        lucide.createIcons();
+        
+        setTimeout(() => {
+            window.location.href = 'login.html';
+        }, 1000);
+    }
+</script>
+</body>
+</html>

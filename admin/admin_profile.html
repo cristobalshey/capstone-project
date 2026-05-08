@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoTrack - Admin Profile</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase_config.js"></script>
+    <script src="../auth_guard.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        :root { 
+            --primary: #02451A;
+            --primary-soft: #e8f5e9;
+            --bg-soft: #f8fafc; 
+            --card-bg: #ffffff;
+            --border-soft: #f1f5f9;
+            --text-main: #1e293b; 
+            --text-muted: #64748b; 
+            --radius-lg: 24px;
+            --radius-md: 16px;
+            --card-shadow: 0 10px 30px rgba(0,0,0,0.04);
+            --sidebar-width: 85px; 
+            --danger-red: #ef4444;
+            --success: #10b981;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Baloo Da 2', cursive; 
+            background-color: var(--bg-soft); 
+            color: var(--text-main); 
+            display: flex; 
+            min-height: 100vh; 
+        }
+
+        /* Sidebar (Icon-only) */
+        .sidebar { 
+            width: var(--sidebar-width); 
+            background-color: var(--card-bg); 
+            height: 100vh; 
+            position: fixed; 
+            left: 0; 
+            top: 0; 
+            border-right: 1px solid var(--border-soft); 
+            display: flex; 
+            flex-direction: column; 
+            padding: 32px 0; 
+            z-index: 1000; 
+            overflow: hidden; 
+        }
+        .sidebar-brand { padding: 0 20px 48px 20px; display: flex; justify-content: center; align-items: center; }
+        .sidebar-logo-img { height: 1.5rem; width: auto; opacity: 0.8; }
+        .nav-menu { list-style: none; flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 0 16px; }
+        .nav-link { 
+            display: flex; justify-content: center; align-items: center; padding: 14px; 
+            color: var(--text-muted); text-decoration: none; transition: all 0.2s; 
+            border-radius: var(--radius-md);
+        }
+        .nav-link i { font-size: 1.2rem; }
+        .nav-link:hover { background-color: var(--bg-soft); color: var(--text-main); }
+        .nav-link.active { background: var(--bg-soft); color: var(--text-main); }
+        .sidebar-brand span, .nav-link span { display: none; }
+        
+        .sidebar-footer { padding: 16px; border-top: 1px solid var(--border-soft); margin-top: auto; }
+        .logout-link { color: var(--text-muted) !important; display: flex; justify-content: center; padding: 14px; text-decoration: none; border-radius: var(--radius-md); transition: all 0.2s; }
+        .logout-link:hover { color: var(--danger-red) !important; background: #fff5f5 !important; }
+
+        .main-content { margin-left: var(--sidebar-width); flex: 1; padding: 40px 48px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+        .page-title { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.02em; }
+
+        /* Profile Header */
+        .profile-card {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: 40px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-soft);
+            display: flex;
+            align-items: center;
+            gap: 40px;
+            margin-bottom: 32px;
+            position: relative;
+            overflow: hidden;
+        }
+        .profile-card::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 8px; background: var(--primary);
+        }
+        .avatar-section { position: relative; }
+        .profile-avatar {
+            width: 120px; height: 120px; border-radius: 50%;
+            background: var(--primary-soft);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 3rem; color: var(--primary);
+            border: 4px solid white; box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .edit-avatar {
+            position: absolute; bottom: 0; right: 0;
+            background: var(--primary); color: white;
+            width: 32px; height: 32px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; border: 3px solid white; font-size: 0.8rem;
+        }
+        .profile-info h2 { font-size: 1.8rem; font-weight: 800; margin-bottom: 4px; }
+        .role-badge {
+            background: var(--primary-soft); color: var(--primary);
+            padding: 4px 12px; border-radius: 50px; font-weight: 700; font-size: 0.8rem; text-transform: uppercase;
+        }
+
+        /* Profile Grid */
+        .details-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-bottom: 32px; }
+        .detail-card {
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: var(--radius-md);
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-soft);
+        }
+        .detail-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; color: var(--primary); }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 0.8rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
+        .form-control {
+            width: 100%; padding: 12px 16px; border-radius: 12px;
+            border: 1.5px solid var(--border-soft); background: var(--bg-soft);
+            font-family: inherit; font-size: 0.9rem; font-weight: 600; color: var(--text-main);
+            transition: all 0.2s;
+        }
+        .form-control:focus { border-color: var(--primary); outline: none; background: white; }
+
+        .btn-action-pill {
+            padding: 10px 24px; border-radius: 50px; border: none;
+            font-family: inherit; font-weight: 700; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 10px; transition: all 0.2s;
+            font-size: 0.9rem; text-decoration: none;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(2, 69, 26, 0.2); }
+
+        /* Activity Log */
+        .activity-card {
+            background: var(--card-bg);
+            padding: 32px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-soft);
+        }
+        .hub-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .hub-table th { text-align: left; padding: 12px 16px; color: var(--text-muted); border-bottom: 2px solid var(--border-soft); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .hub-table td { padding: 16px; border-bottom: 1px solid var(--border-soft); font-size: 0.9rem; }
+        .activity-type { font-weight: 700; color: var(--primary); }
+    </style>
+</head>
+<body>
+
+<nav class="sidebar">
+    <div class="sidebar-brand"><img src="image/logo.png" alt="Logo" class="sidebar-logo-img"></div>
+    <ul class="nav-menu">
+        <li class="nav-item"><a href="admin_dashboard.html" class="nav-link"><i class="fa-solid fa-gauge"></i></a></li>
+        <li class="nav-item"><a href="admin_users_hub.html" class="nav-link"><i class="fa-solid fa-users-gear"></i></a></li>
+        <li class="nav-item"><a href="admin_projects_hub.html" class="nav-link"><i class="fa-solid fa-diagram-project"></i></a></li>
+        <li class="nav-item"><a href="admin_financial_hub.html" class="nav-link"><i class="fa-solid fa-wallet"></i></a></li>
+    </ul>
+    <div class="sidebar-footer">
+        <a href="#" onclick="logout()" class="logout-link"><i class="fa-solid fa-right-from-bracket"></i></a>
+    </div>
+</nav>
+
+<div class="main-content">
+    <div class="top-bar">
+        <div class="page-title">Admin Profile</div>
+        <div style="display:flex; gap:10px;">
+            <a href="admin_dashboard.html" class="btn-action-pill" style="background:var(--border-soft); color:var(--text-main);"><i class="fa-solid fa-arrow-left"></i> Back to Hub</a>
+        </div>
+    </div>
+
+    <div class="profile-card">
+        <div class="avatar-section">
+            <div class="profile-avatar"><i class="fa-solid fa-user-tie"></i></div>
+            <div class="edit-avatar"><i class="fa-solid fa-camera"></i></div>
+        </div>
+        <div class="profile-info">
+            <span class="role-badge">Super Administrator</span>
+            <h2 id="displayAdminName">Hershey</h2>
+            <p style="color: var(--text-muted); font-weight: 600;"><i class="fa-solid fa-envelope"></i> admin@ecotrack.com</p>
+        </div>
+        <div style="margin-left: auto;">
+            <button class="btn-action-pill btn-primary" onclick="saveProfile()"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+        </div>
+    </div>
+
+    <div class="details-grid">
+        <div class="detail-card">
+            <h3><i class="fa-solid fa-id-card"></i> Personal Information</h3>
+            <div class="form-group">
+                <label>Admin Name</label>
+                <input type="text" id="adminName" class="form-control" value="Hershey">
+            </div>
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" id="adminEmail" class="form-control" value="admin@ecotrack.com">
+            </div>
+            <div class="form-group">
+                <label>Phone Number</label>
+                <input type="text" id="adminPhone" class="form-control" value="+63 912 345 6789">
+            </div>
+        </div>
+
+        <div class="detail-card">
+            <h3><i class="fa-solid fa-shield-halved"></i> Security & Access</h3>
+            <div class="form-group">
+                <label>Admin Security Key</label>
+                <div style="display:flex; gap:10px;">
+                    <input type="password" id="adminKey" class="form-control" value="" readonly>
+                    <button class="btn-action-pill" style="background:var(--border-soft);" onclick="changeKey()"><i class="fa-solid fa-key"></i> Edit</button>
+                </div>
+                <small style="color:var(--text-muted); display:block; margin-top:5px;">This key is required for sensitive financial actions.</small>
+            </div>
+            <div class="form-group">
+                <label>Permissions Level</label>
+                <input type="text" class="form-control" value="Full System Access (Lvl 3)" readonly style="background:#f0f9ff; color:#0369a1; border-color:#bae6fd;">
+            </div>
+            <div class="form-group">
+                <label>Last Login</label>
+                <input type="text" class="form-control" value="Today, 10:24 AM (Manila Time)" readonly>
+            </div>
+        </div>
+    </div>
+
+    <div class="activity-card">
+        <h3 style="font-weight: 800; color: var(--primary); margin-bottom: 20px;"><i class="fa-solid fa-clock-rotate-left"></i> Recent Activity Log</h3>
+        <table class="hub-table">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Action</th>
+                    <th>Hub / Module</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="activityLog">
+                <tr>
+                    <td>Just Now</td>
+                    <td><span class="activity-type">Profile Update</span></td>
+                    <td>Admin Settings</td>
+                    <td><span style="color: var(--success); font-weight: 700;"><i class="fa-solid fa-check-circle"></i> Success</span></td>
+                </tr>
+                <tr>
+                    <td>10 mins ago</td>
+                    <td><span class="activity-type">Budget Allocation</span></td>
+                    <td>Financial Hub</td>
+                    <td><span style="color: var(--success); font-weight: 700;"><i class="fa-solid fa-check-circle"></i> Success</span></td>
+                </tr>
+                <tr>
+                    <td>1 hour ago</td>
+                    <td><span class="activity-type">User Verification</span></td>
+                    <td>User Management</td>
+                    <td><span style="color: var(--success); font-weight: 700;"><i class="fa-solid fa-check-circle"></i> Success</span></td>
+                </tr>
+                <tr>
+                    <td>2 hours ago</td>
+                    <td><span class="activity-type">Exported Payouts (PDF)</span></td>
+                    <td>Financial Hub</td>
+                    <td><span style="color: var(--success); font-weight: 700;"><i class="fa-solid fa-check-circle"></i> Success</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    async function loadProfile() {
+        const { data: { session } } = await window.supabaseClient.auth.getSession();
+        if (!session) return;
+
+        const { data: profile, error } = await window.supabaseClient
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+        if (profile) {
+            document.getElementById('adminName').value = profile.full_name || '';
+            document.getElementById('displayAdminName').innerText = profile.full_name || 'Admin';
+            document.getElementById('adminEmail').value = session.user.email;
+            document.getElementById('adminPhone').value = profile.contact_number || '';
+            document.getElementById('adminKey').value = profile.pass_code || '';
+            window.currentPassCode = profile.pass_code;
+        }
+    }
+
+    async function saveProfile() {
+        const name = document.getElementById('adminName').value;
+        const phone = document.getElementById('adminPhone').value;
+        
+        const { data: { session } } = await window.supabaseClient.auth.getSession();
+        const { error } = await window.supabaseClient
+            .from('profiles')
+            .update({ full_name: name, contact_number: phone })
+            .eq('id', session.user.id);
+
+        if (error) {
+            Swal.fire('Error', error.message, 'error');
+        } else {
+            document.getElementById('displayAdminName').innerText = name;
+            Swal.fire({ icon: 'success', title: 'Profile Updated', timer: 2000, showConfirmButton: false });
+        }
+    }
+
+    async function changeKey() {
+        const { value: currentKey } = await Swal.fire({
+            title: 'Authentication Required',
+            text: 'Enter the current security key to continue:',
+            input: 'password',
+            inputPlaceholder: 'Enter Current Key',
+            showCancelButton: true
+        });
+
+        if (currentKey === window.currentPassCode) {
+            const { value: newKey } = await Swal.fire({
+                title: 'New Security Key',
+                text: 'Enter your new security key:',
+                input: 'password',
+                inputPlaceholder: 'New Security Key',
+                showCancelButton: true
+            });
+
+            if (newKey) {
+                const { data: { session } } = await window.supabaseClient.auth.getSession();
+                const { error } = await window.supabaseClient
+                    .from('profiles')
+                    .update({ pass_code: newKey })
+                    .eq('id', session.user.id);
+
+                if (error) {
+                    Swal.fire('Error', error.message, 'error');
+                } else {
+                    window.currentPassCode = newKey;
+                    document.getElementById('adminKey').value = newKey;
+                    Swal.fire('Success', 'Security key updated successfully!', 'success');
+                }
+            }
+        } else if (currentKey) {
+            Swal.fire('Error', 'Incorrect current key.', 'error');
+        }
+    }
+
+    loadProfile();
+
+    function logout() {
+        Swal.fire({
+            title: 'Sign Out?',
+            text: 'Are you sure you want to end your session?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            confirmButtonText: 'Logout'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = "login.html";
+            }
+        });
+    }
+</script>
+
+</body>
+</html>

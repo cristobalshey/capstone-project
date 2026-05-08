@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>EcoTrack | Verification</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Using Lucide Icons for a modern, chill vibe -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase_config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        :root {
+            /* Strict White & Green Palette */
+            --primary-green: #02451A;
+            --bg-color: #ffffff;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(2, 69, 26, 0.1);
+            --card-shadow: 0 8px 32px -8px rgba(2, 69, 26, 0.1);
+            --text-main: #02451A;
+            --text-muted: rgba(2, 69, 26, 0.6);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            min-height: 100svh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .ambient-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+            background: radial-gradient(circle at 15% 50%, rgba(2, 69, 26, 0.05), transparent 50%),
+                        radial-gradient(circle at 85% 30%, rgba(2, 69, 26, 0.08), transparent 50%);
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 480px;
+            height: 100vh;
+            height: 100svh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 0 50px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        /* Header Section */
+        .header {
+            padding: 24px 24px 15px 24px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        .back-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--primary-green);
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(2, 69, 26, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: white;
+            transform: translateX(-3px);
+            box-shadow: 0 6px 15px rgba(2, 69, 26, 0.1);
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--primary-green);
+        }
+
+        /* Stepper UI */
+        .stepper {
+            padding: 0 24px 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+        }
+        
+        .stepper::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 24px;
+            right: 24px;
+            height: 2px;
+            background: rgba(2, 69, 26, 0.1);
+            z-index: 1;
+            transform: translateY(-50%);
+        }
+
+        .stepper-progress {
+            position: absolute;
+            top: 50%;
+            left: 24px;
+            height: 2px;
+            background: var(--primary-green);
+            z-index: 2;
+            transform: translateY(-50%);
+            transition: width 0.4s ease;
+            width: 0%; /* 0%, 50%, 100% */
+        }
+
+        .step-dot {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid rgba(2, 69, 26, 0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text-muted);
+            z-index: 3;
+            transition: all 0.4s ease;
+        }
+
+        /* PIN View Styles */
+        .passcode-display-wrap { display: flex; justify-content: center; gap: 15px; margin: 30px 0; }
+        .passcode-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(2, 69, 26, 0.15); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .passcode-dot.filled { background: var(--primary-green); border-color: var(--primary-green); transform: scale(1.2); box-shadow: 0 4px 10px rgba(2, 69, 26, 0.2); }
+        
+        .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; padding: 0 20px; max-width: 280px; margin: 0 auto; }
+        .keypad-btn {
+            background: rgba(2, 69, 26, 0.05); border: 1px solid rgba(2, 69, 26, 0.05);
+            width: 65px; height: 65px; border-radius: 50%; font-family: inherit; font-size: 24px; font-weight: 700; color: var(--text-main);
+            display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.1s;
+        }
+        .keypad-btn:active { transform: scale(0.9); background: rgba(2, 69, 26, 0.1); }
+        .keypad-btn.action { font-size: 14px; background: transparent; border: none; }
+        #passcodeText { text-align: center; font-size: 18px; font-weight: 800; color: var(--primary-green); }
+        .passcode-sub { text-align: center; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-top: 5px; }
+
+        .step-dot.active {
+            border-color: var(--primary-green);
+            background: var(--primary-green);
+            color: white;
+            box-shadow: 0 0 0 4px rgba(2, 69, 26, 0.1);
+        }
+        
+        .step-dot.completed {
+            border-color: var(--primary-green);
+            background: white;
+            color: var(--primary-green);
+        }
+
+        /* Content Area */
+        .content-area {
+            flex-grow: 1;
+            padding: 10px 24px 40px 24px;
+            overflow-y: auto;
+            scrollbar-width: none;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            position: relative;
+        }
+
+        .content-area.no-padding {
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        .content-area::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Form Card */
+        .form-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 25px;
+            box-shadow: var(--card-shadow);
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            animation: slideIn 0.5s ease backwards;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--primary-green);
+            margin-bottom: 5px;
+        }
+
+        .section-desc {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            line-height: 1.4;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-label {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 14px;
+            border: 1px solid rgba(2, 69, 26, 0.2);
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 600;
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-green);
+            box-shadow: 0 0 0 3px rgba(2, 69, 26, 0.1);
+        }
+        
+        .form-control::placeholder {
+            color: rgba(2, 69, 26, 0.4);
+        }
+
+        /* File Upload Box */
+        .upload-box {
+            width: 100%;
+            height: 160px;
+            border: 2px dashed rgba(2, 69, 26, 0.3);
+            border-radius: 16px;
+            background: rgba(2, 69, 26, 0.02);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .upload-box:hover {
+            border-color: var(--primary-green);
+            background: rgba(2, 69, 26, 0.05);
+        }
+
+        .upload-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            color: var(--primary-green);
+        }
+
+        .upload-content i {
+            width: 32px;
+            height: 32px;
+            opacity: 0.8;
+        }
+
+        .upload-text {
+            font-size: 14px;
+            font-weight: 700;
+        }
+        
+        .upload-sub {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+        
+        .upload-preview {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+
+        /* Camera / Selfie View */
+        .camera-view {
+            width: 100%;
+            height: 250px;
+            background: #111827;
+            border-radius: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .back-immersive {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .back-immersive:active {
+            transform: scale(0.9);
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .camera-view.immersive {
+            height: 100% !important;
+            border-radius: 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 5;
+        }
+
+        .camera-overlay-top {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            width: 100%;
+            padding: 0 24px;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .camera-overlay-bottom {
+            position: absolute;
+            bottom: 40px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0 24px;
+            z-index: 10;
+        }
+
+        .shutter-btn {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 4px solid white;
+            background: transparent;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            padding: 0;
+            outline: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 15px rgba(0,0,0,0.3);
+        }
+
+        .shutter-btn::after {
+            content: '';
+            width: 60px;
+            height: 60px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            position: absolute;
+        }
+
+        .shutter-btn:has(i)::after {
+            display: none;
+        }
+
+        .shutter-btn:active {
+            transform: scale(0.92);
+        }
+
+        .shutter-btn:active::after {
+            width: 54px;
+            height: 54px;
+        }
+
+        .camera-label {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            padding: 8px 16px;
+            border-radius: 20px;
+            color: white;
+            font-size: 14px;
+            font-weight: 700;
+            pointer-events: auto;
+        }
+
+        .face-overlay {
+            position: absolute;
+            width: 250px;
+            height: 250px;
+            z-index: 2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .face-corner {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-color: rgba(255,255,255,0.9);
+            border-style: solid;
+        }
+
+        .corner-tl { top: 0; left: 0; border-width: 4px 0 0 4px; border-top-left-radius: 12px; }
+        .corner-tr { top: 0; right: 0; border-width: 4px 4px 0 0; border-top-right-radius: 12px; }
+        .corner-bl { bottom: 0; left: 0; border-width: 0 0 4px 4px; border-bottom-left-radius: 12px; }
+        .corner-br { bottom: 0; right: 0; border-width: 0 4px 4px 0; border-bottom-right-radius: 12px; }
+
+        .face-mesh-sim {
+            width: 180px;
+            height: 180px;
+            background: url('https://img.icons8.com/ios/100/ffffff/face-id.png') center/contain no-repeat;
+            opacity: 0.3;
+            animation: pulse 2s infinite;
+        }
+
+        .id-overlay {
+            position: absolute;
+            width: 88%;
+            height: 180px;
+            border: 4px solid rgba(255,255,255,0.9);
+            border-radius: 16px;
+            box-shadow: 0 0 0 5000px rgba(0,0,0,0.6);
+            z-index: 2;
+            transition: all 0.3s ease;
+        }
+
+        .id-overlay.vertical {
+            width: 200px;
+            height: 300px;
+        }
+
+        .live-dot {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 10px;
+            height: 10px;
+            background: #ef4444;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        /* Action Buttons */
+        .action-row {
+            display: flex;
+            gap: 15px;
+            margin-top: auto;
+        }
+
+        .btn-primary, .btn-secondary {
+            border: none;
+            padding: 16px;
+            border-radius: 16px;
+            font-family: inherit;
+            font-size: 16px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .btn-primary {
+            background: var(--primary-green);
+            color: white;
+            box-shadow: 0 8px 20px rgba(2, 69, 26, 0.25);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 25px rgba(2, 69, 26, 0.35);
+        }
+
+        .btn-secondary {
+            background: rgba(2, 69, 26, 0.1);
+            color: var(--primary-green);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(2, 69, 26, 0.15);
+        }
+        
+        /* Success Screen */
+        .success-screen {
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            text-align: center;
+            animation: fadeIn 0.5s ease;
+            padding: 0 24px;
+        }
+        
+        .success-icon-wrap {
+            width: 80px;
+            height: 80px;
+            background: var(--primary-green);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 30px rgba(2, 69, 26, 0.3);
+            animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <div class="ambient-layer"></div>
+
+    <div class="app-container">
+        
+        <!-- Header -->
+        <header class="header" id="mainHeader">
+            <button class="back-btn" onclick="goBack()">
+                <i data-lucide="chevron-left"></i>
+            </button>
+            <div class="header-title">Verification</div>
+            <div style="width: 42px;"></div> <!-- Spacer to center title -->
+        </header>
+
+        <!-- Stepper -->
+        <div class="stepper" id="stepperContainer">
+            <div class="stepper-progress" id="progressBar"></div>
+            <div class="step-dot active" id="dot1">1</div>
+            <div class="step-dot" id="dot2">2</div>
+            <div class="step-dot" id="dot3">3</div>
+            <div class="step-dot" id="dot4">4</div>
+        </div>
+
+        <!-- PAGE 1: Personal Information -->
+        <div class="content-area" id="page1">
+            <div class="form-card">
+                <div>
+                    <h2 class="section-title">Personal Information</h2>
+                    <p class="section-desc">Please provide your details exactly as they appear on your government ID.</p>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" id="fullName" class="form-control" placeholder="Juan Dela Cruz">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Date of Birth</label>
+                    <input type="date" id="dob" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Current Address</label>
+                    <input type="text" id="address" class="form-control" placeholder="House No., Street, City">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Contact Number</label>
+                    <input type="tel" id="contactNumber" class="form-control" placeholder="09xxxxxxxxx">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">ID Type</label>
+                    <select id="idType" class="form-control">
+                        <option value="" disabled selected>Select ID Type...</option>
+                        <option value="philid">PhilID / National ID</option>
+                        <option value="passport">Philippine Passport</option>
+                        <option value="driver">Driver's License</option>
+                        <option value="sss">SSS ID</option>
+                        <option value="umid">UMID</option>
+                        <option value="prc">PRC ID</option>
+                        <option value="postal">Postal ID</option>
+                        <option value="voter">Voter's ID</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="action-row">
+                <button class="btn-primary" onclick="nextPage(2)" style="width: 100%; flex: none;">
+                    Continue <i data-lucide="arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- PAGE 2: ID Capture (Immersive) -->
+        <div class="content-area no-padding" id="page2" style="display: none;">
+            <div class="camera-view immersive" id="idCameraViewBox">
+                <video id="idVideo" autoplay playsinline style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: none; z-index: 1;"></video>
+                <canvas id="idCanvas" style="display: none;"></canvas>
+
+                <!-- Top Overlay -->
+                <button class="back-immersive" onclick="nextPage(1)">
+                    <i data-lucide="chevron-left"></i>
+                </button>
+                
+                <!-- Orientation Toggle -->
+                <button class="back-immersive" style="left: auto; right: 20px;" onclick="toggleIDOrientation()">
+                    <i data-lucide="rotate-ccw"></i>
+                </button>
+
+                <div class="camera-overlay-top">
+                    <div class="camera-label" style="margin-left: 50px;">
+                        <i data-lucide="scan" style="width: 14px; vertical-align: middle;"></i> Align ID within the frame
+                    </div>
+                </div>
+
+                <!-- Capture Frame Only -->
+                <div class="id-overlay" id="idOverlay"></div>
+                <div class="live-dot" style="z-index: 2;"></div>
+
+                <!-- Bottom Overlay -->
+                <div class="camera-overlay-bottom">
+                    <button class="shutter-btn" id="idCaptureBtn" onclick="takeIDSnapshot()"></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE 3: Selfie Capture (Immersive) -->
+        <div class="content-area no-padding" id="page3" style="display: none;">
+            <div class="camera-view immersive" id="cameraViewBox">
+                <video id="selfieVideo" autoplay playsinline style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: none; z-index: 1;"></video>
+                <canvas id="selfieCanvas" style="display: none;"></canvas>
+
+                <!-- Top Overlay -->
+                <button class="back-immersive" onclick="nextPage(2)">
+                    <i data-lucide="chevron-left"></i>
+                </button>
+
+                <div class="camera-overlay-top">
+                    <div class="camera-label" id="livenessLabel" style="margin-left: 50px; background: rgba(255,255,255,0.2);">
+                        <i data-lucide="eye" style="width: 14px; vertical-align: middle;"></i> Blink your eyes to capture
+                    </div>
+                </div>
+
+                <div class="face-overlay" id="faceOverlay">
+                    <div class="face-corner corner-tl"></div>
+                    <div class="face-corner corner-tr"></div>
+                    <div class="face-corner corner-bl"></div>
+                    <div class="face-corner corner-br"></div>
+                    <div class="face-mesh-sim"></div>
+                </div>
+                <div class="live-dot" id="liveDot" style="z-index: 2;"></div>
+
+                <div class="camera-overlay-bottom">
+                    <div id="blinkProgress" style="width: 100px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; margin-bottom: 20px; overflow: hidden; display: none;">
+                        <div id="blinkBar" style="width: 0%; height: 100%; background: var(--primary-green); transition: width 0.5s ease;"></div>
+                    </div>
+                    <button class="shutter-btn" id="captureBtn" onclick="takeSelfieSnapshot()"></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE 4: Review Documents -->
+        <div class="content-area" id="page4" style="display: none;">
+            <div class="form-card">
+                <div>
+                    <h2 class="section-title">Review Details</h2>
+                    <p class="section-desc">Please verify your information before final submission.</p>
+                </div>
+
+                <div style="background: rgba(2, 69, 26, 0.05); padding: 15px; border-radius: 16px; margin-bottom: 20px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <label class="form-label" style="font-size: 11px; opacity: 0.6;">Full Name</label>
+                            <p id="reviewName" style="font-weight: 700; color: var(--primary-green);"></p>
+                        </div>
+                        <div>
+                            <label class="form-label" style="font-size: 11px; opacity: 0.6;">Date of Birth</label>
+                            <p id="reviewDOB" style="font-weight: 700; color: var(--primary-green);"></p>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label class="form-label" style="font-size: 11px; opacity: 0.6;">Address</label>
+                        <p id="reviewAddress" style="font-weight: 700; color: var(--primary-green);"></p>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            <label class="form-label" style="font-size: 11px; opacity: 0.6;">Contact</label>
+                            <p id="reviewContact" style="font-weight: 700; color: var(--primary-green);"></p>
+                        </div>
+                        <div>
+                            <label class="form-label" style="font-size: 11px; opacity: 0.6;">ID Type</label>
+                            <p id="reviewIDType" style="font-weight: 700; color: var(--primary-green); text-transform: uppercase;"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+                    <div style="text-align: center;">
+                        <label class="form-label" style="margin-bottom: 8px; display: block;">Captured ID</label>
+                        <div style="width: 100%; aspect-ratio: 4/3; background: #f3f4f6; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb;">
+                            <img id="reviewIDImg" style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <label class="form-label" style="margin-bottom: 8px; display: block;">Selfie</label>
+                        <div style="width: 100%; aspect-ratio: 4/3; background: #f3f4f6; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb;">
+                            <img id="reviewSelfieImg" style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-row">
+                <button class="btn-secondary" onclick="nextPage(3)">
+                    Back
+                </button>
+                <button class="btn-primary" onclick="submitVerification()">
+                    Submit Now <i data-lucide="shield-check"></i>
+                </button>
+            </div>
+        </div>
+        <div class="success-screen" id="successScreen">
+            <div class="success-icon-wrap">
+                <i data-lucide="shield-check" style="width: 40px; height: 40px;"></i>
+            </div>
+            <h2 style="font-size: 24px; font-weight: 800; color: var(--primary-green); margin-bottom: 10px;">Verification Under Review</h2>
+            <p style="font-size: 14px; color: var(--text-muted); font-weight: 600; margin-bottom: 40px; padding: 0 20px;">
+                Your documents and selfie have been securely submitted. We will notify you once your account has been verified, usually within 24 hours.
+            </p>
+            <button class="btn-primary" style="width: 100%;" onclick="window.location.href='menu.html'">
+                Return to Menu
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // Initialize icons
+        lucide.createIcons();
+
+        let currentPage = 1;
+        let userProfile = null;
+        let capturedSelfie = null;
+        let capturedID = null;
+
+        // On Load: Check user status
+        window.addEventListener('DOMContentLoaded', async () => {
+            const { data: { session } } = await window.supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            const { data: profile, error } = await window.supabaseClient
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+
+            if (profile) {
+                userProfile = profile;
+                handleStatusView(profile.status);
+                fillExistingData(profile);
+            }
+        });
+
+        function handleStatusView(status) {
+            const inputs = ['fullName', 'dob', 'address', 'contactNumber', 'idType'];
+            
+            if (status === 'pending' || status === 'verified') {
+                // Lock everything initially
+                inputs.forEach(id => document.getElementById(id).disabled = true);
+                
+                if (status === 'pending') {
+                    // Hide ID and Face for pending users (Security)
+                    document.getElementById('progressBar').style.width = '100%';
+                    document.querySelectorAll('.step-dot').forEach(dot => dot.classList.add('completed'));
+                    
+                    document.getElementById('page1').innerHTML += `
+                        <div style="background: rgba(2, 69, 26, 0.05); padding: 15px; border-radius: 16px; text-align: center; margin-top: 10px;">
+                            <p style="font-size: 13px; font-weight: 700; color: var(--primary-green);">
+                                <i data-lucide="clock" style="width: 14px;"></i> Your verification is currently under review.
+                            </p>
+                        </div>
+                    `;
+                    lucide.createIcons();
+                } else if (status === 'verified') {
+                    // Verified users can edit Address and Contact
+                    document.getElementById('address').disabled = false;
+                    document.getElementById('contactNumber').disabled = false;
+                    
+                    const actionRow = document.querySelector('#page1 .action-row');
+                    actionRow.innerHTML = `
+                        <button class="btn-primary" onclick="triggerReverification()" style="width: 100%; flex: none;">
+                            Update Info (Requires Re-verify) <i data-lucide="refresh-cw"></i>
+                        </button>
+                    `;
+                    lucide.createIcons();
+                }
+            }
+        }
+
+        function fillExistingData(p) {
+            if (p.full_name) document.getElementById('fullName').value = p.full_name;
+            if (p.dob) document.getElementById('dob').value = p.dob;
+            if (p.address) document.getElementById('address').value = p.address;
+            if (p.contact_number) document.getElementById('contactNumber').value = p.contact_number;
+            if (p.id_type) document.getElementById('idType').value = p.id_type;
+        }
+
+        function triggerReverification() {
+            Swal.fire({
+                title: 'Re-verification Required',
+                text: "Changing your address or contact number requires a fresh ID and Selfie check for security. Continue?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#02451A',
+                confirmButtonText: 'Yes, proceed'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Unlock steps and proceed to ID upload
+                    nextPage(2);
+                }
+            });
+        }
+
+        function nextPage(pageNumber) {
+            // Hide all pages
+            document.getElementById('page1').style.display = 'none';
+            document.getElementById('page2').style.display = 'none';
+            document.getElementById('page3').style.display = 'none';
+            document.getElementById('page4').style.display = 'none';
+            
+            // Toggle Header and Stepper visibility for immersive pages
+            const header = document.getElementById('mainHeader');
+            const stepper = document.getElementById('stepperContainer');
+            
+            if (pageNumber === 2 || pageNumber === 3) {
+                header.style.display = 'none';
+                stepper.style.display = 'none';
+            } else {
+                header.style.display = 'flex';
+                stepper.style.display = 'flex';
+            }
+            
+            // Update dots
+            document.getElementById('dot1').className = 'step-dot';
+            document.getElementById('dot2').className = 'step-dot';
+            document.getElementById('dot3').className = 'step-dot';
+            document.getElementById('dot4').className = 'step-dot';
+            
+            if (pageNumber === 1) {
+                document.getElementById('progressBar').style.width = '0%';
+                document.getElementById('dot1').classList.add('active');
+                stopCamera();
+            } 
+            else if (pageNumber === 2) {
+                document.getElementById('progressBar').style.width = '33%';
+                document.getElementById('dot1').classList.add('completed');
+                document.getElementById('dot1').innerHTML = '<i data-lucide="check" style="width:14px;"></i>';
+                document.getElementById('dot2').classList.add('active');
+                stopCamera();
+                setTimeout(() => startCamera('id'), 300);
+            }
+            else if (pageNumber === 3) {
+                document.getElementById('progressBar').style.width = '66%';
+                document.getElementById('dot1').classList.add('completed');
+                document.getElementById('dot1').innerHTML = '<i data-lucide="check" style="width:14px;"></i>';
+                document.getElementById('dot2').classList.add('completed');
+                document.getElementById('dot2').innerHTML = '<i data-lucide="check" style="width:14px;"></i>';
+                document.getElementById('dot3').classList.add('active');
+                stopCamera();
+                setTimeout(() => startCamera('selfie'), 300);
+            }
+            else if (pageNumber === 4) {
+                document.getElementById('progressBar').style.width = '100%';
+                document.getElementById('dot1').classList.add('completed');
+                document.getElementById('dot1').innerHTML = '<i data-lucide="check" style="width:14px;"></i>';
+                document.getElementById('dot2').classList.add('completed');
+                document.getElementById('dot2').innerHTML = '<i data-lucide="check" style="width:14px;"></i>';
+                document.getElementById('dot3').classList.add('completed');
+                document.getElementById('dot3').innerHTML = '<i data-lucide="check" style="width:14px;"></i>';
+                document.getElementById('dot4').classList.add('active');
+                stopCamera();
+                populateReviewPage();
+            }
+
+            // Re-init icons if we added checkmarks
+            lucide.createIcons();
+            
+            // Show target page
+            document.getElementById(`page${pageNumber}`).style.display = 'flex';
+            currentPage = pageNumber;
+        }
+
+        function populateReviewPage() {
+            document.getElementById('reviewName').innerText = document.getElementById('fullName').value || 'Not provided';
+            document.getElementById('reviewDOB').innerText = document.getElementById('dob').value || 'Not provided';
+            document.getElementById('reviewAddress').innerText = document.getElementById('address').value || 'Not provided';
+            document.getElementById('reviewContact').innerText = document.getElementById('contactNumber').value || 'Not provided';
+            document.getElementById('reviewIDType').innerText = document.getElementById('idType').value || 'Not provided';
+            document.getElementById('reviewIDImg').src = capturedID;
+            document.getElementById('reviewSelfieImg').src = capturedSelfie;
+        }
+
+        function goBack() {
+            // If in pending mode (Page 4 is active and submit is disabled), always go to menu
+            const submitBtn = document.querySelector('#page4 .btn-primary');
+            if (currentPage === 4 && submitBtn && submitBtn.disabled) {
+                window.location.href = 'menu.html';
+                return;
+            }
+
+            if (currentPage > 1) {
+                nextPage(currentPage - 1);
+            } else {
+                window.location.href = 'menu.html';
+            }
+        }
+
+        function previewID(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    capturedID = e.target.result;
+                    const preview = document.getElementById('idPreview');
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                    document.getElementById('idUploadContent').style.display = 'none';
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        let videoStream = null;
+
+        function toggleIDOrientation() {
+            const overlay = document.getElementById('idOverlay');
+            overlay.classList.toggle('vertical');
+        }
+
+        async function startCamera(type) {
+            const videoId = type === 'id' ? 'idVideo' : 'selfieVideo';
+            const video = document.getElementById(videoId);
+            if (!video) return;
+
+            video.style.display = 'block';
+            
+            const constraints = { 
+                video: { 
+                    facingMode: type === 'id' ? { ideal: 'environment' } : 'user' 
+                } 
+            };
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                videoStream = stream;
+                video.srcObject = stream;
+                
+                if (type === 'selfie') {
+                    startBlinkDetection();
+                }
+            } catch (err) {
+                console.error("Camera access denied", err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Camera Access Required',
+                    text: 'Please allow camera access to complete verification.',
+                    confirmButtonColor: '#02451A'
+                });
+            }
+        }
+
+        function startBlinkDetection() {
+            const label = document.getElementById('livenessLabel');
+            const progress = document.getElementById('blinkProgress');
+            const bar = document.getElementById('blinkBar');
+            
+            if (!label || !progress) return;
+
+            progress.style.display = 'block';
+            
+            // Simulate blink detection after 2 seconds
+            setTimeout(() => {
+                label.innerHTML = '<i data-lucide="check" style="width:14px;"></i> Blink Detected!';
+                label.style.background = 'var(--primary-green)';
+                bar.style.width = '100%';
+                lucide.createIcons();
+                
+                // Auto capture after detection
+                setTimeout(() => {
+                    takeSelfieSnapshot();
+                }, 800);
+            }, 2500);
+        }
+        
+        function stopCamera() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+        }
+
+        function takeIDSnapshot() {
+            const video = document.getElementById('idVideo');
+            const canvas = document.getElementById('idCanvas');
+            const cameraView = document.getElementById('idCameraViewBox');
+            
+            if (!videoStream || !video) return;
+
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const imgData = canvas.toDataURL('image/jpeg', 0.8);
+            capturedID = imgData;
+            
+            stopCamera();
+            video.style.display = 'none';
+
+            cameraView.style.background = `url(${imgData}) center/cover`;
+            
+            const overlayBottom = cameraView.querySelector('.camera-overlay-bottom');
+            overlayBottom.innerHTML = `
+                <div class="action-row" style="width: 100%; pointer-events: auto; justify-content: center; align-items: center; gap: 40px;">
+                    <button class="back-immersive" style="position: static; border-radius: 14px;" onclick="resetIDCapture()">
+                        <i data-lucide="refresh-cw" style="width: 20px; color: white;"></i>
+                    </button>
+                    
+                    <button class="shutter-btn" style="opacity: 0.5; pointer-events: none;"></button>
+                    
+                    <button class="back-immersive" style="position: static; border-radius: 14px;" onclick="nextPage(3)">
+                        <i data-lucide="chevron-right" style="width: 24px; color: white;"></i>
+                    </button>
+                </div>
+                <div style="color: white; font-size: 11px; margin-top: 12px; opacity: 0.6; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Recapture • Continue</div>
+            `;
+            lucide.createIcons();
+        }
+
+        function resetIDCapture() {
+            const cameraView = document.getElementById('idCameraViewBox');
+            cameraView.style.background = '#111827';
+            cameraView.innerHTML = `
+                <video id="idVideo" autoplay playsinline style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1;"></video>
+                <canvas id="idCanvas" style="display: none;"></canvas>
+                <button class="back-immersive" onclick="nextPage(1)">
+                    <i data-lucide="chevron-left"></i>
+                </button>
+                <div class="camera-overlay-top">
+                    <div class="camera-label" style="margin-left: 50px;">
+                        <i data-lucide="scan" style="width: 14px; vertical-align: middle;"></i> Align ID within the frame
+                    </div>
+                </div>
+                <div class="id-overlay" id="idOverlay" style="z-index: 2; border-color: rgba(255,255,255,0.9); border-width: 4px; border-style: solid; box-shadow: 0 0 0 5000px rgba(0,0,0,0.5);"></div>
+                <div class="live-dot" style="z-index: 2;"></div>
+                <div class="camera-overlay-bottom">
+                    <button class="shutter-btn" id="idCaptureBtn" onclick="takeIDSnapshot()"></button>
+                </div>
+            `;
+            lucide.createIcons();
+            startCamera('id');
+        }
+
+        function takeSelfieSnapshot() {
+            const video = document.getElementById('selfieVideo');
+            const canvas = document.getElementById('selfieCanvas');
+            const cameraView = document.getElementById('cameraViewBox');
+            
+            if (!videoStream || !video) return;
+
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const imgData = canvas.toDataURL('image/jpeg', 0.8);
+            capturedSelfie = imgData;
+            
+            stopCamera();
+            video.style.display = 'none';
+
+            cameraView.style.background = `url(${imgData}) center/cover`;
+            
+            const overlayBottom = cameraView.querySelector('.camera-overlay-bottom');
+            overlayBottom.innerHTML = `
+                <div class="action-row" style="width: 100%; pointer-events: auto; justify-content: center; align-items: center; gap: 40px;">
+                    <button class="back-immersive" style="position: static; border-radius: 14px;" onclick="resetSelfieCapture()">
+                        <i data-lucide="refresh-cw" style="width: 20px; color: white;"></i>
+                    </button>
+                    
+                    <button class="shutter-btn" style="opacity: 0.5; pointer-events: none;"></button>
+                    
+                    <button class="back-immersive" style="position: static; border-radius: 14px;" onclick="nextPage(4)">
+                        <i data-lucide="chevron-right" style="width: 24px; color: white;"></i>
+                    </button>
+                </div>
+                <div style="color: white; font-size: 11px; margin-top: 12px; opacity: 0.6; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Recapture • Submit</div>
+            `;
+            lucide.createIcons();
+        }
+
+        function resetSelfieCapture() {
+            const cameraView = document.getElementById('cameraViewBox');
+            cameraView.style.background = '#111827';
+            cameraView.innerHTML = `
+                <video id="selfieVideo" autoplay playsinline style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1;"></video>
+                <canvas id="selfieCanvas" style="display: none;"></canvas>
+                <button class="back-immersive" onclick="nextPage(2)">
+                    <i data-lucide="chevron-left"></i>
+                </button>
+                <div class="camera-overlay-top">
+                    <div class="camera-label" id="livenessLabel" style="margin-left: 50px; background: rgba(255,255,255,0.2);">
+                        <i data-lucide="eye" style="width: 14px; vertical-align: middle;"></i> Blink your eyes to capture
+                    </div>
+                </div>
+                <div class="face-overlay" id="faceOverlay">
+                    <div class="face-corner corner-tl"></div>
+                    <div class="face-corner corner-tr"></div>
+                    <div class="face-corner corner-bl"></div>
+                    <div class="face-corner corner-br"></div>
+                    <div class="face-mesh-sim"></div>
+                </div>
+                <div class="live-dot" id="liveDot" style="z-index: 2;"></div>
+                <div class="camera-overlay-bottom">
+                    <div id="blinkProgress" style="width: 100px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; margin-bottom: 20px; overflow: hidden; display: none;">
+                        <div id="blinkBar" style="width: 0%; height: 100%; background: var(--primary-green); transition: width 0.5s ease;"></div>
+                    </div>
+                    <button class="shutter-btn" id="captureBtn" onclick="takeSelfieSnapshot()"></button>
+                </div>
+            `;
+            lucide.createIcons();
+            startCamera('selfie');
+        }
+
+        async function submitVerification() {
+            const btn = document.querySelector('#page4 .btn-primary');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = "Submitting...";
+            btn.disabled = true;
+
+            try {
+                const { data: { user } } = await window.supabaseClient.auth.getUser();
+                if (!user) throw new Error("Authentication error. Please log in again.");
+                
+                const updateData = {
+                    full_name: document.getElementById('fullName').value,
+                    dob: document.getElementById('dob').value,
+                    address: document.getElementById('address').value,
+                    contact_number: document.getElementById('contactNumber').value,
+                    id_type: document.getElementById('idType').value,
+                    id_image_url: capturedID, 
+                    selfie_image_url: capturedSelfie,
+                    status: 'pending'
+                };
+
+                const { error } = await window.supabaseClient
+                    .from('profiles')
+                    .update(updateData)
+                    .eq('id', user.id);
+
+                if (error) throw error;
+
+                // Hide review page and show success screen
+                document.getElementById('page4').style.display = 'none';
+                document.getElementById('stepperContainer').style.display = 'none';
+                document.getElementById('mainHeader').style.display = 'none';
+                
+                document.getElementById('successScreen').style.display = 'flex';
+                localStorage.setItem('verification_status', 'pending');
+            } catch (err) {
+                console.error("Submission error:", err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Submission Failed',
+                    text: err.message || 'An error occurred while submitting your verification. Please try again.',
+                    confirmButtonColor: '#02451A'
+                });
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // Initialize Status Check
+        async function checkVerificationStatus() {
+            try {
+                const { data: { user } } = await window.supabaseClient.auth.getUser();
+                if (!user) return;
+
+                const { data: profile } = await window.supabaseClient
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single();
+
+                if (profile && (profile.status === 'pending' || profile.status === 'verified')) {
+                    // Populate fields
+                    document.getElementById('fullName').value = profile.full_name || '';
+                    document.getElementById('dob').value = profile.dob || '';
+                    document.getElementById('address').value = profile.address || '';
+                    document.getElementById('contactNumber').value = profile.contact_number || '';
+                    document.getElementById('idType').value = profile.id_type || '';
+                    capturedID = profile.id_image_url;
+                    capturedSelfie = profile.selfie_image_url;
+
+                    // Move to Review Page
+                    nextPage(4);
+
+                    // Update UI for Pending State
+                    if (profile.status === 'pending') {
+                        document.querySelector('#page4 .section-title').innerText = "Verification Pending";
+                        document.querySelector('#page4 .section-desc').innerText = "Your documents are currently under review by our team.";
+                        
+                        const submitBtn = document.querySelector('#page4 .btn-primary');
+                        submitBtn.innerHTML = '<i data-lucide="clock" style="width:18px;"></i> Under Review';
+                        submitBtn.disabled = true;
+                        submitBtn.style.background = "#f59e0b";
+                        
+                        document.querySelector('#page4 .btn-secondary').style.display = 'none';
+                        lucide.createIcons();
+                    }
+                }
+            } catch (err) {
+                console.error("Status check failed:", err);
+            }
+        }
+
+        checkVerificationStatus();
+    </script>
+</body>
+
+</html>

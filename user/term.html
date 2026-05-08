@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>EcoTrack | Terms of Service</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-green: #02451A;
+            --forest-dark: #035e24;
+            --emerald: #10b981;
+            --glass-bg: rgba(255, 255, 255, 0.95);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --transition-smooth: cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Baloo Da 2', cursive;
+            background-color: #f0fdf4;
+            color: #374151;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            min-height: 100svh;
+            overflow-x: hidden;
+            overflow-y: auto;
+            position: relative;
+            padding: 40px 20px;
+            line-height: 1.6;
+        }
+
+        /* --- Background --- */
+        .ambient-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .ambient-blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.5;
+            animation: drift 15s infinite alternate ease-in-out;
+        }
+
+        .blob-1 {
+            width: 60vw;
+            height: 60vw;
+            background: #dcfce7;
+            top: -10%;
+            right: -10%;
+        }
+
+        .blob-2 {
+            width: 70vw;
+            height: 70vw;
+            background: #a7f3d0;
+            bottom: -10%;
+            left: -10%;
+            animation-delay: -5s;
+        }
+
+        @keyframes drift {
+            from {
+                transform: translate(0, 0) scale(1);
+            }
+
+            to {
+                transform: translate(5%, 5%) scale(1.1);
+            }
+        }
+
+        /* --- Document Area --- */
+        .document-card {
+            width: 100%;
+            max-width: 800px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 40px 40px;
+            box-shadow: 0 25px 50px -12px rgba(2, 69, 26, 0.1);
+            animation: slideUpFade 0.6s var(--transition-smooth) forwards;
+        }
+
+        @keyframes slideUpFade {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--primary-green);
+            font-weight: 700;
+            text-decoration: none;
+            margin-bottom: 25px;
+            font-size: 16px;
+            transition: opacity 0.2s;
+        }
+
+        .back-btn:hover {
+            opacity: 0.7;
+        }
+
+        .header-container {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--primary-green);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+
+        .date-badge {
+            display: inline-block;
+            background-color: #dcfce7;
+            color: var(--forest-dark);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        h3 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary-green);
+            margin-top: 35px;
+            margin-bottom: 12px;
+            border-bottom: 2px solid rgba(2, 69, 26, 0.1);
+            padding-bottom: 6px;
+        }
+
+        h5 {
+            font-size: 15px;
+            font-weight: 700;
+            color: #b91c1c;
+            margin-top: 15px;
+            background: #fef2f2;
+            padding: 12px 16px;
+            border-left: 4px solid #ef4444;
+            border-radius: 8px;
+            line-height: 1.5;
+        }
+
+        p {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+
+        ul {
+            margin-bottom: 16px;
+            padding-left: 24px;
+        }
+
+        li {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+
+        li::marker {
+            color: var(--emerald);
+        }
+
+        strong {
+            font-weight: 700;
+        }
+
+        .contact-box {
+            background: rgba(2, 69, 26, 0.04);
+            border: 1px solid rgba(2, 69, 26, 0.1);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .contact-box p {
+            margin-bottom: 8px;
+            color: #4b5563;
+        }
+
+        .email-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 18px;
+            color: var(--primary-green);
+            text-decoration: none;
+            font-weight: 800;
+        }
+
+        @media (max-width: 600px) {
+            .document-card {
+                padding: 30px 20px;
+            }
+
+            h1 {
+                font-size: 26px;
+            }
+
+            h3 {
+                font-size: 18px;
+            }
+
+            p, li {
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="ambient-layer">
+        <div class="ambient-blob blob-1"></div>
+        <div class="ambient-blob blob-2"></div>
+    </div>
+
+    <div class="document-card">
+        
+        <a href="signup.html" class="back-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Sign Up
+        </a>
+
+        <div class="header-container">
+        rev

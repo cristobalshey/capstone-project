@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>EcoTrack | Eco Catcher Game</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --primary-green: #02451A;
+            --bg-color: #ffffff;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(2, 69, 26, 0.1);
+            --card-shadow: 0 8px 32px -8px rgba(2, 69, 26, 0.1);
+            --text-main: #02451A;
+            --text-muted: rgba(2, 69, 26, 0.6);
+            --danger: #FF3B30;
+            --success: #34C759;
+            --warning: #FFCC00;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; overflow: hidden; position: relative;
+            user-select: none;
+        }
+
+        .ambient-layer {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1;
+            background: radial-gradient(circle at 15% 50%, rgba(2, 69, 26, 0.05), transparent 50%),
+                        radial-gradient(circle at 85% 30%, rgba(2, 69, 26, 0.08), transparent 50%);
+        }
+
+        .app-container {
+            width: 100%; max-width: 480px; height: 100vh;
+            display: flex; flex-direction: column; position: relative;
+            background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px);
+            box-shadow: 0 0 50px rgba(0,0,0,0.05); overflow: hidden;
+        }
+
+        /* Header */
+        .header {
+            padding: 24px 24px 15px 24px; display: flex; align-items: center; justify-content: space-between; z-index: 10;
+        }
+
+        .back-btn {
+            background: var(--glass-bg); border: 1px solid var(--glass-border);
+            width: 42px; height: 42px; border-radius: 14px; display: flex; justify-content: center; align-items: center;
+            color: var(--primary-green); cursor: pointer; box-shadow: 0 4px 12px rgba(2, 69, 26, 0.05); transition: all 0.3s ease;
+        }
+
+        .back-btn:hover { background: white; transform: translateX(-3px); }
+        .header-title { font-size: 20px; font-weight: 800; color: var(--primary-green); text-transform: uppercase; }
+        
+        .header-right { display: flex; gap: 10px; align-items: center; }
+        .points-display {
+            background: var(--primary-green); color: white; padding: 8px 14px; border-radius: 14px;
+            font-size: 13px; font-weight: 800; display: flex; align-items: center; gap: 6px;
+        }
+
+        /* Game Area */
+        .game-area {
+            flex-grow: 1; position: relative; 
+            background: linear-gradient(135deg, #d8f3dc 0%, #b7e4c7 100%);
+            border-radius: 30px 30px 0 0; overflow: hidden; border-top: 1px solid var(--glass-border);
+            box-shadow: inset 0 10px 20px rgba(0,0,0,0.05); margin-top: 10px;
+        }
+
+        /* Top Bar inside Game */
+        .game-hud {
+            position: absolute; top: 15px; left: 15px; right: 15px;
+            display: flex; justify-content: space-between; align-items: center; z-index: 20;
+        }
+
+        .score-box {
+            background: var(--glass-bg); padding: 10px 20px; border-radius: 16px; border: 1px solid var(--glass-border);
+            font-size: 18px; font-weight: 800; color: var(--primary-green); display: flex; align-items: center; gap: 8px;
+            box-shadow: 0 4px 15px rgba(2, 69, 26, 0.05); backdrop-filter: blur(10px);
+        }
+
+        .lives-box {
+            display: flex; gap: 5px; background: var(--glass-bg); padding: 10px 15px; border-radius: 16px;
+            border: 1px solid var(--glass-border); backdrop-filter: blur(10px);
+        }
+
+        .heart-icon { color: var(--danger); width: 22px; height: 22px; transition: all 0.3s ease; fill: var(--danger); }
+        .heart-icon.lost { color: #ccc; fill: none; transform: scale(0.8); }
+
+        /* Player */
+        #player {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            width: 80px; height: 80px; z-index: 10; pointer-events: none;
+            display: flex; justify-content: center; align-items: flex-end;
+            transition: transform 0.05s linear;
+        }
+
+        .catch-glow {
+            position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 100px; height: 100px; background: radial-gradient(circle, rgba(52, 199, 89, 0.6) 0%, transparent 70%);
+            opacity: 0; transition: opacity 0.2s; z-index: 1; border-radius: 50%;
+        }
+
+        .catch-glow.active { opacity: 1; transform: translateX(-50%) scale(1.2); }
+        .catch-glow.error { background: radial-gradient(circle, rgba(255, 59, 48, 0.6) 0%, transparent 70%); opacity: 1; transform: translateX(-50%) scale(1.5); }
+
+        /* Falling Items */
+        .falling-item {
+            position: absolute; z-index: 5;
+            display: flex; justify-content: center; align-items: center;
+            width: 45px; height: 45px; border-radius: 12px;
+            background: var(--glass-bg); border: 1px solid var(--glass-border);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1); backdrop-filter: blur(5px);
+        }
+
+        .item-icon { width: 24px; height: 24px; }
+        .item-good { color: var(--success); }
+        .item-bad { color: var(--danger); background: rgba(255, 59, 48, 0.1); border-color: rgba(255, 59, 48, 0.3); }
+
+        .floating-text {
+            position: absolute; font-weight: 800; font-size: 20px; text-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            pointer-events: none; animation: floatUpText 0.8s ease-out forwards; z-index: 20;
+        }
+
+        @keyframes floatUpText {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-60px) scale(1.3); opacity: 0; }
+        }
+
+        /* Overlays */
+        .overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(15px);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 100; transition: opacity 0.3s ease;
+        }
+
+        .overlay.hidden { opacity: 0; pointer-events: none; }
+
+        .glass-card {
+            background: var(--glass-bg); border: 1px solid var(--glass-border);
+            border-radius: 30px; padding: 40px 30px; text-align: center; width: 85%;
+            box-shadow: 0 20px 50px rgba(2, 69, 26, 0.1);
+            transform: scale(1); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .overlay.hidden .glass-card { transform: scale(0.8); }
+
+        .game-title { font-size: 32px; font-weight: 800; color: var(--primary-green); margin-bottom: 5px; line-height: 1.1; }
+        .game-subtitle { font-size: 14px; font-weight: 700; color: var(--text-muted); margin-bottom: 30px; text-transform: uppercase; }
+
+        .rule-list { text-align: left; margin-bottom: 30px; display: flex; flex-direction: column; gap: 12px; }
+        .rule-item { display: flex; align-items: center; gap: 15px; font-size: 14px; font-weight: 600; color: var(--text-main); }
+        .rule-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; justify-content: center; align-items: center; background: rgba(2, 69, 26, 0.05); }
+
+        .btn-primary {
+            background: var(--primary-green); color: white; border: none; padding: 16px 0; width: 100%;
+            border-radius: 16px; font-family: inherit; font-size: 16px; font-weight: 800; text-transform: uppercase;
+            cursor: pointer; box-shadow: 0 10px 20px rgba(2, 69, 26, 0.2); transition: all 0.2s;
+            display: flex; justify-content: center; align-items: center; gap: 10px;
+        }
+
+        .btn-primary:active { transform: scale(0.95); }
+
+        .final-score { font-size: 48px; font-weight: 800; color: var(--primary-green); margin: 20px 0; background: linear-gradient(135deg, var(--primary-green), #037A2D); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+
+    </style>
+</head>
+<body>
+    <div class="ambient-layer"></div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <button class="back-btn" onclick="window.location.href='menu.html'">
+                <i data-lucide="chevron-left"></i>
+            </button>
+            <div class="header-title">ECO SORTER</div>
+        </header>
+
+        <!-- Game Area -->
+        <div class="game-area" id="gameArea">
+            
+            <div class="game-hud">
+                <div class="score-box">
+                    <i data-lucide="award"></i> <span id="scoreDisplay">0</span>
+                </div>
+                <div class="lives-box" id="livesContainer">
+                    <i data-lucide="heart" class="heart-icon"></i>
+                    <i data-lucide="heart" class="heart-icon"></i>
+                    <i data-lucide="heart" class="heart-icon"></i>
+                </div>
+            </div>
+
+            <!-- Player -->
+            <div id="player">
+                <div class="catch-glow" id="catchGlow"></div>
+                <!-- Using a cute recycle bin design instead of rigid font-awesome -->
+                <div style="background: white; width: 70px; height: 70px; border-radius: 20px; display: flex; justify-content: center; align-items: center; box-shadow: 0 8px 25px rgba(2, 69, 26, 0.15); border: 3px solid var(--primary-green); z-index: 2;">
+                    <i data-lucide="recycle" style="width: 40px; height: 40px; color: var(--primary-green);"></i>
+                </div>
+            </div>
+            
+            <!-- Start Screen Overlay -->
+            <div class="overlay" id="startScreen">
+                <div class="glass-card">
+                    <div class="game-title">ECO SORTER</div>
+                    <div class="game-subtitle">Catch Recyclables, Avoid Hazards</div>
+                    
+                    <div class="rule-list">
+                        <div class="rule-item">
+                            <div class="rule-icon"><i data-lucide="package" style="color: var(--success);"></i></div>
+                            <div>Catch recyclables (+0.1 Points)</div>
+                        </div>
+                        <div class="rule-item">
+                            <div class="rule-icon" style="background: rgba(255, 59, 48, 0.1);"><i data-lucide="flame" style="color: var(--danger);"></i></div>
+                            <div>Avoid hazards (Lose a Life)</div>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" id="btnPlay" onclick="startGame()">
+                        <i data-lucide="play-circle"></i> PLAY NOW
+                    </button>
+                    <div id="limitMessage" style="display: none; margin-top: 15px; color: var(--danger); font-weight: 700; font-size: 14px;">
+                        <i data-lucide="clock" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle;"></i> 
+                        Played Today! Come back tomorrow.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Game Over Overlay -->
+            <div class="overlay hidden" id="gameOverScreen">
+                <div class="glass-card">
+                    <i data-lucide="alert-octagon" style="width: 50px; height: 50px; color: var(--danger); margin-bottom: 10px;"></i>
+                    <div class="game-title">GAME OVER</div>
+                    <div class="game-subtitle">Your Eco Impact</div>
+                    
+                    <div class="final-score" id="finalScoreDisplay">0</div>
+
+                    <div style="font-size: 13px; font-weight: 700; color: var(--danger); margin-bottom: 15px;">
+                        <i data-lucide="clock" style="width: 14px; height: 14px; vertical-align: middle;"></i> Limit Reached. Come back tomorrow.
+                    </div>
+
+                    <button class="btn-primary" onclick="window.location.href='menu.html'" style="background: var(--glass-bg); color: var(--primary-green); border: 2px solid var(--primary-green); box-shadow: none;">
+                        EXIT GAME
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Script logic -->
+    <script>
+        lucide.createIcons();
+
+        // Game Configuration
+        const gameArea = document.getElementById('gameArea');
+        const player = document.getElementById('player');
+        const catchGlow = document.getElementById('catchGlow');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const livesContainer = document.getElementById('livesContainer');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalScoreDisplay = document.getElementById('finalScoreDisplay');
+
+        // State
+        let isPlaying = false;
+        let score = 0;
+        let lives = 3;
+        let fallingItems = [];
+        let animationFrameId;
+        let spawnTimeoutId;
+        let baseSpeed = 4;
+        let spawnRate = 1200; // ms
+
+        // Items Definition using Lucide icons
+        const goodItems = ['package', 'newspaper', 'leaf', 'droplet', 'coffee'];
+        const badItems = ['flame', 'zap', 'alert-triangle', 'x-octagon'];
+
+        // Input Tracking
+        let targetX = window.innerWidth / 2;
+        let currentX = window.innerWidth / 2;
+
+        function initPlayerControl() {
+            // Mouse/Touch Dragging on the game area
+            const handleMove = (e) => {
+                if (!isPlaying) return;
+                e.preventDefault(); // Stop scrolling
+                let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                
+                // Keep player within game area bounds
+                const areaRect = gameArea.getBoundingClientRect();
+                let relativeX = clientX - areaRect.left;
+                
+                // Bounds
+                const playerHalfWidth = 40;
+                if (relativeX < playerHalfWidth) relativeX = playerHalfWidth;
+                if (relativeX > areaRect.width - playerHalfWidth) relativeX = areaRect.width - playerHalfWidth;
+                
+                targetX = relativeX;
+            };
+
+            gameArea.addEventListener('mousemove', handleMove);
+            gameArea.addEventListener('touchmove', handleMove, { passive: false });
+        }
+
+        window.onload = () => {
+            const lastPlayed = localStorage.getItem('ecotrack_game_last_played');
+            const today = new Date().toDateString();
+            
+            if (lastPlayed === today) {
+                const btn = document.getElementById('btnPlay');
+                if(btn) {
+                    btn.style.opacity = '0.5';
+                    btn.style.pointerEvents = 'none';
+                }
+                const msg = document.getElementById('limitMessage');
+                if(msg) msg.style.display = 'block';
+            }
+        };
+
+        function startGame() {
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            
+            // Mark as played today
+            localStorage.setItem('ecotrack_game_last_played', new Date().toDateString());
+            
+            // Reset state
+            score = 0;
+            lives = 3;
+            baseSpeed = 4;
+            spawnRate = 1200;
+            updateScoreUI();
+            updateLivesUI();
+            
+            // Clear items
+            fallingItems.forEach(item => item.element.remove());
+            fallingItems = [];
+
+            isPlaying = true;
+            targetX = gameArea.getBoundingClientRect().width / 2;
+            currentX = targetX;
+
+            initPlayerControl();
+            scheduleNextSpawn();
+            gameLoop();
+        }
+
+        function resetGame() {
+            startGame();
+        }
+
+        function scheduleNextSpawn() {
+            if (!isPlaying) return;
+            spawnItem();
+            
+            // Speed up progressively based on the new 0.1 point increment logic
+            let currentSpawnRate = spawnRate - (score * 200);
+            if (currentSpawnRate < 400) currentSpawnRate = 400; // Max spawn speed
+
+            spawnTimeoutId = setTimeout(scheduleNextSpawn, currentSpawnRate);
+        }
+
+        function spawnItem() {
+            const isBad = Math.random() < 0.25; // 25% chance for a bad item
+            const iconName = isBad 
+                ? badItems[Math.floor(Math.random() * badItems.length)] 
+                : goodItems[Math.floor(Math.random() * goodItems.length)];
+
+            const el = document.createElement('div');
+            el.className = `falling-item ${isBad ? 'item-bad' : ''}`;
+            el.innerHTML = `<i data-lucide="${iconName}" class="item-icon ${isBad ? 'item-bad' : 'item-good'}"></i>`;
+            
+            const areaWidth = gameArea.getBoundingClientRect().width;
+            const startX = 25 + Math.random() * (areaWidth - 50); // 25px margin
+            
+            el.style.left = startX + 'px';
+            el.style.top = '-50px';
+            gameArea.appendChild(el);
+
+            // Re-render new lucide icon
+            lucide.createIcons({ root: el });
+
+            fallingItems.push({
+                element: el,
+                x: startX,
+                y: -50,
+                speed: baseSpeed + Math.random() * 2 + (score * 100 / 150), // Gets faster
+                isBad: isBad
+            });
+        }
+
+        function gameLoop() {
+            if (!isPlaying) return;
+
+            // Smooth player movement
+            currentX += (targetX - currentX) * 0.3; // LERP
+            player.style.left = `${currentX - 40}px`; // -40 for half width to center
+
+            // Update items
+            const areaHeight = gameArea.getBoundingClientRect().height;
+            const hitZoneTop = areaHeight - 80;
+
+            for (let i = fallingItems.length - 1; i >= 0; i--) {
+                const item = fallingItems[i];
+                item.y += item.speed;
+                item.element.style.top = item.y + 'px';
+
+                // Check out of bounds
+                if (item.y > areaHeight + 50) {
+                    item.element.remove();
+                    fallingItems.splice(i, 1);
+                    continue;
+                }
+
+                // Simplified Circle Collision (distance based)
+                const dx = currentX - item.x;
+                const dy = hitZoneTop - item.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < 50) { // Collision Radius
+                   catchItem(item, i);
+                }
+            }
+
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function catchItem(item, index) {
+            fallingItems.splice(index, 1);
+            
+            if (item.isBad) {
+                // Hazard logic
+                catchGlow.className = 'catch-glow error active';
+                setTimeout(() => catchGlow.className = 'catch-glow error', 200);
+                
+                showFloatingText('-1 Life', item.x, item.y, 'var(--danger)');
+                
+                lives--;
+                updateLivesUI();
+                
+                if (lives <= 0) {
+                    endGame();
+                }
+                
+                // Shake screen effect
+                gameArea.style.transform = 'translate(-5px, 5px)';
+                setTimeout(() => gameArea.style.transform = 'translate(5px, -5px)', 50);
+                setTimeout(() => gameArea.style.transform = 'translate(0, 0)', 100);
+
+            } else {
+                // Recyclable logic
+                catchGlow.className = 'catch-glow active';
+                setTimeout(() => catchGlow.className = 'catch-glow', 200);
+                
+                score += 0.1;
+                updateScoreUI();
+                showFloatingText('+0.1', item.x, item.y, 'var(--success)');
+            }
+
+            item.element.remove();
+        }
+
+        function updateScoreUI() {
+            scoreDisplay.innerText = score.toFixed(1);
+        }
+
+        function updateLivesUI() {
+            const hearts = livesContainer.querySelectorAll('.heart-icon');
+            hearts.forEach((heart, idx) => {
+                if (idx >= lives) {
+                    heart.classList.add('lost');
+                } else {
+                    heart.classList.remove('lost');
+                }
+            });
+        }
+
+        function showFloatingText(text, x, y, color) {
+            const el = document.createElement('div');
+            el.className = 'floating-text';
+            el.innerText = text;
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            el.style.color = color;
+            gameArea.appendChild(el);
+            setTimeout(() => el.remove(), 800);
+        }
+
+        function endGame() {
+            isPlaying = false;
+            clearTimeout(spawnTimeoutId);
+            cancelAnimationFrame(animationFrameId);
+            
+            finalScoreDisplay.innerText = score.toFixed(1);
+
+            setTimeout(() => {
+                gameOverScreen.classList.remove('hidden');
+            }, 500);
+        }
+
+    </script>
+</body>
+</html>

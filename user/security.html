@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>EcoTrack | Security</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.42.0/dist/umd/supabase.js"></script>
+    <script src="../supabase_config.js"></script>
+    <script src="../auth_guard.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        :root {
+            --primary-green: #02451A;
+            --bg-color: #ffffff;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(2, 69, 26, 0.1);
+            --card-shadow: 0 8px 32px -8px rgba(2, 69, 26, 0.1);
+            --text-main: #02451A;
+            --text-muted: rgba(2, 69, 26, 0.6);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            min-height: 100svh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .ambient-layer {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1;
+            background: radial-gradient(circle at 15% 50%, rgba(2, 69, 26, 0.05), transparent 50%),
+                        radial-gradient(circle at 85% 30%, rgba(2, 69, 26, 0.08), transparent 50%);
+        }
+
+        .app-container {
+            width: 100%; max-width: 480px; height: 100vh; height: 100svh;
+            display: flex; flex-direction: column; position: relative;
+            background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px); box-shadow: 0 0 50px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        /* Header */
+        .header {
+            padding: 24px 24px 15px 24px; display: flex; align-items: center; justify-content: space-between; z-index: 10;
+        }
+        
+        .header-left { display: flex; align-items: center; gap: 15px; }
+
+        .back-btn {
+            background: var(--glass-bg); border: 1px solid var(--glass-border); width: 42px; height: 42px; border-radius: 14px;
+            display: flex; justify-content: center; align-items: center; color: var(--primary-green); cursor: pointer;
+            box-shadow: 0 4px 12px rgba(2, 69, 26, 0.05); transition: all 0.3s ease;
+        }
+
+        .back-btn:hover { background: white; transform: translateX(-3px); box-shadow: 0 6px 15px rgba(2, 69, 26, 0.1); }
+        .header-title { font-size: 20px; font-weight: 800; color: var(--primary-green); }
+
+        /* Views */
+        .view-content {
+            flex-grow: 1; padding: 10px 24px 40px 24px; overflow-y: auto; scrollbar-width: none;
+            display: none; flex-direction: column; opacity: 0; transform: translateX(20px); transition: all 0.3s ease;
+        }
+        .view-content.active { display: flex; opacity: 1; transform: translateX(0); }
+        .view-content::-webkit-scrollbar { display: none; }
+
+        .section-desc { font-size: 14px; font-weight: 500; color: var(--text-muted); margin-bottom: 25px; line-height: 1.5; }
+
+        /* Options Menu */
+        .menu-list { display: flex; flex-direction: column; gap: 12px; }
+        .menu-item {
+            background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 20px; padding: 18px 20px;
+            display: flex; align-items: center; gap: 15px; cursor: pointer; box-shadow: var(--card-shadow);
+            transition: transform 0.2s, box-shadow 0.2s; text-align: left;
+        }
+        .menu-item:hover { transform: translateY(-2px); box-shadow: 0 12px 25px rgba(2, 69, 26, 0.12); }
+        .menu-icon-wrap {
+            width: 48px; height: 48px; border-radius: 14px; background: rgba(2, 69, 26, 0.08);
+            display: flex; justify-content: center; align-items: center; color: var(--primary-green);
+        }
+        .menu-icon-wrap i { width: 22px; height: 22px; stroke-width: 2.5px; }
+        .menu-text-wrap { flex-grow: 1; }
+        .menu-title { font-size: 16px; font-weight: 800; color: var(--text-main); margin-bottom: 2px; }
+        .menu-sub { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+        .menu-item i.chevron { color: var(--text-muted); }
+
+        /* Form Card */
+        .form-card {
+            background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 24px; padding: 25px;
+            box-shadow: var(--card-shadow); backdrop-filter: blur(12px); display: flex; flex-direction: column; gap: 20px;
+        }
+        
+        .form-group { display: flex; flex-direction: column; gap: 8px; position: relative; }
+        .form-label { font-size: 13px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; }
+        .form-control {
+            width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid rgba(2, 69, 26, 0.2);
+            background: rgba(255, 255, 255, 0.9); color: var(--text-main); font-family: inherit; font-size: 15px; font-weight: 600; outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .form-control:focus { border-color: var(--primary-green); box-shadow: 0 0 0 3px rgba(2, 69, 26, 0.1); }
+        
+        .password-toggle {
+            position: absolute; right: 16px; top: 40px; color: var(--text-muted); cursor: pointer; transition: color 0.2s;
+        }
+        .password-toggle:hover { color: var(--primary-green); }
+
+        .btn-primary {
+            border: none; padding: 16px; border-radius: 16px; font-family: inherit; font-size: 16px; font-weight: 800;
+            background: var(--primary-green); color: white; box-shadow: 0 8px 20px rgba(2, 69, 26, 0.25); cursor: pointer; transition: all 0.3s ease;
+            display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: auto;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 25px rgba(2, 69, 26, 0.35); }
+
+        /* Passcode UI (Bank Style) */
+        .passcode-display-wrap {
+            display: flex; justify-content: center; align-items: center; gap: 15px; margin: 30px 0 50px 0;
+        }
+        .passcode-dot {
+            width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(2, 69, 26, 0.3); transition: all 0.2s;
+        }
+        .passcode-dot.filled { background: var(--primary-green); border-color: var(--primary-green); transform: scale(1.1); box-shadow: 0 4px 10px rgba(2, 69, 26, 0.2); }
+        
+        .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 0 20px; max-width: 320px; margin: 0 auto; }
+        .keypad-btn {
+            background: rgba(255, 255, 255, 0.8); border: 1px solid rgba(2, 69, 26, 0.1);
+            width: 70px; height: 70px; border-radius: 50%; font-family: inherit; font-size: 28px; font-weight: 700; color: var(--text-main);
+            display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 12px rgba(2, 69, 26, 0.05); margin: 0 auto; transition: all 0.1s;
+        }
+        .keypad-btn:active { transform: scale(0.9); background: rgba(2, 69, 26, 0.1); }
+        .keypad-btn.action { font-size: 16px; background: transparent; box-shadow: none; border: none; }
+        
+        #passcodeText { text-align: center; font-size: 18px; font-weight: 800; color: var(--primary-green); margin-top: 10px; }
+
+        /* Password Strength */
+        .strength-container { margin-top: -10px; display: none; align-items: center; gap: 8px; padding-left: 4px; }
+        .strength-bar { flex-grow: 1; height: 4px; background: rgba(2, 69, 26, 0.1); border-radius: 2px; overflow: hidden; }
+        .strength-fill { height: 100%; width: 0; transition: all 0.3s ease; }
+        .strength-text { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+        .strength-weak { background: #ef4444; }
+        .strength-strong { background: #10b981; }
+        .text-weak { color: #ef4444; }
+        .text-strong { color: #10b981; }
+
+    </style>
+</head>
+
+<body>
+    <div class="ambient-layer"></div>
+
+    <div class="app-container">
+        
+        <header class="header">
+            <div class="header-left">
+                <button class="back-btn" id="headerBackBtn" onclick="goBack()">
+                    <i data-lucide="chevron-left"></i>
+                </button>
+                <div class="header-title" id="headerTitle">Security Option</div>
+            </div>
+        </header>
+
+        <div class="view-content active" id="viewMenu">
+            <p class="section-desc">Manage your account security, passwords, and sensitive actions like transferring assets.</p>
+
+            <div class="menu-list">
+                <button class="menu-item" onclick="switchView('viewPassword', 'Change Password')">
+                    <div class="menu-icon-wrap"><i data-lucide="key"></i></div>
+                    <div class="menu-text-wrap">
+                        <div class="menu-title">Change Password</div>
+                        <div class="menu-sub">Used for logging into your account</div>
+                    </div>
+                    <i data-lucide="chevron-right" class="chevron"></i>
+                </button>
+
+                <button class="menu-item" id="upgradeMenuItem" style="display: none; border: 2px solid var(--primary-green); background: rgba(2, 69, 26, 0.05);" onclick="window.location.href='set_password.html'">
+                    <div class="menu-icon-wrap" style="background: var(--primary-green); color: white;"><i data-lucide="sparkles"></i></div>
+                    <div class="menu-text-wrap">
+                        <div class="menu-title">Upgrade Security</div>
+                        <div class="menu-sub">Set a manual password for your account</div>
+                    </div>
+                    <i data-lucide="chevron-right" class="chevron"></i>
+                </button>
+
+                <button class="menu-item" onclick="switchView('viewPasscode', 'Manage PIN')">
+                    <div class="menu-icon-wrap"><i data-lucide="hash"></i></div>
+                    <div class="menu-text-wrap">
+                        <div class="menu-title">Manage Security PIN</div>
+                        <div class="menu-sub">4-digit PIN used for sensitive actions</div>
+                    </div>
+                    <i data-lucide="chevron-right" class="chevron"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="view-content" id="viewPassword">
+            <div class="form-card">
+                <div class="form-group">
+                    <label class="form-label">Current Password</label>
+                    <input type="password" class="form-control" placeholder="Enter current password" id="pwCurrentInput">
+                    <i data-lucide="eye" class="password-toggle" onclick="togglePw('pwCurrentInput', this)"></i>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">New Password</label>
+                    <input type="password" class="form-control" placeholder="Enter new password" id="pwNewInput" oninput="checkStrength(this.value)">
+                    <i data-lucide="eye" class="password-toggle" onclick="togglePw('pwNewInput', this)"></i>
+                </div>
+                <div class="strength-container" id="strengthContainer">
+                    <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+                    <span class="strength-text" id="strengthText">Weak</span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Confirm New Password</label>
+                    <input type="password" class="form-control" placeholder="Confirm new password" id="pwConfInput">
+                    <i data-lucide="eye" class="password-toggle" onclick="togglePw('pwConfInput', this)"></i>
+                </div>
+            </div>
+
+            
+            <div style="flex-grow: 1;"></div>
+            
+            <button class="btn-primary" id="updatePwBtn" onclick="handlePasswordUpdate()">
+                Update Password
+            </button>
+        </div>
+
+        <div class="view-content" id="viewPasscode">
+            <div id="passcodeText">Enter Current PIN</div>
+            
+            <div class="passcode-display-wrap">
+                <div class="passcode-dot"></div>
+                <div class="passcode-dot"></div>
+                <div class="passcode-dot"></div>
+                <div class="passcode-dot"></div>
+            </div>
+
+            <div class="keypad">
+                <button class="keypad-btn" onclick="addPin(1)">1</button>
+                <button class="keypad-btn" onclick="addPin(2)">2</button>
+                <button class="keypad-btn" onclick="addPin(3)">3</button>
+                <button class="keypad-btn" onclick="addPin(4)">4</button>
+                <button class="keypad-btn" onclick="addPin(5)">5</button>
+                <button class="keypad-btn" onclick="addPin(6)">6</button>
+                <button class="keypad-btn" onclick="addPin(7)">7</button>
+                <button class="keypad-btn" onclick="addPin(8)">8</button>
+                <button class="keypad-btn" onclick="addPin(9)">9</button>
+                <button class="keypad-btn action"></button>
+                <button class="keypad-btn" onclick="addPin(0)">0</button>
+                <button class="keypad-btn action" onclick="removePin()"><i data-lucide="delete"></i></button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        let currentView = 'viewMenu';
+        const titleEl = document.getElementById('headerTitle');
+
+        // Reset main view title on load
+        titleEl.textContent = 'Security';
+
+        function goBack() {
+            if (currentView === 'viewMenu') {
+                window.location.href = 'profile.html';
+            } else {
+                switchView('viewMenu', 'Security');
+                resetPasscode();
+            }
+        }
+
+        function switchView(viewId, titleStr) {
+            document.querySelectorAll('.view-content').forEach(el => {
+                el.classList.remove('active');
+                setTimeout(() => { if(!el.classList.contains('active')) el.style.display = 'none'; }, 300);
+            });
+            
+            const target = document.getElementById(viewId);
+            target.style.display = 'flex';
+            setTimeout(() => target.classList.add('active'), 50);
+            
+            titleEl.textContent = titleStr;
+            currentView = viewId;
+        }
+
+        function togglePw(inputId, iconEl) {
+            const input = document.getElementById(inputId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                iconEl.setAttribute('data-lucide', 'eye-off');
+            } else {
+                input.type = 'password';
+                iconEl.setAttribute('data-lucide', 'eye');
+            }
+            lucide.createIcons();
+        }
+
+        function checkStrength(val) {
+            const container = document.getElementById('strengthContainer');
+            const fill = document.getElementById('strengthFill');
+            const text = document.getElementById('strengthText');
+            
+            if (!val) {
+                container.style.display = 'none';
+                return;
+            }
+            
+            container.style.display = 'flex';
+            const hasUpper = /[A-Z]/.test(val);
+            const isLongEnough = val.length >= 8;
+            
+            if (hasUpper && isLongEnough) {
+                fill.className = 'strength-fill strength-strong';
+                fill.style.width = '100%';
+                text.innerText = 'Strong';
+                text.className = 'strength-text text-strong';
+            } else {
+                fill.className = 'strength-fill strength-weak';
+                fill.style.width = '33%';
+                text.innerText = 'Weak';
+                text.className = 'strength-text text-weak';
+            }
+        }
+
+        // Passcode Logic
+        let currentPin = '';
+        let firstNewPin = '';
+        let passcodePhase = 'VERIFY'; // VERIFY, SET, CONFIRM
+        let dbPin = '';
+        let dbPassCode = '';
+
+        async function fetchUserData() {
+            const { data: { user } } = await window.supabaseClient.auth.getUser();
+            const { data: profile } = await window.supabaseClient
+                .from('profiles')
+                .select('pin_code, pass_code, has_password')
+                .eq('id', user.id)
+                .single();
+            
+            if (profile) {
+                dbPin = profile.pin_code || '';
+                dbPassCode = profile.pass_code || '';
+                
+                // Handle Upgrade Menu Item
+                if (!profile.has_password) {
+                    document.getElementById('upgradeMenuItem').style.display = 'flex';
+                }
+            }
+        }
+        fetchUserData();
+
+        function updateDots() {
+            const dots = document.querySelectorAll('.passcode-dot');
+            dots.forEach((dot, index) => {
+                if (index < currentPin.length) dot.classList.add('filled');
+                else dot.classList.remove('filled');
+            });
+
+            if (currentPin.length === 4) {
+                if (passcodePhase === 'VERIFY') {
+                    if (currentPin === dbPin) {
+                        setTimeout(() => {
+                            currentPin = '';
+                            passcodePhase = 'SET';
+                            document.getElementById('passcodeText').innerText = 'Enter New 4-Digit PIN';
+                            updateDots();
+                        }, 400);
+                    } else {
+                        setTimeout(() => {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Incorrect PIN',
+                                text: 'The current PIN you entered is incorrect.',
+                                confirmButtonColor: '#02451A'
+                            });
+                            currentPin = '';
+                            updateDots();
+                        }, 300);
+                    }
+                } else if (passcodePhase === 'SET') {
+                    firstNewPin = currentPin;
+                    setTimeout(() => {
+                        currentPin = '';
+                        passcodePhase = 'CONFIRM';
+                        document.getElementById('passcodeText').innerText = 'Confirm New PIN';
+                        updateDots();
+                    }, 400);
+                } else if (passcodePhase === 'CONFIRM') {
+                    if (currentPin === firstNewPin) {
+                        savePinToDb(currentPin);
+                    } else {
+                        setTimeout(() => {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Mismatch',
+                                text: 'The new PINs do not match. Please try again.',
+                                confirmButtonColor: '#02451A'
+                            });
+                            currentPin = '';
+                            passcodePhase = 'SET';
+                            document.getElementById('passcodeText').innerText = 'Enter New 4-Digit PIN';
+                            updateDots();
+                        }, 300);
+                    }
+                }
+            }
+        }
+
+        async function savePinToDb(newPin) {
+            const { data: { user } } = await window.supabaseClient.auth.getUser();
+            const { error } = await window.supabaseClient
+                .from('profiles')
+                .update({ pin_code: newPin })
+                .eq('id', user.id);
+
+            if (error) {
+                Swal.fire('Error', 'Failed to update PIN', 'error');
+            } else {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'PIN Updated',
+                    text: 'Your security PIN has been successfully changed.',
+                    confirmButtonColor: '#02451A'
+                }).then(() => {
+                    dbPin = newPin;
+                    goBack();
+                });
+            }
+        }
+
+        async function handlePasswordUpdate() {
+            const currentPw = document.getElementById('pwCurrentInput').value;
+            const newPw = document.getElementById('pwNewInput').value;
+            const confPw = document.getElementById('pwConfInput').value;
+            const btn = document.getElementById('updatePwBtn');
+
+            // Initial input validation
+            if (!currentPw || currentPw.trim() === '') {
+                Swal.fire({ icon: 'error', title: 'Current Password Required', text: 'Please enter your current password to continue.', confirmButtonColor: '#02451A' });
+                return;
+            }
+            
+            const hasUpper = /[A-Z]/.test(newPw);
+            if (!newPw || newPw.length < 8 || !hasUpper) {
+                Swal.fire({ icon: 'error', title: 'Weak Password', text: 'New password must be at least 8 characters long and contain at least one uppercase letter.', confirmButtonColor: '#02451A' });
+                return;
+            }
+            
+            if (newPw !== confPw) {
+                Swal.fire({ icon: 'error', title: 'Mismatch', text: 'New passwords do not match.', confirmButtonColor: '#02451A' });
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "Verifying...";
+
+            try {
+                // 1. Logic Check: Must match the pass_code stored in our profile record
+                if (currentPw !== dbPassCode) {
+                    throw new Error("The current password you entered does not match our records.");
+                }
+
+                btn.innerText = "Updating...";
+
+                // 2. Update Supabase Auth Password
+                // This will now work directly since "Require current password" is OFF in your Dashboard.
+                const { error: authError } = await window.supabaseClient.auth.updateUser({
+                    password: newPw
+                });
+
+                if (authError) throw authError;
+
+                // 3. Sync the 'profiles' table pass_code column
+                const { data: { user } } = await window.supabaseClient.auth.getUser();
+                const { error: profileUpdateError } = await window.supabaseClient
+                    .from('profiles')
+                    .update({ pass_code: newPw })
+                    .eq('id', user.id);
+
+                if (profileUpdateError) throw profileUpdateError;
+
+                dbPassCode = newPw; // Update local reference for the current session
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success',
+                    text: 'Your EcoTrack password has been updated.',
+                    confirmButtonColor: '#02451A'
+                }).then(() => {
+                    goBack();
+                });
+
+            } catch (err) {
+                console.error("Update Error:", err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Update Failed',
+                    text: err.message || "An error occurred while updating your password.",
+                    footer: err.status ? `Error Code: ${err.status}` : '',
+                    confirmButtonColor: '#02451A'
+                });
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Update Password";
+            }
+        }
+
+
+        function addPin(num) {
+            if (currentPin.length < 4) {
+                currentPin += num.toString();
+                updateDots();
+            }
+        }
+
+        function removePin() {
+            if (currentPin.length > 0) {
+                currentPin = currentPin.slice(0, -1);
+                updateDots();
+            }
+        }
+
+        function resetPasscode() {
+            currentPin = '';
+            firstNewPin = '';
+            passcodePhase = 'VERIFY';
+            document.getElementById('passcodeText').textContent = 'Enter Current PIN';
+            updateDots();
+        }
+
+    </script>
+</body>
+
+</html>

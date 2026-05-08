@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoTrack - Financial Hub</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase_config.js"></script>
+    <script src="../auth_guard.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        :root { 
+            --primary: #02451A;
+            --primary-neutral: #444444; 
+            --accent-neutral: #888888; 
+            --bg-soft: #fcfcfc; 
+            --card-bg: #ffffff;
+            --border-soft: #f0f0f0;
+            --text-main: #444444; 
+            --text-muted: #888888; 
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            --card-shadow: 0 4px 20px rgba(0,0,0,0.02);
+            --sidebar-width: 85px; 
+            --danger-red: #d32f2f;
+            --success-green: #2e7d32;
+            --info-blue: #1976d2;
+            --warning-orange: #ed6c02;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Baloo Da 2', cursive; 
+            background-color: var(--bg-soft); 
+            color: var(--text-main); 
+            display: flex; 
+            min-height: 100vh; 
+            font-size: 16px; 
+            letter-spacing: -0.01em;
+        }
+
+        /* Sidebar (Icon-only) */
+        .sidebar { 
+            width: var(--sidebar-width); 
+            background-color: var(--card-bg); 
+            height: 100vh; 
+            position: fixed; 
+            left: 0; 
+            top: 0; 
+            border-right: 1px solid var(--border-soft); 
+            display: flex; 
+            flex-direction: column; 
+            padding: 32px 0; 
+            z-index: 1000; 
+            overflow: hidden; 
+            transition: all 0.3s ease; 
+        }
+        .sidebar-brand { padding: 0 20px 48px 20px; display: flex; justify-content: center; align-items: center; transition: all 0.3s ease; }
+        .sidebar-logo-img { height: 1.5rem; width: auto; display: block; opacity: 0.8; }
+        .nav-menu { list-style: none; flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 0 16px; }
+        .nav-link { 
+            display: flex; justify-content: center; align-items: center; padding: 14px; 
+            color: var(--text-muted); text-decoration: none; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); 
+            border-radius: var(--radius-md);
+        }
+        .nav-link i { font-size: 1.2rem; color: var(--text-muted); transition: all 0.25s; }
+        .nav-link:hover { background-color: var(--bg-soft); color: var(--text-main); }
+        .nav-link:hover i { transform: scale(1.1); color: var(--text-main); }
+        .nav-link.active { background: var(--bg-soft); color: var(--text-main); }
+        .nav-link.active i { color: var(--text-main); }
+        .sidebar-brand span, .nav-link span { display: none; }
+
+        .sidebar-footer { padding: 16px; border-top: 1px solid var(--border-soft); margin-top: auto; }
+        .logout-link { color: var(--text-muted) !important; display: flex; justify-content: center; padding: 14px; text-decoration: none; border-radius: var(--radius-md); transition: all 0.2s; }
+        .logout-link:hover { color: #d32f2f !important; background: #fff5f5 !important; }
+
+        /* Main Content */
+        .main-content { margin-left: var(--sidebar-width); flex: 1; padding: 40px 48px; overflow-x: hidden; transition: margin-left 0.3s ease; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+        .page-title { font-size: 1.8rem; font-weight: 700; color: var(--text-main); letter-spacing: -0.02em; }
+
+        /* Hub Tabs */
+        .hub-tabs { display: flex; gap: 10px; margin-bottom: 24px; background: var(--border-soft); padding: 5px; border-radius: 50px; width: fit-content; }
+        .hub-tab { 
+            padding: 10px 24px; border-radius: 50px; border: none; background: none; 
+            font-family: inherit; font-weight: 700; color: var(--text-muted); cursor: pointer; 
+            transition: all 0.3s ease; font-size: 0.95rem;
+        }
+        .hub-tab.active { background: var(--card-bg); color: var(--text-main); box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+
+        /* Section Display */
+        .hub-section { display: none; }
+        .hub-section.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Management Card & Toolbar */
+        .management-card { background: var(--card-bg); border-radius: var(--radius-lg); box-shadow: var(--card-shadow); border: 1px solid var(--border-soft); overflow: hidden; margin-bottom: 40px; }
+        .toolbar { padding: 24px 40px; border-bottom: 1px solid var(--border-soft); display: flex; justify-content: space-between; align-items: center; gap: 24px; }
+        
+        /* Stats Grid */
+        .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+        .stat-card { 
+            background: var(--card-bg); 
+            padding: 40px; 
+            border-radius: var(--radius-lg); 
+            box-shadow: var(--card-shadow); 
+            border: 1px solid var(--border-soft); 
+            text-align: center; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .stat-label { font-size: 0.8rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
+        .stat-value { font-size: 2.2rem; font-weight: 800; color: var(--text-main); }
+
+        /* Buttons */
+        .btn-action-pill {
+            padding: 6px 18px; border-radius: 50px; font-family: inherit;
+            font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.25s ease;
+            display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+            border: 1px solid transparent;
+        }
+        .btn-action-pill:hover { transform: translateY(-1px); filter: brightness(0.95); }
+        .btn-add { background-color: #e6f7ff; color: #1890ff; border-color: #91d5ff; }
+        .btn-delete { background-color: #fff1f0; color: #ff4d4f; border-color: #ffa39e; }
+        .btn-action-pill.success { background-color: var(--success-green); color: white; border: none; }
+        .btn-action-pill.danger { background-color: #ffebee; color: #d32f2f; border-color: #d32f2f; }
+
+        /* Table */
+        .hub-table { width: 100%; border-collapse: collapse; min-width: 900px; }
+        .hub-table th { text-align: center; padding: 16px 20px; background-color: var(--bg-soft); color: var(--text-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; border-bottom: 1px solid var(--border-soft); }
+        .hub-table td { text-align: center; padding: 20px 20px; border-bottom: 1px solid var(--border-soft); vertical-align: middle; font-size: 0.9rem; }
+
+        /* Redemption Specifics */
+        .resident-info h4 { margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text-main); }
+        .resident-info span { font-size: 0.85rem; color: var(--text-muted); }
+        .amount-info .peso-val { color: var(--success-green); font-weight: 800; font-size: 1.1rem; display: block; }
+        .amount-info .pts-val { color: var(--danger-red); font-size: 0.8rem; font-weight: 600; }
+        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .status-pending { background-color: #FFF3E0; color: #E65100; }
+        .status-completed { background-color: #E8F5E9; color: #2E7D32; }
+
+        /* Modals */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(8px); }
+        .modal-overlay.active { display: flex; }
+        .modal-box { background: var(--card-bg); width: 95%; max-width: 480px; padding: 32px; border-radius: var(--radius-lg); box-shadow: 0 20px 50px rgba(0,0,0,0.1); }
+        .security-input { border: 1px solid #f59e0b !important; background: #fff9e6 !important; border-radius: 50px !important; padding: 12px 20px; width: 100%; text-align: center; font-weight: 700; color: #92400e; margin-top: 10px; }
+        .modal-box input, .modal-box select { width: 100%; padding: 10px 14px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); margin-top: 8px; font-family: inherit; outline: none; background: var(--bg-soft); font-size: 0.9rem; }
+
+        .summary-box { background: var(--bg-soft); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border-soft); margin-bottom: 24px; line-height: 1.6; text-align: left; }
+        .summary-box b { color: var(--text-main); font-weight: 700; }
+
+        .admin-profile { display: flex; align-items: center; gap: 15px; }
+
+        /* Profile Dropdown (Facebook Style) */
+        .profile-dropdown {
+            position: absolute;
+            top: 55px;
+            right: 0;
+            width: 320px;
+            background: white !important;
+            border-radius: 12px;
+            box-shadow: 0 12px 28px 0 rgba(0, 0, 0, 0.2), 0 2px 4px 0 rgba(0, 0, 0, 0.1);
+            display: none;
+            z-index: 2000;
+            padding: 12px;
+            animation: dropdownFade 0.2s ease-out;
+            text-align: left;
+        }
+        .profile-dropdown.active { display: block; }
+        @keyframes dropdownFade { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .profile-user-card {
+            padding: 8px;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            margin-bottom: 8px;
+            background: white;
+        }
+        .user-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background 0.2s;
+            text-decoration: none;
+            color: inherit;
+        }
+        .user-item:hover { background: #f2f2f2; }
+        .user-avatar-circle {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: #e4e6eb; display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; color: #1c1e21;
+        }
+        .user-name-text { font-weight: 600; font-size: 1rem; color: #050505; }
+
+        .dropdown-list { list-style: none; margin-top: 8px; }
+        .dropdown-item {
+            display: flex; align-items: center; gap: 12px; padding: 12px 8px;
+            border-radius: 8px; cursor: pointer; transition: background 0.2s;
+            text-decoration: none; color: inherit; font-weight: 500; font-size: 0.95rem;
+        }
+        .dropdown-item:hover { background: #f2f2f2; }
+        .item-icon-circle {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: #e4e6eb; display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem;
+        }
+        .item-arrow { margin-left: auto; color: #65676b; font-size: 0.8rem; }
+        
+        .dropdown-footer { padding: 8px; color: #65676b; font-size: 0.75rem; margin-top: 8px; }
+
+        /* Custom Theme Toggle (As requested) */
+        .theme-toggle-container { padding: 8px; margin-top: 4px; }
+        .theme-switch {
+            position: relative; width: 100%; height: 50px; background: #e4e6eb;
+            border-radius: 25px; display: flex; align-items: center; cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); overflow: hidden;
+            border: 2px solid transparent;
+        }
+        .toggle-circle {
+            position: absolute; width: 38px; height: 38px; background: white;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 2; font-size: 1.2rem;
+        }
+        .mode-text {
+            width: 100%; text-align: center; font-weight: 900; font-size: 0.85rem;
+            letter-spacing: 1px; text-transform: uppercase; z-index: 1; transition: 0.3s;
+        }
+        
+        /* Light Mode Styles */
+        .theme-switch.light-state .toggle-circle { left: calc(100% - 44px); color: #f59e0b; }
+        .theme-switch.light-state .mode-text { padding-right: 40px; color: #1c1e21; }
+        
+        /* Dark Mode Styles */
+        .theme-switch.dark-state { background: #000000; border-color: #334155; }
+        .theme-switch.dark-state .toggle-circle { left: 6px; color: #1e293b; }
+        .theme-switch.dark-state .mode-text { padding-left: 40px; color: white; }
+
+        /* Dark Mode Tokens */
+        body.dark-mode {
+            --bg-soft: #0f172a;
+            --card-bg: #1e293b;
+            --border-soft: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+        body.dark-mode .profile-dropdown { background: #1e293b !important; color: #f8fafc; border-color: #334155; box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+        body.dark-mode .user-avatar-circle, body.dark-mode .item-icon-circle { background: #334155; color: #f8fafc; }
+        body.dark-mode .dropdown-item:hover, body.dark-mode .user-item:hover { background: #2d3748; }
+        body.dark-mode .user-name-text { color: #f8fafc; }
+        body.dark-mode .item-arrow { color: #94a3b8; }
+        body.dark-mode .profile-user-card { background: #242f42; border: 1px solid #334155; }
+        body.dark-mode .sidebar { background: #1e293b; border-color: #334155; }
+        body.dark-mode .dropdown-item { color: #f8fafc; }
+        body.dark-mode .modal-box { background: #1e293b; color: #f8fafc; }
+        body.dark-mode .modal-box input, body.dark-mode .modal-box select { background: #0f172a; color: #f8fafc; border-color: #334155; }
+
+        /* Header Icons - Light Mode (Default) */
+        .header-icon-btn { 
+            position: relative; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; 
+            border-radius: 50%; background: white; border: 1px solid #f0f0f0; color: #888; 
+            text-decoration: none; transition: 0.3s; font-size: 1.1rem;
+        }
+        .header-icon-btn:hover { background: #f8fafc; color: #333; transform: translateY(-2px); }
+        .notif-dot::after { 
+            content: ''; position: absolute; top: 11px; right: 11px; width: 10px; height: 10px; 
+            background: #ef4444; border: 2px solid white; border-radius: 50%; 
+        }
+
+        /* Header Icons - Dark Mode */
+        body.dark-mode .header-icon-btn { background: #1e293b; border-color: #334155; color: #cbd5e1; }
+        body.dark-mode .header-icon-btn:hover { background: #334155; color: white; }
+        body.dark-mode .notif-dot::after { border-color: #1e293b; }
+
+        @media (max-width: 768px) { .sidebar { width: 0; padding: 0; } .main-content { margin-left: 0; padding: 20px; } }
+    </style>
+</head>
+<body>
+
+<nav class="sidebar">
+    <div class="sidebar-brand">
+        <img src="image/logo.png" alt="Logo" class="sidebar-logo-img" id="sidebarLogo"> 
+        <span>EcoTrack</span>
+    </div>
+    <ul class="nav-menu">
+        <li class="nav-item"><a href="admin_dashboard.html" class="nav-link"><i class="fa-solid fa-gauge"></i> <span>Dashboard</span></a></li>
+        <li class="nav-item"><a href="admin_users_hub.html" class="nav-link"><i class="fa-solid fa-users-gear"></i> <span>User Hub</span></a></li>
+        <li class="nav-item"><a href="admin_projects_hub.html" class="nav-link"><i class="fa-solid fa-diagram-project"></i> <span>Project Hub</span></a></li>
+        <li class="nav-item"><a href="admin_financial_hub.html" class="nav-link active"><i class="fa-solid fa-wallet"></i> <span>Financial Hub</span></a></li>
+    </ul>
+
+    <div class="sidebar-footer">
+        <a href="#" onclick="logout()" class="nav-link logout-link"><i class="fa-solid fa-right-from-bracket"></i> <span>Logout</span></a>
+    </div>
+</nav>
+
+<div class="main-content">
+    <div class="top-bar">
+        <div class="page-title">Financial Hub</div>
+        <div class="admin-profile" style="position: relative;">
+            <a href="admin_community.html" class="header-icon-btn" title="Community Chat"><i class="fa-solid fa-comments"></i></a>
+            <a href="admin_notif.html" class="header-icon-btn notif-dot" title="Notifications"><i class="fa-solid fa-bell"></i></a>
+            <div class="profile-trigger" onclick="toggleProfileDropdown(event)" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-soft); border: 1px solid var(--border-soft); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-main);" title="Admin Profile">
+                <i class="fa-solid fa-user"></i>
+            </div>
+
+            <!-- PROFILE DROPDOWN MENU (IMMEDIATE) -->
+            <div id="profileDropdown" class="profile-dropdown">
+                <div class="profile-user-card">
+                    <div class="user-item">
+                        <div class="user-avatar-circle"><i class="fa-solid fa-user"></i></div>
+                        <div class="user-name-text">Hershey Cristobal</div>
+                    </div>
+                </div>
+
+                <div class="dropdown-list">
+                    <a href="admin_profile.html" class="dropdown-item">
+                        <div class="item-icon-circle"><i class="fa-solid fa-gear"></i></div>
+                        <span>Settings & privacy</span>
+                        <i class="fa-solid fa-chevron-right item-arrow"></i>
+                    </a>
+                    <a href="#" class="dropdown-item">
+                        <div class="item-icon-circle"><i class="fa-solid fa-circle-question"></i></div>
+                        <span>Help & support</span>
+                        <i class="fa-solid fa-chevron-right item-arrow"></i>
+                    </a>
+                    
+                    <!-- NEW THEME TOGGLE -->
+                    <div class="theme-toggle-container">
+                        <div id="themeSwitch" onclick="toggleDarkMode()" class="theme-switch light-state">
+                            <div class="toggle-circle">
+                                <i id="themeIcon" class="fa-solid fa-sun"></i>
+                            </div>
+                            <span id="themeText" class="mode-text">Day Mode</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="dropdown-footer">
+                    Privacy · Terms · Advertising · Cookies · More
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="hub-tabs">
+        <button class="hub-tab active" id="budgetTabBtn" onclick="switchTab('budget')">Budget Management</button>
+        <button class="hub-tab" id="redemptionTabBtn" onclick="switchTab('redemption')">Redemption Center</button>
+    </div>
+
+    <!-- BUDGET SECTION -->
+    <div id="budgetSection" class="hub-section active">
+        <div class="stats-row">
+            <div class="stat-card"><span class="stat-label">Total Allocated</span><div class="stat-value" id="tAlloc">₱0.00</div></div>
+            <div class="stat-card"><span class="stat-label">Total Spent</span><div class="stat-value" id="tSpent" style="color: var(--danger-red);">₱0.00</div></div>
+            <div class="stat-card"><span class="stat-label">Balance</span><div class="stat-value" id="tBal" style="color: var(--success-green);">₱0.00</div></div>
+        </div>
+
+        <div class="management-card">
+            <div class="toolbar">
+                <h3 style="font-weight: 700;">Allocation Overview</h3>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn-action-pill success" onclick="openHistoryModal()"><i class="fa-solid fa-clock-rotate-left"></i> View History</button>
+                    <button class="btn-action-pill success" onclick="openBudgetModal()"><i class="fa-solid fa-plus"></i> New Category</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table class="hub-table">
+                    <thead><tr><th>Category</th><th>Limit</th><th>Spent</th><th>Utilization</th><th>Actions</th></tr></thead>
+                    <tbody id="budgetTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- REDEMPTION SECTION -->
+    <div id="redemptionSection" class="hub-section">
+        <div class="stats-grid">
+            <div class="stat-card"><span class="stat-label">Unprocessed</span><div class="stat-value pending" id="rPending">0</div></div>
+            <div class="stat-card"><span class="stat-label">Total Processed</span><div class="stat-value success" id="rCompleted">0</div></div>
+            <div class="stat-card"><span class="stat-label">Disbursed (PHP)</span><div class="stat-value" id="rDisbursed">₱0.00</div></div>
+            <div class="stat-card"><span class="stat-label">PTS Processed</span><div class="stat-value" id="rTotalPts">0</div></div>
+        </div>
+
+        <div class="management-card">
+            <div class="toolbar" style="flex-direction: column; align-items: flex-start; gap: 20px;">
+                <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; flex-wrap: wrap; gap: 15px;">
+                    <div class="filter-group">
+                        <button class="btn-action-pill" id="filterAll" onclick="filterRedemption('all')">All</button>
+                        <button class="btn-action-pill" id="filterPending" onclick="filterRedemption('pending')">Pending</button>
+                        <button class="btn-action-pill" id="filterCompleted" onclick="filterRedemption('completed')">Completed</button>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn-action-pill success" onclick="openRedemptionHistoryModal()"><i class="fa-solid fa-clock-rotate-left"></i> View History</button>
+                        <button class="btn-action-pill success" onclick="exportRedemptionPDF()"><i class="fa-solid fa-file-pdf"></i> PDF Report</button>
+                        <button class="btn-action-pill success" onclick="exportRedemptionExcel()"><i class="fa-solid fa-file-excel"></i> Excel Report</button>
+                    </div>
+                </div>
+                <div class="search-box" style="width: 100%; display: flex; align-items: center; background: var(--bg-soft); border-radius: 50px; padding: 10px 20px; border: 1px solid var(--border-soft);">
+                    <i class="fa-solid fa-magnifying-glass" style="color: var(--text-muted);"></i>
+                    <input type="text" id="redemptionSearch" placeholder="Search resident or account..." style="border: none; background: transparent; outline: none; margin-left: 10px; width: 100%;" onkeyup="searchRedemption()">
+                </div>
+            </div>
+            <div class="table-container">
+                <table class="hub-table">
+                    <thead><tr><th>Request Date</th><th>Resident</th><th>Account Info</th><th>Amount (PHP)</th><th>Status</th><th style="text-align:center;">Action</th></tr></thead>
+                    <tbody id="redemptionTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODALS -->
+<div id="budgetModal" class="modal-overlay">
+    <div class="modal-box">
+        <h2 style="margin-bottom: 20px;">Add Budget Category</h2>
+        <form id="budgetForm">
+            <div class="form-group"><label>Category Name</label><input type="text" id="catName" required></div>
+            <div class="form-group"><label>Initial Limit (₱)</label><input type="number" id="catLimit" required></div>
+            <div class="form-group"><label style="color: var(--warning-orange);">Admin Security Key</label><input type="password" id="budgetMasterKey" class="security-input" required></div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button type="button" class="btn-action-pill" onclick="closeModal('budgetModal')">Cancel</button>
+                <button type="submit" class="btn-action-pill success">Save Category</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="expenseModal" class="modal-overlay">
+    <div class="modal-box">
+        <h2 id="expenseTitle" style="margin-bottom: 20px;">Encode Expense</h2>
+        <form id="expenseForm">
+            <input type="hidden" id="targetLogId">
+            <div class="form-group"><label>Amount to Add (₱)</label><input type="number" id="addAmount" step="0.01" required></div>
+            <div class="form-group"><label style="color: var(--warning-orange);">Admin Security Key</label><input type="password" id="expenseMasterKey" class="security-input" required></div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button type="button" class="btn-action-pill" onclick="closeModal('expenseModal')">Cancel</button>
+                <button type="submit" class="btn-action-pill success">Update Spending</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="historyModal" class="modal-overlay">
+    <div class="modal-box" style="max-width: 850px; width: 95%;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <h2 style="font-size: 1.4rem; font-weight: 700;"><i class="fa-solid fa-clock-rotate-left"></i> Transaction History</h2>
+            <button class="btn-action-pill danger" onclick="closeModal('historyModal')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 12px;">
+            <input type="date" id="startDate" style="width: auto; margin:0;"> <span>to</span> <input type="date" id="endDate" style="width: auto; margin:0;">
+            <button class="btn-action-pill" onclick="renderHistoryTable()"><i class="fa-solid fa-filter"></i> Apply</button>
+            <div style="flex-grow: 1;"></div>
+            <button class="btn-action-pill success" onclick="exportPDF()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+            <button class="btn-action-pill success" onclick="exportExcel()"><i class="fa-solid fa-file-excel"></i> Excel</button>
+        </div>
+        <div style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border-soft); border-radius: 8px;">
+            <table class="hub-table">
+                <thead style="position: sticky; top:0; background: white;"><tr><th>Date</th><th>Category</th><th>Type</th><th style="text-align: right;">Amount</th></tr></thead>
+                <tbody id="historyTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Process Payout Modal -->
+<div id="processModal" class="modal-overlay">
+    <div class="modal-box">
+        <h2 style="color:var(--warning-orange); margin-bottom: 24px;"><i class="fa-solid fa-money-bill-transfer"></i> Process Payout</h2>
+        <div id="modalSummary" class="summary-box"></div>
+        <form id="payoutForm">
+            <input type="hidden" id="pId">
+            <div class="form-group"><label>GCash Reference Number</label><input type="text" id="refId" required placeholder="Paste Ref ID from GCash app"></div>
+            <div class="form-group"><label style="color: var(--warning-orange);">Admin Security Key</label><input type="password" id="redemptionSecurityKey" class="security-input" required placeholder="ENTER MASTER KEY"></div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 32px;">
+                <button type="button" class="btn-action-pill" onclick="closeModal('processModal')">Cancel</button>
+                <button type="submit" class="btn-action-pill success" id="confirmPayoutBtn">Verify & Complete</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="redemptionHistoryModal" class="modal-overlay">
+    <div class="modal-box" style="max-width: 850px; width: 95%;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <h2 style="font-size: 1.4rem; font-weight: 700;"><i class="fa-solid fa-clock-rotate-left"></i> Payout History</h2>
+            <button class="btn-action-pill danger" onclick="closeModal('redemptionHistoryModal')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 12px;">
+            <input type="date" id="rStartDate" style="width: auto; margin:0;"> <span>to</span> <input type="date" id="rEndDate" style="width: auto; margin:0;">
+            <button class="btn-action-pill" onclick="renderRedemptionHistoryTable()"><i class="fa-solid fa-filter"></i> Apply</button>
+            <div style="flex-grow: 1;"></div>
+            <button class="btn-action-pill success" onclick="exportRedemptionPDF()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+            <button class="btn-action-pill success" onclick="exportRedemptionExcel()"><i class="fa-solid fa-file-excel"></i> Excel</button>
+        </div>
+        <div style="max-height: 400px; overflow-y: auto; border: 1px solid var(--border-soft); border-radius: 8px;">
+            <table class="hub-table">
+                <thead style="position: sticky; top:0; background: white;"><tr><th>Paid Date</th><th>Resident</th><th>Reference #</th><th style="text-align: right;">Amount</th></tr></thead>
+                <tbody id="redemptionHistoryTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- PROFILE QUICK-VIEW MODAL -->
+<div id="profileQuickModal" class="modal-overlay" onclick="toggleProfileModal()">
+    <div class="modal-box" style="max-width: 300px; position: absolute; top: 80px; right: 48px;" onclick="event.stopPropagation()">
+        <div style="text-align: center; padding: 10px 0;">
+            <div style="width: 60px; height: 60px; border-radius: 50%; background: #e8f5e9; color: #02451A; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; font-size: 1.5rem;">
+                <i class="fa-solid fa-user-tie"></i>
+            </div>
+            <h3 style="font-weight: 800; font-size: 1.2rem; margin-bottom: 2px;">Hershey</h3>
+            <p style="color: var(--text-muted); font-size: 0.8rem; font-weight: 700; text-transform: uppercase; margin-bottom: 20px;">Super Administrator</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <a href="admin_profile.html" class="btn-action-pill" style="justify-content: center; background: #02451A; color: white;">
+                    <i class="fa-solid fa-gear"></i> Manage Account
+                </a>
+                <button onclick="logout()" class="btn-action-pill" style="justify-content: center; background: #fff5f5; color: var(--danger-red); border-color: #ffebeb;">
+                    <i class="fa-solid fa-right-from-bracket"></i> Logout
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleProfileModal() {
+        document.getElementById('profileQuickModal').classList.toggle('active');
+    }
+
+    // --- State ---
+    let budgets = [
+        { id: '1', category: 'Operational Expenses', limit: 100000, spent: 45000, created_at: new Date().toISOString() },
+        { id: '2', category: 'User Payouts (Rewards)', limit: 50000, spent: 12500, created_at: new Date().toISOString() }
+    ];
+    let budgetHistory = [
+        { date: new Date().toISOString(), category: 'User Payouts (Rewards)', type: 'Initial Allocation', amount: 50000 },
+        { date: new Date().toISOString(), category: 'User Payouts (Rewards)', type: 'Expense Added', amount: 12500 }
+    ];
+    let redemptions = [
+        { id: 'log1', date: '2026-10-14T14:20:00Z', user_id: 'user1', resident: 'Juan Dela Cruz', address: 'Purok 1', provider: 'GCash', account: '09123456789', pts: 1000, pesos: 100.00, status: 'completed', ref: 'GC77881122', paid_at: '2026-10-15T09:00:00Z' },
+        { id: 'log2', date: '2026-10-16T10:15:00Z', user_id: 'user2', resident: 'Maria Clara', address: 'Purok 4', provider: 'GCash', account: '09987654321', pts: 500, pesos: 50.00, status: 'pending' },
+        { id: 'log3', date: '2026-10-16T11:45:00Z', user_id: 'user3', resident: 'Carlos Yulo', address: 'Purok 2', provider: 'Maya', account: '09171234567', pts: 2500, pesos: 250.00, status: 'pending' }
+    ];
+    let currentRedemptionFilter = 'all';
+
+    // --- Tab Switching ---
+    function switchTab(tab) {
+        document.querySelectorAll('.hub-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.hub-section').forEach(s => s.classList.remove('active'));
+        if (tab === 'budget') { document.getElementById('budgetTabBtn').classList.add('active'); document.getElementById('budgetSection').classList.add('active'); }
+        else { document.getElementById('redemptionTabBtn').classList.add('active'); document.getElementById('redemptionSection').classList.add('active'); }
+    }
+
+    // --- Budget Logic ---
+    function renderBudgets() {
+        const tbody = document.getElementById('budgetTableBody');
+        let tAlloc = 0, tSpent = 0;
+        tbody.innerHTML = budgets.map(b => {
+            tAlloc += b.limit; tSpent += b.spent;
+            const percent = Math.min((b.spent / b.limit) * 100, 100);
+            return `<tr><td><b>${b.category}</b></td><td>₱${b.limit.toLocaleString()}</td><td style="color:var(--danger-red);">₱${b.spent.toLocaleString()}</td><td><div style="font-size:0.75rem;">${percent.toFixed(1)}%</div><div class="progress-wrapper"><div class="progress-bar" style="width:${percent}%; background:${percent > 90 ? 'var(--danger-red)' : 'var(--success-green)'}"></div></div></td><td><div style="display:flex; gap:8px; justify-content: center;"><button class="btn-action-pill btn-add" onclick="openExpenseModal('${b.id}', '${b.category}')"><i class="fa-solid fa-plus"></i> Add</button><button class="btn-action-pill btn-delete" onclick="deleteBudget('${b.id}', '${b.category}')"><i class="fa-solid fa-trash"></i> Delete</button></div></td></tr>`;
+        }).join('');
+        document.getElementById('tAlloc').innerText = '₱' + tAlloc.toLocaleString();
+        document.getElementById('tSpent').innerText = '₱' + tSpent.toLocaleString();
+        document.getElementById('tBal').innerText = '₱' + (tAlloc - tSpent).toLocaleString();
+    }
+
+    function renderHistoryTable() {
+        const tbody = document.getElementById('historyTableBody');
+        const start = document.getElementById('startDate').value;
+        const end = document.getElementById('endDate').value;
+        const filtered = budgetHistory.filter(h => {
+            const d = new Date(h.date);
+            return (!start || d >= new Date(start)) && (!end || d <= new Date(end + 'T23:59:59'));
+        });
+        tbody.innerHTML = filtered.map(h => `<tr><td>${new Date(h.date).toLocaleDateString()}</td><td><b>${h.category}</b></td><td><span class="badge" style="background:${h.type.includes('Expense')?'#ffebee':'#e8f5e9'}; color:${h.type.includes('Expense')?'#d32f2f':'#2e7d32'}">${h.type}</span></td><td style="text-align:right; font-weight:700; color:${h.type.includes('Expense')?'#d32f2f':'#2e7d32'}">${h.type.includes('Expense')?'-':'+'} ₱${h.amount.toLocaleString()}</td></tr>`).join('');
+    }
+
+    // --- Redemption Logic ---
+    function openRedemptionHistoryModal() {
+        renderRedemptionHistoryTable();
+        document.getElementById('redemptionHistoryModal').classList.add('active');
+    }
+
+    function renderRedemptionHistoryTable() {
+        const tbody = document.getElementById('redemptionHistoryTableBody');
+        const start = document.getElementById('rStartDate').value;
+        const end = document.getElementById('rEndDate').value;
+        
+        const filtered = redemptions.filter(r => {
+            if (r.status !== 'completed') return false;
+            const d = new Date(r.paid_at);
+            return (!start || d >= new Date(start)) && (!end || d <= new Date(end + 'T23:59:59'));
+        });
+
+        tbody.innerHTML = filtered.map(r => `
+            <tr>
+                <td>${new Date(r.paid_at).toLocaleDateString()}</td>
+                <td><b>${r.resident}</b></td>
+                <td><span class="badge" style="background:#FFF3E0; color:var(--warning-orange); padding:4px 8px; border-radius:4px; font-weight:800;">${r.ref}</span></td>
+                <td style="text-align:right; font-weight:700; color:var(--success-green);">₱${r.pesos.toLocaleString()}</td>
+            </tr>
+        `).join('');
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:30px; color:var(--text-muted);">No processed payouts found for this period.</td></tr>';
+        }
+    }
+
+    function renderRedemptions() {
+        const tbody = document.getElementById('redemptionTableBody');
+        const query = document.getElementById('redemptionSearch').value.toUpperCase();
+        
+        const filtered = redemptions.filter(r => {
+            const matchesStatus = currentRedemptionFilter === 'all' || r.status === currentRedemptionFilter;
+            const matchesSearch = r.resident.toUpperCase().includes(query) || r.account.toUpperCase().includes(query);
+            return matchesStatus && matchesSearch;
+        });
+
+        tbody.innerHTML = filtered.map(r => `
+            <tr>
+                <td>${new Date(r.date).toLocaleDateString()} ${r.paid_at ? `<br><span style="font-size:0.7rem; color:var(--text-muted);">Paid on ${new Date(r.paid_at).toLocaleDateString()}</span>` : ''}</td>
+                <td><div class="resident-info"><h4>${r.resident}</h4><span>${r.address}</span></div></td>
+                <td><div class="account-info"><b>${r.provider}</b><br><span>${r.account}</span>${r.ref ? `<br><span style="color:var(--warning-orange); font-size:0.75rem; font-weight:800; background:#FFF3E0; padding:2px 8px; border-radius:4px;">REF: ${r.ref}</span>` : ''}</div></td>
+                <td><div class="amount-info"><span class="peso-val">₱${r.pesos.toLocaleString()}</span><span class="pts-val">-${r.pts.toLocaleString()} PTS</span></div></td>
+                <td><span class="status-badge status-${r.status}">${r.status}</span></td>
+                <td>${r.status === 'pending' ? `<button class="btn-action-pill" onclick="openPayoutModal('${r.id}', '${r.resident}', '${r.account}', ${r.pts}, ${r.pesos})"><i class="fa-solid fa-bolt"></i> Process</button>` : `<div style="color:var(--success-green); font-weight:800; font-size:0.85rem;"><i class="fa-solid fa-circle-check"></i> DISBURSED</div>`}</td>
+            </tr>
+        `).join('');
+
+        // Stats
+        document.getElementById('rPending').innerText = redemptions.filter(r => r.status === 'pending').length;
+        document.getElementById('rCompleted').innerText = redemptions.filter(r => r.status === 'completed').length;
+        const totalPesos = redemptions.filter(r => r.status === 'completed').reduce((acc, curr) => acc + curr.pesos, 0);
+        document.getElementById('rDisbursed').innerText = '₱' + totalPesos.toLocaleString();
+        const totalPts = redemptions.filter(r => r.status === 'completed').reduce((acc, curr) => acc + curr.pts, 0);
+        document.getElementById('rTotalPts').innerText = totalPts.toLocaleString();
+    }
+
+    function filterRedemption(status) {
+        currentRedemptionFilter = status;
+        renderRedemptions();
+    }
+
+    function searchRedemption() {
+        renderRedemptions();
+    }
+
+    function openPayoutModal(id, name, acc, pts, pesos) {
+        document.getElementById('pId').value = id;
+        document.getElementById('modalSummary').innerHTML = `<b>Resident:</b> ${name}<br><b>Account:</b> ${acc}<br><b>Payout:</b> <span style="color:var(--success-green);">₱${pesos.toLocaleString()}</span><br><b>Points:</b> ${pts.toLocaleString()} PTS`;
+        document.getElementById('processModal').classList.add('active');
+    }
+
+    document.getElementById('payoutForm').onsubmit = (e) => {
+        e.preventDefault();
+        if(document.getElementById('redemptionSecurityKey').value !== window.currentPassCode) return Swal.fire('Error', 'Invalid Admin Key', 'error');
+        const log = redemptions.find(r => r.id === document.getElementById('pId').value);
+        if(log) {
+            log.status = 'completed';
+            log.ref = document.getElementById('refId').value;
+            log.paid_at = new Date().toISOString();
+            // Also deduct from budget if linked
+            const rewardsBudget = budgets.find(b => b.category.includes('Payouts'));
+            if(rewardsBudget) rewardsBudget.spent += log.pesos;
+        }
+        Swal.fire('Success', 'Payout recorded!', 'success');
+        closeModal('processModal'); renderRedemptions(); renderBudgets();
+    };
+
+    // --- Global Actions ---
+    function openBudgetModal() { document.getElementById('budgetModal').classList.add('active'); }
+    function openExpenseModal(id, cat) { document.getElementById('targetLogId').value = id; document.getElementById('expenseTitle').innerText = "Update: " + cat; document.getElementById('expenseModal').classList.add('active'); }
+    function openHistoryModal() { renderHistoryTable(); document.getElementById('historyModal').classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+    document.getElementById('budgetForm').onsubmit = (e) => {
+        e.preventDefault();
+        if(document.getElementById('budgetMasterKey').value !== window.currentPassCode) return Swal.fire('Error', 'Invalid Admin Key', 'error');
+        const cat = document.getElementById('catName').value;
+        const amt = parseFloat(document.getElementById('catLimit').value);
+        budgets.push({ id: Date.now().toString(), category: cat, limit: amt, spent: 0, created_at: new Date().toISOString() });
+        budgetHistory.unshift({ date: new Date().toISOString(), category: cat, type: 'Initial Allocation', amount: amt });
+        renderBudgets(); closeModal('budgetModal');
+    };
+
+    document.getElementById('expenseForm').onsubmit = (e) => {
+        e.preventDefault();
+        if(document.getElementById('expenseMasterKey').value !== window.currentPassCode) return Swal.fire('Error', 'Invalid Admin Key', 'error');
+        const amt = parseFloat(document.getElementById('addAmount').value);
+        const item = budgets.find(b => b.id === document.getElementById('targetLogId').value);
+        if(item) { item.spent += amt; budgetHistory.unshift({ date: new Date().toISOString(), category: item.category, type: 'Expense Added', amount: amt }); }
+        renderBudgets(); closeModal('expenseModal');
+    };
+
+    async function deleteBudget(id, name) { if((await Swal.fire({ title: `Delete ${name}?`, input: 'password', showCancelButton: true })).value === window.currentPassCode) { budgets = budgets.filter(b => b.id !== id); renderBudgets(); } }
+
+    function exportPDF() { const doc = new jspdf.jsPDF(); doc.text("Financial History", 14, 15); doc.autoTable({ head: [['Date', 'Category', 'Type', 'Amount']], body: budgetHistory.map(h => [new Date(h.date).toLocaleDateString(), h.category, h.type, `₱${h.amount.toLocaleString()}`]), startY: 20 }); doc.save("Financial_History.pdf"); }
+    function exportExcel() { const ws = XLSX.utils.json_to_sheet(budgetHistory); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "History"); XLSX.writeFile(wb, "Financial_History.xlsx"); }
+
+    function exportRedemptionPDF() { const doc = new jspdf.jsPDF(); doc.text("Redemption History", 14, 15); doc.autoTable({ head: [['Paid Date', 'Resident', 'Amount', 'Ref #']], body: redemptions.filter(r=>r.status==='completed').map(r => [new Date(r.paid_at).toLocaleDateString(), r.resident, `₱${r.pesos.toLocaleString()}`, r.ref]), startY: 20 }); doc.save("Redemption_Report.pdf"); }
+    function exportRedemptionExcel() { const ws = XLSX.utils.json_to_sheet(redemptions.filter(r=>r.status==='completed')); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "History"); XLSX.writeFile(wb, "Redemption_Report.xlsx"); }
+
+    async function logout() { if((await Swal.fire({ title: 'Logout?', showCancelButton: true })).isConfirmed) window.location.href="login.html"; }
+
+    function toggleProfileDropdown(e) {
+        e.stopPropagation();
+        document.getElementById('profileDropdown').classList.toggle('active');
+    }
+
+    function toggleProfileDropdown(e) {
+        e.stopPropagation();
+        document.getElementById('profileDropdown').classList.toggle('active');
+    }
+
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+        const isDark = document.body.classList.contains('dark-mode');
+        localStorage.setItem('admin-theme', isDark ? 'dark' : 'light');
+        updateThemeUI(isDark);
+    }
+
+    function updateThemeUI(isDark) {
+        const switchEl = document.getElementById('themeSwitch');
+        const iconEl = document.getElementById('themeIcon');
+        const textEl = document.getElementById('themeText');
+        
+        if (isDark) {
+            if(switchEl) { switchEl.classList.remove('light-state'); switchEl.classList.add('dark-state'); }
+            if(iconEl) iconEl.className = 'fa-solid fa-moon';
+            if(textEl) textEl.innerText = 'Night Mode';
+        } else {
+            if(switchEl) { switchEl.classList.remove('dark-state'); switchEl.classList.add('light-state'); }
+            if(iconEl) iconEl.className = 'fa-solid fa-sun';
+            if(textEl) textEl.innerText = 'Day Mode';
+        }
+    }
+
+    // Load theme preference
+    const savedTheme = localStorage.getItem('admin-theme');
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+        updateThemeUI(true);
+    } else {
+        updateThemeUI(false);
+    }
+
+    window.onclick = function(event) {
+        if (!event.target.closest('.admin-profile')) {
+            const dropdown = document.getElementById('profileDropdown');
+            if(dropdown) dropdown.classList.remove('active');
+        }
+        if (event.target.closest('.modal-overlay')) {
+             // Keep existing modal click outside logic if any
+        }
+    }
+
+    window.onclick = function(event) {
+        if (!event.target.closest('.admin-profile')) {
+            const dropdown = document.getElementById('profileDropdown');
+            if(dropdown) dropdown.classList.remove('active');
+        }
+        if (event.target.classList.contains('modal-overlay')) event.target.classList.remove('active');
+    }
+
+    renderBudgets();
+    renderRedemptions();
+</script>
+</body>
+</html>

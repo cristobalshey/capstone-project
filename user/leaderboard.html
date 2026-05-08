@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>EcoTrack | Barangay Leaderboard</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --primary-green: #02451A;
+            --bg-color: #ffffff;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(2, 69, 26, 0.1);
+            --card-shadow: 0 8px 32px -8px rgba(2, 69, 26, 0.1);
+            --text-main: #02451A;
+            --text-muted: rgba(2, 69, 26, 0.6);
+            --gold: #fbbf24;
+            --silver: #94a3b8;
+            --bronze: #b45309;
+        }
+
+        * {
+            margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-color); color: var(--text-main);
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; min-height: 100svh; overflow: hidden; position: relative;
+        }
+
+        .ambient-layer {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1;
+            background: linear-gradient(135deg, rgba(2, 69, 26, 0.05), transparent),
+                        radial-gradient(circle at 50% 0%, rgba(251, 191, 36, 0.05), transparent 50%);
+        }
+
+        .app-container {
+            width: 100%; max-width: 480px; height: 100vh; height: 100svh; display: flex; flex-direction: column; position: relative;
+            background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); box-shadow: 0 0 50px rgba(0,0,0,0.05); overflow: hidden;
+        }
+
+        /* Header */
+        .header {
+            padding: 24px 24px 15px 24px; display: flex; align-items: center; justify-content: space-between; z-index: 10;
+        }
+
+        .back-btn {
+            background: var(--glass-bg); border: 1px solid var(--glass-border); width: 42px; height: 42px; border-radius: 14px;
+            display: flex; justify-content: center; align-items: center; color: var(--primary-green); cursor: pointer;
+            box-shadow: 0 4px 12px rgba(2, 69, 26, 0.05); transition: all 0.3s ease;
+        }
+
+        .back-btn:hover { background: white; transform: translateX(-3px); box-shadow: 0 6px 15px rgba(2, 69, 26, 0.1); }
+        .header-title { font-size: 18px; font-weight: 800; color: var(--primary-green); display: flex; align-items: center; gap: 8px; }
+        .header-title i { width: 18px; height: 18px; color: var(--gold); fill: var(--gold); }
+
+        /* Main Content */
+        .lb-content {
+            flex-grow: 1; padding: 10px 24px 40px 24px; overflow-y: auto; scrollbar-width: none;
+            display: flex; flex-direction: column; gap: 25px;
+        }
+        .lb-content::-webkit-scrollbar { display: none; }
+
+        /* Podium Section for Top 3 */
+        .podium-container {
+            display: flex; justify-content: center; align-items: flex-end; gap: 15px; margin-top: 10px; margin-bottom: 10px;
+            padding-bottom: 20px; border-bottom: 1px solid rgba(2, 69, 26, 0.1);
+        }
+
+        .podium-item {
+            display: flex; flex-direction: column; align-items: center; animation: slideUp 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) backwards;
+        }
+
+        .podium-item.rank-1 { animation-delay: 0.1s; }
+        .podium-item.rank-2 { animation-delay: 0.2s; }
+        .podium-item.rank-3 { animation-delay: 0.3s; }
+
+        .podium-avatar {
+            width: 50px; height: 50px; border-radius: 16px; display: flex; justify-content: center; align-items: center;
+            font-size: 18px; font-weight: 800; color: white; margin-bottom: -15px; z-index: 2;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        }
+        
+        .podium-item.rank-1 .podium-avatar { width: 65px; height: 65px; font-size: 24px; background: var(--primary-green); border: 2px solid var(--gold); margin-bottom: -20px; }
+        .podium-item.rank-2 .podium-avatar { background: rgba(2, 69, 26, 0.8); border: 2px solid var(--silver); }
+        .podium-item.rank-3 .podium-avatar { background: rgba(2, 69, 26, 0.6); border: 2px solid var(--bronze); }
+
+        .podium-base {
+            width: 75px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px 16px 10px 10px;
+            display: flex; flex-direction: column; align-items: center; padding: 25px 5px 10px 5px; box-shadow: var(--card-shadow);
+        }
+
+        .podium-item.rank-1 .podium-base { width: 90px; height: 140px; padding-top: 35px; background: linear-gradient(to bottom, rgba(251, 191, 36, 0.15), var(--glass-bg)); border-color: rgba(251, 191, 36, 0.3); }
+        .podium-item.rank-2 .podium-base { height: 110px; background: linear-gradient(to bottom, rgba(148, 163, 184, 0.15), var(--glass-bg)); border-color: rgba(148, 163, 184, 0.3); }
+        .podium-item.rank-3 .podium-base { height: 90px; background: linear-gradient(to bottom, rgba(180, 83, 9, 0.1), var(--glass-bg)); border-color: rgba(180, 83, 9, 0.2); }
+
+        .podium-name { font-size: 12px; font-weight: 800; color: var(--text-main); text-align: center; margin-bottom: 2px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+        }
+        .podium-pts { font-size: 11px; font-weight: 700; color: var(--primary-green); }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* List Section */
+        .list-header { font-size: 15px; font-weight: 800; color: var(--primary-green); margin-bottom: -10px; animation: slideIn 0.5s ease 0.4s backwards; }
+
+        .rank-list {
+            display: flex; flex-direction: column; gap: 10px; animation: slideIn 0.5s ease 0.5s backwards;
+        }
+
+        .rank-card {
+            background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px; padding: 12px 15px;
+            display: flex; align-items: center; gap: 12px; box-shadow: 0 4px 15px rgba(2, 69, 26, 0.05); transition: transform 0.2s;
+        }
+
+        .rank-card:hover { transform: translateX(5px); }
+        
+        .rank-card.current-user {
+            background: var(--primary-green); color: white; border-color: transparent;
+        }
+
+        .rank-num { font-size: 15px; font-weight: 800; width: 25px; text-align: center; color: var(--text-muted); }
+        .rank-card.current-user .rank-num { color: rgba(255,255,255,0.7); }
+
+        .rank-avatar {
+            width: 36px; height: 36px; border-radius: 12px; background: rgba(2, 69, 26, 0.1); color: var(--primary-green);
+            display: flex; justify-content: center; align-items: center; font-weight: 800; font-size: 14px;
+        }
+        .rank-card.current-user .rank-avatar { background: rgba(255,255,255,0.2); color: white; }
+
+        .rank-info { flex-grow: 1; display: flex; flex-direction: column; }
+        .rank-name { font-size: 14px; font-weight: 700; color: var(--text-main); line-height: 1.2; }
+        .rank-card.current-user .rank-name { color: white; }
+        .rank-brgy { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+        .rank-card.current-user .rank-brgy { color: rgba(255,255,255,0.8); }
+
+        .rank-score { font-size: 14px; font-weight: 800; color: var(--primary-green); background: rgba(2, 69, 26, 0.05); padding: 4px 10px; border-radius: 10px; }
+        .rank-card.current-user .rank-score { color: var(--primary-green); background: white; }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+    </style>
+</head>
+
+<body>
+    <div class="ambient-layer"></div>
+
+    <div class="app-container">
+        
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <button class="back-btn" onclick="window.location.href='stat.html'">
+                    <i data-lucide="chevron-left"></i>
+                </button>
+            </div>
+            <div class="header-title"><i data-lucide="trophy"></i> Barangay Leaderboard</div>
+            <div style="width: 42px;"></div> <!-- Spacer -->
+        </header>
+
+        <main class="lb-content">
+            
+            <!-- Top 3 Podium -->
+            <div class="podium-container">
+                
+                <!-- Rank 2 -->
+                <div class="podium-item rank-2">
+                    <div class="podium-avatar">M</div>
+                    <div class="podium-base">
+                        <span class="podium-name">Maria S.</span>
+                        <span class="podium-pts">120 tasks</span>
+                    </div>
+                </div>
+
+                <!-- Rank 1 -->
+                <div class="podium-item rank-1">
+                    <div class="podium-avatar">J</div>
+                    <div class="podium-base">
+                        <span class="podium-name" style="font-size: 14px; margin-bottom: 4px;">Jose R.</span>
+                        <span class="podium-pts" style="font-size: 12px;">145 tasks</span>
+                    </div>
+                </div>
+
+                <!-- Rank 3 -->
+                <div class="podium-item rank-3">
+                    <div class="podium-avatar">R</div>
+                    <div class="podium-base">
+                        <span class="podium-name">Rosario P.</span>
+                        <span class="podium-pts">98 tasks</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="list-header">Top Collectors</div>
+
+            <!-- List -->
+            <div class="rank-list">
+                
+                <div class="rank-card">
+                    <div class="rank-num">4</div>
+                    <div class="rank-avatar">D</div>
+                    <div class="rank-info">
+                        <span class="rank-name">Dennis T.</span>
+                        <span class="rank-brgy">Zone 1</span>
+                    </div>
+                    <div class="rank-score">85 tasks</div>
+                </div>
+
+                <div class="rank-card">
+                    <div class="rank-num">5</div>
+                    <div class="rank-avatar">C</div>
+                    <div class="rank-info">
+                        <span class="rank-name">Clara B.</span>
+                        <span class="rank-brgy">Zone 3</span>
+                    </div>
+                    <div class="rank-score">72 tasks</div>
+                </div>
+
+                <div class="rank-card">
+                    <div class="rank-num">6</div>
+                    <div class="rank-avatar">P</div>
+                    <div class="rank-info">
+                        <span class="rank-name">Pedro L.</span>
+                        <span class="rank-brgy">Zone 2</span>
+                    </div>
+                    <div class="rank-score">61 tasks</div>
+                </div>
+
+                <!-- Spacer indicator -->
+                <div style="display:flex; justify-content:center; margin: 5px 0;">
+                    <i data-lucide="more-vertical" style="color: var(--text-muted); opacity: 0.5;"></i>
+                </div>
+
+                <!-- Current User -->
+                <div class="rank-card current-user">
+                    <div class="rank-num" style="font-size: 13px;">12</div>
+                    <div class="rank-avatar"><i data-lucide="user" style="width: 20px;"></i></div>
+                    <div class="rank-info">
+                        <span class="rank-name">You (Eco Warrior)</span>
+                        <span class="rank-brgy">Zone 2</span>
+                    </div>
+                    <div class="rank-score">42 tasks</div>
+                </div>
+
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoTrack - User Management Hub</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase_config.js"></script>
+    <script src="../auth_guard.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        :root { 
+            --primary-neutral: #444444; 
+            --accent-neutral: #888888; 
+            --bg-soft: #fcfcfc; 
+            --card-bg: #ffffff;
+            --border-soft: #f0f0f0;
+            --text-main: #444444; 
+            --text-muted: #888888; 
+            --radius-lg: 16px; 
+            --radius-md: 12px;
+            --card-shadow: 0 4px 20px rgba(0,0,0,0.02);
+            --sidebar-width: 85px; 
+            --danger-red: #d32f2f;
+            --success-green: #2e7d32;
+            --info-blue: #1976d2;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Baloo Da 2', cursive; 
+            background-color: var(--bg-soft); 
+            color: var(--text-main); 
+            display: flex; 
+            min-height: 100vh; 
+            font-size: 16px; 
+            letter-spacing: -0.01em;
+        }
+
+        /* Sidebar (Icon-only) */
+        .sidebar { 
+            width: var(--sidebar-width); 
+            background-color: var(--card-bg); 
+            height: 100vh; 
+            position: fixed; 
+            left: 0; 
+            top: 0; 
+            border-right: 1px solid var(--border-soft); 
+            display: flex; 
+            flex-direction: column; 
+            padding: 32px 0; 
+            z-index: 1000; 
+            overflow: hidden; 
+            transition: all 0.3s ease; 
+        }
+        .sidebar-brand { padding: 0 20px 48px 20px; display: flex; justify-content: center; align-items: center; transition: all 0.3s ease; }
+        .sidebar-logo-img { height: 1.5rem; width: auto; display: block; opacity: 0.8; }
+        .nav-menu { list-style: none; flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 0 16px; }
+        .nav-link { 
+            display: flex; justify-content: center; align-items: center; padding: 14px; 
+            color: var(--text-muted); text-decoration: none; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); 
+            border-radius: var(--radius-md);
+        }
+        .nav-link i { font-size: 1.2rem; color: var(--text-muted); transition: all 0.25s; }
+        .nav-link:hover { background-color: var(--bg-soft); color: var(--text-main); }
+        .nav-link:hover i { transform: scale(1.1); color: var(--text-main); }
+        .nav-link.active { background: var(--bg-soft); color: var(--text-main); }
+        .nav-link.active i { color: var(--text-main); }
+        .sidebar-brand span, .nav-link span { display: none; }
+        
+        .sidebar-footer { padding: 16px; border-top: 1px solid var(--border-soft); margin-top: auto; }
+        .logout-link { color: var(--text-muted) !important; display: flex; justify-content: center; padding: 14px; text-decoration: none; border-radius: var(--radius-md); transition: all 0.2s; }
+        .logout-link:hover { color: #d32f2f !important; background: #fff5f5 !important; }
+
+        /* Profile Dropdown (Facebook Style) */
+        .profile-dropdown {
+            position: absolute;
+            top: 55px;
+            right: 0;
+            width: 320px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 12px 28px 0 rgba(0, 0, 0, 0.2), 0 2px 4px 0 rgba(0, 0, 0, 0.1);
+            display: none;
+            z-index: 2000;
+            padding: 12px;
+            animation: dropdownFade 0.2s ease-out;
+        }
+        .profile-dropdown.active { display: block; }
+        @keyframes dropdownFade { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .profile-user-card {
+            padding: 8px;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            margin-bottom: 8px;
+            background: white;
+        }
+        .user-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background 0.2s;
+            text-decoration: none;
+            color: inherit;
+        }
+        .user-item:hover { background: #f2f2f2; }
+        .user-avatar-circle {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: #e4e6eb; display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; color: #1c1e21;
+        }
+        .user-name-text { font-weight: 600; font-size: 1rem; color: #050505; }
+
+        .see-all-btn {
+            display: block; width: 100%; padding: 8px; text-align: center;
+            background: #e4e6eb; color: #050505; border-radius: 6px;
+            font-weight: 600; font-size: 0.9rem; text-decoration: none;
+            margin-top: 8px; transition: background 0.2s;
+        }
+        .see-all-btn:hover { background: #d8dadf; }
+
+        .dropdown-list { list-style: none; margin-top: 8px; }
+        .dropdown-item {
+            display: flex; align-items: center; gap: 12px; padding: 12px 8px;
+            border-radius: 8px; cursor: pointer; transition: background 0.2s;
+            text-decoration: none; color: inherit; font-weight: 500; font-size: 0.95rem;
+        }
+        .dropdown-item:hover { background: #f2f2f2; }
+        .item-icon-circle {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: #e4e6eb; display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem;
+        }
+        .item-arrow { margin-left: auto; color: #65676b; font-size: 0.8rem; }
+        
+        .dropdown-footer { padding: 8px; color: #65676b; font-size: 0.75rem; margin-top: 8px; }
+
+        /* Custom Theme Toggle (As requested) */
+        .theme-toggle-container { padding: 8px; margin-top: 4px; }
+        .theme-switch {
+            position: relative; width: 100%; height: 50px; background: #e4e6eb;
+            border-radius: 25px; display: flex; align-items: center; cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); overflow: hidden;
+            border: 2px solid transparent;
+        }
+        .toggle-circle {
+            position: absolute; width: 38px; height: 38px; background: white;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 2; font-size: 1.2rem;
+        }
+        .mode-text {
+            width: 100%; text-align: center; font-weight: 900; font-size: 0.85rem;
+            letter-spacing: 1px; text-transform: uppercase; z-index: 1; transition: 0.3s;
+        }
+        
+        /* Light Mode Styles */
+        .theme-switch.light-state .toggle-circle { left: calc(100% - 44px); color: #f59e0b; }
+        .theme-switch.light-state .mode-text { padding-right: 40px; color: #1c1e21; }
+        
+        /* Dark Mode Styles */
+        .theme-switch.dark-state { background: #000000; border-color: #334155; }
+        .theme-switch.dark-state .toggle-circle { left: 6px; color: #1e293b; }
+        .theme-switch.dark-state .mode-text { padding-left: 40px; color: white; }
+
+        /* Dark Mode Tokens */
+        body.dark-mode {
+            --bg-soft: #0f172a;
+            --card-bg: #1e293b;
+            --border-soft: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+        body.dark-mode .profile-dropdown { background: #1e293b !important; color: #f8fafc; border-color: #334155; box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+        body.dark-mode .user-avatar-circle, body.dark-mode .item-icon-circle { background: #334155; color: #f8fafc; }
+        body.dark-mode .dropdown-item:hover, body.dark-mode .user-item:hover { background: #2d3748; }
+        body.dark-mode .user-name-text { color: #f8fafc; }
+        body.dark-mode .item-arrow { color: #94a3b8; }
+        body.dark-mode .sidebar { background: #1e293b; border-color: #334155; }
+        body.dark-mode .dropdown-item { color: #f8fafc; }
+
+        /* Header Icons - Light Mode (Default) */
+        .header-icon-btn { 
+            position: relative; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; 
+            border-radius: 50%; background: white; border: 1px solid #f0f0f0; color: #888; 
+            text-decoration: none; transition: 0.3s; font-size: 1.1rem;
+        }
+        .header-icon-btn:hover { background: #f8fafc; color: #333; transform: translateY(-2px); }
+        .notif-dot::after { 
+            content: ''; position: absolute; top: 11px; right: 11px; width: 10px; height: 10px; 
+            background: #ef4444; border: 2px solid white; border-radius: 50%; 
+        }
+
+        /* Header Icons - Dark Mode */
+        body.dark-mode .header-icon-btn { background: #1e293b; border-color: #334155; color: #cbd5e1; }
+        body.dark-mode .header-icon-btn:hover { background: #334155; color: white; }
+        body.dark-mode .notif-dot::after { border-color: #1e293b; }
+
+        /* User Hub Specific Dark Mode Fixes */
+        body.dark-mode .filter-btn.active { color: var(--text-main); border-bottom-color: var(--text-main); }
+        body.dark-mode .filter-btn:hover { color: white; }
+        body.dark-mode .hub-tabs { background: #0f172a; }
+        body.dark-mode .hub-tab.active { background: #1e293b; color: #f8fafc; }
+        body.dark-mode .residents-table th, body.dark-mode .hub-table th { background-color: #0f172a; color: #94a3b8; }
+        body.dark-mode .btn-action-pill { background-color: #1e3a8a; color: #bfdbfe; border-color: #3b82f6; }
+        body.dark-mode .btn-action-pill:hover { background-color: #2563eb; color: white; }
+        body.dark-mode .search-box { background: #0f172a; }
+        body.dark-mode .search-box input { color: white; }
+
+        /* Main Content */
+        .main-content { margin-left: var(--sidebar-width); flex: 1; padding: 40px 48px; overflow-x: hidden; transition: margin-left 0.3s ease; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+        .page-title { font-size: 1.8rem; font-weight: 700; color: var(--text-main); letter-spacing: -0.02em; }
+
+        .admin-profile { display: flex; align-items: center; gap: 15px; }
+
+        /* Hub Tabs (Dividers) */
+        .hub-tabs { display: flex; gap: 10px; margin-bottom: 24px; background: var(--border-soft); padding: 5px; border-radius: 50px; width: fit-content; }
+        .hub-tab { 
+            padding: 10px 24px; border-radius: 50px; border: none; background: none; 
+            font-family: inherit; font-weight: 700; color: var(--text-muted); cursor: pointer; 
+            transition: all 0.3s ease; font-size: 0.95rem;
+        }
+        .hub-tab.active { background: var(--card-bg); color: var(--text-main); box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+
+        /* Hub Section */
+        .hub-section { display: none; }
+        .hub-section.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Table & Management Card (User's Styling) */
+        .management-card { background: var(--card-bg); border-radius: var(--radius-lg); box-shadow: var(--card-shadow); border: 1px solid var(--border-soft); overflow: hidden; margin-bottom: 40px; }
+        .table-filters, .toolbar { padding: 24px 40px; border-bottom: 1px solid var(--border-soft); display: flex; justify-content: space-between; align-items: center; gap: 24px; }
+        .filter-group { display: flex; gap: 24px; }
+        .filter-btn { background: none; border: none; font-family: 'Baloo Da 2', cursive; font-size: 0.9rem; font-weight: 600; color: var(--text-muted); cursor: pointer; padding-bottom: 8px; border-bottom: 3px solid transparent; transition: all 0.2s; }
+        .filter-btn.active { color: var(--text-main); border-bottom-color: var(--text-main); }
+        .filter-btn:hover { color: var(--text-main); }
+        
+        .table-container { overflow-x: auto; }
+        .residents-table, .hub-table { width: 100%; border-collapse: collapse; min-width: 800px; }
+        .residents-table th, .hub-table th { text-align: center; padding: 16px 20px; background-color: var(--bg-soft); color: var(--text-muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border-soft); }
+        .residents-table td, .hub-table td { text-align: center; padding: 20px 20px; border-bottom: 1px solid var(--border-soft); vertical-align: middle; }
+        
+        /* Resident Profile Column Alignment */
+        .residents-table th:first-child, .residents-table td:first-child { text-align: left; padding-left: 40px; }
+
+        .user-cell { display: flex; align-items: center; gap: 20px; }
+        .table-avatar { width: 40px; height: 40px; border-radius: 50%; background-color: var(--bg-soft); object-fit: cover; }
+        .user-info h4 { margin: 0; font-size: 0.95rem; font-weight: 600; line-height: 1.2; color: var(--text-main); }
+        .user-info span { font-size: 0.9rem; color: var(--text-muted); }
+
+        /* Badges */
+        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; display: inline-block; }
+        .status-verified, .status-active { background-color: #E8F5E9; color: #2E7D32; }
+        .status-pending { background-color: #FFF3E0; color: #EF6C00; }
+        .status-banned, .status-rejected, .status-inactive { background-color: #FFEBEE; color: #C62828; }
+        .role-badge { background-color: #E3F2FD; color: var(--info-blue); padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
+
+        /* Buttons */
+        .btn-action-pill {
+            background-color: #f8f9fa; color: var(--info-blue); border: 1.5px solid var(--border-soft);
+            padding: 8px 24px; border-radius: 50px; font-family: 'Baloo Da 2', cursive;
+            font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all 0.25s ease;
+            display: inline-flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none;
+            min-width: 100px;
+        }
+        .btn-action-pill:hover { background-color: #e3f2fd; border-color: var(--info-blue); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(25, 118, 210, 0.1); }
+        .btn-action-pill.danger { color: var(--danger-red); }
+        .btn-action-pill.danger:hover { background-color: #ffebee; border-color: var(--danger-red); box-shadow: 0 4px 12px rgba(211, 47, 47, 0.1); }
+
+        .btn-add-mod { 
+            background-color: #2e7d32; color: white; border: none; 
+            padding: 10px 24px; border-radius: 50px; font-family: 'Baloo Da 2', cursive;
+            font-size: 0.9rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.25s ease;
+        }
+        .btn-add-mod:hover { background-color: #256629; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(46, 125, 50, 0.2); }
+
+        /* Search Box */
+        .search-box { 
+            display: flex; align-items: center; background: var(--card-bg); padding: 10px 20px; 
+            border-radius: 50px; width: 320px; border: 1px solid var(--border-soft); 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02); transition: all 0.3s ease;
+        }
+        .search-box:focus-within { border-color: var(--accent-neutral); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .search-box i { color: var(--text-muted); font-size: 0.9rem; }
+        .search-box input { border: none; background: transparent; outline: none; width: 100%; font-family: inherit; margin-left: 12px; color: var(--text-main); font-size: 0.9rem; }
+
+        /* Modals (User's Styling) */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s; backdrop-filter: blur(8px); }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .user-modal { 
+            background: var(--card-bg); border-radius: 28px; width: 95%; max-width: 500px; 
+            box-shadow: 0 25px 70px rgba(0,0,0,0.15); transform: translateY(30px); 
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); max-height: 85vh; 
+            display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border-soft);
+        }
+        .modal-overlay.active .user-modal { transform: translateY(0); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 24px 32px; border-bottom: 1px solid var(--border-soft); background: var(--card-bg); position: sticky; top: 0; z-index: 10; }
+        .modal-title { font-size: 1.3rem; font-weight: 700; color: var(--text-main); letter-spacing: -0.02em; }
+        .close-modal { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--bg-soft); font-size: 1rem; cursor: pointer; color: var(--text-muted); transition: all 0.2s; }
+        .close-modal:hover { background: #fee2e2; color: #ef4444; transform: rotate(90deg); }
+        
+        .modal-body { padding: 32px; overflow-y: auto; flex: 1; scrollbar-width: thin; scrollbar-color: var(--border-soft) transparent; }
+        .modal-body::-webkit-scrollbar { width: 6px; }
+        .modal-body::-webkit-scrollbar-thumb { background-color: var(--border-soft); border-radius: 10px; }
+        .modal-footer { padding: 20px 32px; border-top: 1px solid var(--border-soft); background: #fdfdfd; position: sticky; bottom: 0; z-index: 10; }
+
+        .detail-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px dotted var(--border-soft); font-size: 0.95rem; }
+        .detail-row:last-of-type { border-bottom: none; }
+        .detail-label { font-weight: 500; color: var(--text-muted); }
+        .detail-val { font-weight: 600; color: var(--text-main); }
+        
+        .id-preview, .selfie-preview { width: 100%; height: 220px; background-color: #f9f9f9; border-radius: var(--radius-md); margin-top: 12px; display: flex; justify-content: center; align-items: center; overflow: hidden; position: relative; border: 1px solid var(--border-soft); transition: all 0.3s; }
+        .id-preview img, .selfie-preview img { width: 100%; height: 100%; object-fit: contain; cursor: pointer; transition: transform 0.3s; }
+        .section-label { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 24px; margin-bottom: 8px; display: block; }
+        
+        .decision-actions, .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .modal-actions { margin-top: 32px; display: flex; justify-content: flex-end; }
+
+        /* Form Styles */
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+        .form-group input, .form-group select { width: 100%; padding: 12px 16px; border: 1.5px solid var(--border-soft); border-radius: var(--radius-md); font-family: inherit; font-size: 0.95rem; outline: none; background: var(--bg-soft); color: var(--text-main); }
+        
+        .password-wrapper { position: relative; }
+        .toggle-eye { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); font-size: 0.9rem; }
+
+        /* Security Key Input Style */
+        .security-input { 
+            background: #fff9e6 !important; border: 1.5px solid #ffcc80 !important; border-radius: 50px !important; 
+            padding: 14px 24px !important; height: 54px !important; font-family: 'Baloo Da 2', cursive !important;
+            box-shadow: none !important; color: var(--text-main) !important; width: 100% !important; margin-top: 10px !important;
+        }
+        .security-check-label { color: #ef6c00 !important; font-weight: 800 !important; font-size: 0.95rem !important; display: block; margin-bottom: 5px; }
+
+        .btn-cancel { background: none; border: 1.5px solid var(--border-soft); padding: 12px 24px; border-radius: 50px; cursor: pointer; font-family: inherit; font-weight: 600; color: var(--text-muted); }
+        .btn-cancel:hover { background: var(--bg-soft); color: var(--text-main); border-color: var(--text-muted); }
+        .btn-save { background: var(--primary-neutral); color: white; border: none; padding: 12px 24px; border-radius: 50px; cursor: pointer; font-family: inherit; font-weight: 700; transition: all 0.25s ease; }
+        .btn-save:hover { background-color: #333; transform: translateY(-1px); }
+
+        /* SweetAlert Customization */
+        .swal2-popup { font-family: 'Baloo Da 2', cursive !important; border-radius: 28px !important; padding: 20px !important; }
+        .swal2-title { font-size: 1.4rem !important; font-weight: 700 !important; color: var(--text-main) !important; }
+        .swal2-html-container { font-size: 1rem !important; color: var(--text-muted) !important; }
+        .swal2-input { 
+            background: #fff9e6 !important; 
+            border: 1.5px solid #ffcc80 !important; 
+            border-radius: 50px !important; 
+            padding: 14px 24px !important; 
+            height: 54px !important; 
+            font-family: 'Baloo Da 2', cursive !important;
+            box-shadow: none !important;
+            color: var(--text-main) !important;
+            margin: 20px auto 0 !important;
+            width: 85% !important;
+            box-sizing: border-box !important;
+        }
+        .swal2-confirm, .swal2-cancel { font-family: 'Baloo Da 2', cursive !important; font-size: 0.9rem !important; font-weight: 700 !important; border-radius: 50px !important; padding: 12px 24px !important; }
+
+        @media (max-width: 768px) { .sidebar { width: 0; padding: 0; } .main-content { margin-left: 0; padding: 20px; } }
+    </style>
+</head>
+<body>
+
+<nav class="sidebar">
+    <div class="sidebar-brand">
+        <img src="image/logo.png" alt="Logo" class="sidebar-logo-img" id="sidebarLogo"> 
+        <span>EcoTrack</span>
+    </div>
+    <ul class="nav-menu">
+        <li class="nav-item"><a href="admin_dashboard.html" class="nav-link"><i class="fa-solid fa-gauge"></i> <span>Dashboard</span></a></li>
+        <li class="nav-item"><a href="admin_users_hub.html" class="nav-link active"><i class="fa-solid fa-users-gear"></i> <span>User Hub</span></a></li>
+        <li class="nav-item"><a href="admin_projects_hub.html" class="nav-link"><i class="fa-solid fa-diagram-project"></i> <span>Project Hub</span></a></li>
+        <li class="nav-item"><a href="admin_financial_hub.html" class="nav-link"><i class="fa-solid fa-wallet"></i> <span>Financial Hub</span></a></li>
+    </ul>
+
+    <div class="sidebar-footer">
+        <a href="#" onclick="logout()" class="nav-link logout-link"><i class="fa-solid fa-right-from-bracket"></i> <span>Logout</span></a>
+    </div>
+</nav>
+
+<div class="main-content">
+    <div class="top-bar">
+        <div class="page-title">User Management Hub</div>
+        <div class="admin-profile" style="position: relative;">
+            <a href="admin_community.html" class="header-icon-btn" title="Community Chat"><i class="fa-solid fa-comments"></i></a>
+            <a href="admin_notif.html" class="header-icon-btn notif-dot" title="Notifications"><i class="fa-solid fa-bell"></i></a>
+            <div class="profile-trigger" onclick="toggleProfileDropdown(event)" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-soft); border: 1px solid var(--border-soft); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-main);" title="Admin Profile">
+                <i class="fa-solid fa-user"></i>
+            </div>
+
+            <!-- PROFILE DROPDOWN MENU (IMMEDIATE) -->
+            <div id="profileDropdown" class="profile-dropdown">
+                <div class="profile-user-card">
+                    <div class="user-item">
+                        <div class="user-avatar-circle"><i class="fa-solid fa-user"></i></div>
+                        <div class="user-name-text">Hershey Cristobal</div>
+                    </div>
+                </div>
+
+                <div class="dropdown-list">
+                    <a href="admin_profile.html" class="dropdown-item">
+                        <div class="item-icon-circle"><i class="fa-solid fa-gear"></i></div>
+                        <span>Settings & privacy</span>
+                        <i class="fa-solid fa-chevron-right item-arrow"></i>
+                    </a>
+                    <a href="#" class="dropdown-item">
+                        <div class="item-icon-circle"><i class="fa-solid fa-circle-question"></i></div>
+                        <span>Help & support</span>
+                        <i class="fa-solid fa-chevron-right item-arrow"></i>
+                    </a>
+                    
+                    <!-- NEW THEME TOGGLE -->
+                    <div class="theme-toggle-container">
+                        <div id="themeSwitch" onclick="toggleDarkMode()" class="theme-switch light-state">
+                            <div class="toggle-circle">
+                                <i id="themeIcon" class="fa-solid fa-sun"></i>
+                            </div>
+                            <span id="themeText" class="mode-text">Day Mode</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="dropdown-footer">
+                    Privacy · Terms · Advertising · Cookies · More
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="hub-tabs">
+        <button class="hub-tab active" id="tabResidents" onclick="switchTab('residents')">Resident Management</button>
+        <button class="hub-tab" id="tabModerators" onclick="switchTab('moderators')">Moderator Management</button>
+    </div>
+
+    <!-- RESIDENTS SECTION -->
+    <div id="residentsSection" class="hub-section active">
+        <div class="management-card">
+            <div class="table-filters">
+                <div class="filter-group">
+                    <button class="filter-btn active" onclick="filterTable('all')">All Residents</button>
+                    <button class="filter-btn" onclick="filterTable('pending')">Pending</button>
+                    <button class="filter-btn" onclick="filterTable('verified')">Verified</button>
+                    <button class="filter-btn" onclick="filterTable('rejected')">Rejected</button>
+                </div>
+                
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="searchInput" placeholder="Search resident name..." onkeyup="searchByName()">
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="residents-table">
+                    <thead>
+                        <tr>
+                            <th>User Profile</th>
+                            <th>Address</th>
+                            <th>Date Registered</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userTableBody">
+                        <tr><td colspan="5" style="text-align:center;">Loading data...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODERATORS SECTION (Integrated from User Code) -->
+    <div id="moderatorsSection" class="hub-section">
+        <div class="management-card">
+            <div class="toolbar">
+                <button class="btn-add-mod" onclick="openAddModal()"><i class="fa-solid fa-plus"></i> Add Moderator</button>
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="modSearchInput" placeholder="Search moderator..." onkeyup="searchModTable()">
+                </div>
+            </div>
+            <div class="table-container">
+                <table class="residents-table" id="modTable">
+                    <thead>
+                        <tr>
+                            <th>Moderator</th>
+                            <th>Role</th>
+                            <th>Assigned Area</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="moderatorTableBody">
+                        <!-- Data will be rendered here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODALS -->
+<!-- Resident Details Modal -->
+<div class="modal-overlay" id="userModal">
+    <div class="user-modal">
+        <div class="modal-header">
+            <div class="modal-title">Resident Details</div>
+            <div class="close-modal" onclick="closeModal('userModal')"><i class="fa-solid fa-xmark"></i></div>
+        </div>
+        <div class="modal-body">
+            <div class="detail-row"><span class="detail-label">Full Name:</span><span class="detail-val" id="modalName">--</span></div>
+            <div class="detail-row"><span class="detail-label">Address:</span><span class="detail-val" id="modalAddress">--</span></div>
+            <div class="detail-row"><span class="detail-label">Contact:</span><span class="detail-val" id="modalContact">--</span></div>
+            <div class="detail-row"><span class="detail-label">DOB:</span><span class="detail-val" id="modalDOB">--</span></div>
+            <div class="detail-row"><span class="detail-label">ID Type:</span><span class="detail-val" id="modalIdType">--</span></div>
+
+            <span class="section-label">ID Proof:</span>
+            <div class="id-preview"><img id="modalIdImg" src="" onclick="window.open(this.src)" alt="ID Proof"></div>
+            
+            <span class="section-label">Selfie Proof:</span>
+            <div class="selfie-preview"><img id="modalSelfieImg" src="" onclick="window.open(this.src)" alt="Selfie Proof"></div>
+        </div>
+        <div class="modal-footer">
+            <div class="decision-actions" id="actionButtons"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Integrated Moderator Add/Edit Modal -->
+<div class="modal-overlay" id="modModal">
+    <div class="user-modal">
+        <div class="modal-header">
+            <div class="modal-title" id="modalTitle">Add Moderator</div>
+            <div class="close-modal" onclick="closeModal('modModal')"><i class="fa-solid fa-xmark"></i></div>
+        </div>
+        <div class="modal-body">
+            <form class="modal-form" id="modForm">
+                <input type="hidden" id="editModId">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="modName" required placeholder="Enter full name">
+                </div>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="modEmail" required placeholder="example@ecotrack.com">
+                </div>
+                
+                <div class="form-group" id="passGroup">
+                    <label>New Account Password</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="modPass" minlength="6" placeholder="Min 6 characters">
+                        <i class="fa-solid fa-eye-slash toggle-eye" onclick="togglePass('modPass', this)"></i>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Role</label>
+                    <select id="modRole">
+                        <option value="Verification Lead">Verification Lead</option>
+                        <option value="Waste Collector">Waste Collector</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Assigned Area</label>
+                    <input type="text" id="modArea" required placeholder="e.g. Purok 1, Purok 2">
+                </div>
+                
+                <div class="security-check">
+                    <label class="security-check-label"><i class="fa-solid fa-shield-halved"></i> Admin Security Key</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="adminPassConfirm" class="security-input" required placeholder="Enter Security Key to verify">
+                        <i class="fa-solid fa-eye-slash toggle-eye" onclick="togglePass('adminPassConfirm', this)"></i>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeModal('modModal')">Cancel</button>
+                    <button type="submit" class="btn-save" id="saveModBtn">Verify & Create</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODALS END -->
+
+<script>
+    // --- Shared State ---
+    let isEditMode = false;
+
+    // --- Resident Data ---
+    let currentRequests = [
+        { id: '1', full_name: 'Juan Dela Cruz', address: 'Purok 1', contact_number: '09123456789', dob: '1990-01-01', created_at: new Date().toISOString(), status: 'pending', id_type: 'Driver License', selfie_image_url: '', id_image_url: '' },
+        { id: '2', full_name: 'Maria Santos', address: 'Purok 2', contact_number: '09987654321', dob: '1985-05-15', created_at: new Date(Date.now() - 86400000).toISOString(), status: 'verified', id_type: 'National ID', selfie_image_url: '', id_image_url: '' },
+        { id: '3', full_name: 'Pedro Penduko', address: 'Purok 3', contact_number: '09555555555', dob: '2000-10-20', created_at: new Date(Date.now() - 86400000 * 2).toISOString(), status: 'rejected', id_type: 'Voter ID', selfie_image_url: '', id_image_url: '' }
+    ]; 
+
+    // --- Moderator Data ---
+    let moderatorsList = [
+        { id: '1', full_name: 'Ana Reyes', email: 'ana@ecotrack.com', role: 'Verification Lead', assigned_area: 'Purok 1, Purok 2', status: 'Active' },
+        { id: '2', full_name: 'Carlos Santos', email: 'carlos@ecotrack.com', role: 'Waste Collector', assigned_area: 'Purok 3, Purok 4', status: 'Active' },
+        { id: '3', full_name: 'Liza Soberano', email: 'liza@ecotrack.com', role: 'Waste Collector', assigned_area: 'Purok 5', status: 'Inactive' }
+    ];
+
+    // --- Utility ---
+    function togglePass(id, icon) {
+        const input = document.getElementById(id);
+        if (input.type === "password") {
+            input.type = "text";
+            icon.classList.replace('fa-eye-slash', 'fa-eye');
+        } else {
+            input.type = "password";
+            icon.classList.replace('fa-eye', 'fa-eye-slash');
+        }
+    }
+
+    // --- Tab Logic ---
+    function switchTab(tab) {
+        document.querySelectorAll('.hub-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.hub-section').forEach(s => s.classList.remove('active'));
+        
+        if (tab === 'residents') {
+            document.getElementById('tabResidents').classList.add('active');
+            document.getElementById('residentsSection').classList.add('active');
+        } else {
+            document.getElementById('tabModerators').classList.add('active');
+            document.getElementById('moderatorsSection').classList.add('active');
+        }
+    }
+
+    // --- Resident Logic ---
+    function renderTable(data) {
+        const tbody = document.getElementById('userTableBody');
+        tbody.innerHTML = '';
+        if(data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">No requests found.</td></tr>`;
+            return;
+        }
+        data.forEach(req => {
+            const date = new Date(req.created_at).toLocaleDateString();
+            const statusClass = `status-${req.status}`;
+            const row = `
+                <tr class="row-item" data-status="${req.status}">
+                    <td>
+                        <div class="user-cell">
+                            <img src="${req.selfie_image_url || 'https://ui-avatars.com/api/?name='+req.full_name}" class="table-avatar">
+                            <div class="user-info"><h4>${req.full_name}</h4><span>${req.contact_number}</span></div>
+                        </div>
+                    </td>
+                    <td>${req.address}</td>
+                    <td>${date}</td>
+                    <td class="status-cell"><span class="status-badge ${statusClass}">${req.status}</span></td>
+                    <td class="action-cell">
+                        <button class="btn-action-pill" onclick="openUserModal('${req.id}')"><i class="fa-solid fa-eye"></i> View</button>
+                        <button class="btn-action-pill danger" onclick="deleteUserConfirmation('${req.id}', '${req.full_name}')"><i class="fa-solid fa-trash"></i> Delete</button>
+                    </td>
+                </tr>`;
+            tbody.innerHTML += row;
+        });
+    }
+
+    function filterTable(status) {
+        document.querySelectorAll('#residentsSection .filter-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+        renderTable(status === 'all' ? currentRequests : currentRequests.filter(req => req.status === status));
+    }
+
+    function searchByName() {
+        const val = document.getElementById('searchInput').value.toLowerCase();
+        renderTable(currentRequests.filter(req => req.full_name.toLowerCase().includes(val)));
+    }
+
+    function openUserModal(id) {
+        const req = currentRequests.find(r => r.id === id);
+        document.getElementById('modalName').innerText = req.full_name;
+        document.getElementById('modalAddress').innerText = req.address;
+        document.getElementById('modalContact').innerText = req.contact_number;
+        document.getElementById('modalDOB').innerText = req.dob;
+        document.getElementById('modalIdType').innerText = req.id_type || "N/A";
+        document.getElementById('modalIdImg').src = req.id_image_url || "";
+        document.getElementById('modalSelfieImg').src = req.selfie_image_url || "";
+
+        const btnDiv = document.getElementById('actionButtons');
+        btnDiv.innerHTML = '';
+
+        if (req.status === 'pending') {
+            btnDiv.innerHTML = `
+                <button class="btn-action-pill" style="background-color: #2e7d32; color: white; border: none;" onclick="updateResStatus('${req.id}', 'verified')"><i class="fa-solid fa-check"></i> Approve</button>
+                <button class="btn-action-pill" style="background-color: #f8f9fa; color: #444;" onclick="updateResStatus('${req.id}', 'rejected')"><i class="fa-solid fa-xmark"></i> Reject</button>`;
+        } else if (req.status === 'verified') {
+            btnDiv.innerHTML = `<button class="btn-action-pill danger" style="grid-column: 1 / -1" onclick="updateResStatus('${req.id}', 'banned')"><i class="fa-solid fa-ban"></i> Ban User</button>`;
+        } else if (req.status === 'banned') {
+            btnDiv.innerHTML = `<button class="btn-action-pill" style="grid-column: 1 / -1; background-color: #2e7d32; color: white; border: none;" onclick="updateResStatus('${req.id}', 'verified')"><i class="fa-solid fa-arrow-rotate-left"></i> Re-Activate User</button>`;
+        } else if (req.status === 'rejected') {
+            btnDiv.innerHTML = `<button class="btn-action-pill" style="grid-column: 1 / -1; background-color: #2e7d32; color: white; border: none;" onclick="updateResStatus('${req.id}', 'verified')"><i class="fa-solid fa-check"></i> Re-Evaluate (Approve)</button>`;
+        }
+        document.getElementById('userModal').classList.add('active');
+    }
+
+    async function updateResStatus(id, newStatus) {
+        let actionText = newStatus === 'banned' ? "BAN" : newStatus.toUpperCase();
+        const result = await Swal.fire({ title: `Mark as ${newStatus}?`, text: `Are you sure you want to ${actionText} this user?`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#02451A', cancelButtonColor: '#d33', confirmButtonText: 'Yes, do it!' });
+        if (result.isConfirmed) {
+            const req = currentRequests.find(r => r.id === id);
+            if (req) {
+                req.status = newStatus;
+                Swal.fire('Updated!', `User has been marked as ${newStatus}.`, 'success');
+                closeModal('userModal');
+                renderTable(currentRequests);
+            }
+        }
+    }
+
+    async function deleteUserConfirmation(id, name) {
+        const { value: key } = await Swal.fire({ title: `Remove ${name}?`, text: "Input Admin Security Key to confirm deletion:", input: 'password', inputPlaceholder: 'Enter Security Key', showCancelButton: true, confirmButtonColor: '#d32f2f', confirmButtonText: 'Yes, delete it' });
+        if (key === window.currentPassCode) {
+            currentRequests = currentRequests.filter(r => r.id !== id);
+            Swal.fire('Deleted!', 'Resident record has been removed.', 'success');
+            renderTable(currentRequests);
+        } else if (key) {
+            Swal.fire('Denied', 'Invalid Security Key', 'error');
+        }
+    }
+
+    // --- Moderator Logic ---
+    function renderModerators(list) {
+        const tbody = document.getElementById('moderatorTableBody');
+        if (list.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 40px;">No moderators found.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = list.map(m => `
+            <tr>
+                <td><div class="user-info"><h4>${m.full_name}</h4><span>${m.email}</span></div></td>
+                <td><span class="role-badge">${m.role}</span></td>
+                <td>${m.assigned_area}</td>
+                <td><span class="status-badge ${m.status === 'Active' ? 'status-active' : 'status-inactive'}">${m.status}</span></td>
+                <td>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <button class="btn-action-pill" onclick="openEditModal('${m.id}')"><i class="fa-solid fa-eye"></i> View</button>
+                        <button class="btn-action-pill danger" onclick="deleteMod('${m.id}', '${m.full_name}')"><i class="fa-solid fa-trash"></i> Delete</button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function searchModTable() {
+        const filter = document.getElementById('modSearchInput').value.toUpperCase();
+        const filtered = moderatorsList.filter(m => 
+            m.full_name.toUpperCase().includes(filter) || 
+            m.email.toUpperCase().includes(filter) || 
+            m.role.toUpperCase().includes(filter) || 
+            m.assigned_area.toUpperCase().includes(filter)
+        );
+        renderModerators(filtered);
+    }
+
+    function openAddModal() {
+        isEditMode = false;
+        document.getElementById('modalTitle').innerText = "Add Moderator";
+        document.getElementById('saveModBtn').innerText = "Verify & Create";
+        document.getElementById('passGroup').style.display = "block";
+        document.getElementById('modPass').required = true;
+        document.getElementById('modForm').reset();
+        document.getElementById('adminPassConfirm').value = ""; 
+        document.getElementById('modModal').classList.add('active');
+    }
+
+    function openEditModal(id) {
+        isEditMode = true;
+        const m = moderatorsList.find(item => item.id === id);
+        if (!m) return;
+        document.getElementById('modalTitle').innerText = "Edit Moderator";
+        document.getElementById('saveModBtn').innerText = "Update Moderator";
+        document.getElementById('passGroup').style.display = "none"; 
+        document.getElementById('modPass').required = false;
+        document.getElementById('editModId').value = m.id;
+        document.getElementById('modName').value = m.full_name;
+        document.getElementById('modEmail').value = m.email;
+        document.getElementById('modRole').value = m.role;
+        document.getElementById('modArea').value = m.assigned_area;
+        document.getElementById('adminPassConfirm').value = ""; 
+        document.getElementById('modModal').classList.add('active');
+    }
+
+    document.getElementById('modForm').onsubmit = (e) => {
+        e.preventDefault();
+        const inputKey = document.getElementById('adminPassConfirm').value.trim();
+        if (inputKey !== window.currentPassCode) return Swal.fire({ icon: 'error', title: 'Unauthorized', text: 'Invalid Admin Security Key!', confirmButtonColor: 'var(--danger-red)' });
+
+        const fullName = document.getElementById('modName').value;
+        const email = document.getElementById('modEmail').value;
+        const role = document.getElementById('modRole').value;
+        const area = document.getElementById('modArea').value;
+
+        if (isEditMode) {
+            const modId = document.getElementById('editModId').value;
+            const m = moderatorsList.find(i => i.id === modId);
+            if(m) { m.full_name = fullName; m.email = email; m.role = role; m.assigned_area = area; }
+            Swal.fire({ title: 'Updated!', text: 'Moderator info updated.', icon: 'success' });
+        } else {
+            moderatorsList.unshift({ id: Date.now().toString(), full_name: fullName, email: email, role: role, assigned_area: area, status: 'Active' });
+            Swal.fire({ title: 'Success!', text: 'New moderator account created.', icon: 'success' });
+        }
+        closeModal('modModal');
+        renderModerators(moderatorsList); 
+    };
+
+    async function deleteMod(id, name) {
+        const { value: key } = await Swal.fire({ title: `Remove ${name}?`, text: "Input Admin Security Key to confirm deletion", input: 'password', inputPlaceholder: 'Enter Security Key', showCancelButton: true, confirmButtonColor: 'var(--danger-red)', confirmButtonText: 'Yes, delete it' });
+        if (key === window.currentPassCode) {
+            moderatorsList = moderatorsList.filter(m => m.id !== id);
+            Swal.fire({ title: 'Deleted!', text: 'Moderator removed.', icon: 'success' });
+            renderModerators(moderatorsList); 
+        } else if (key) {
+            Swal.fire({ title: 'Denied', text: 'Invalid Security Key.', icon: 'error' });
+        }
+    }
+
+    // --- Global ---
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    async function logout() {
+        const res = await Swal.fire({ title: 'Logout?', icon: 'question', showCancelButton: true, confirmButtonColor: '#02451A' });
+        if (res.isConfirmed) window.location.href = "login.html";
+    }
+
+    function toggleProfileDropdown(e) {
+        e.stopPropagation();
+        document.getElementById('profileDropdown').classList.toggle('active');
+    }
+
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+        const isDark = document.body.classList.contains('dark-mode');
+        localStorage.setItem('admin-theme', isDark ? 'dark' : 'light');
+        updateThemeUI(isDark);
+    }
+
+    function updateThemeUI(isDark) {
+        const switchEl = document.getElementById('themeSwitch');
+        const iconEl = document.getElementById('themeIcon');
+        const textEl = document.getElementById('themeText');
+        
+        if (isDark) {
+            if(switchEl) { switchEl.classList.remove('light-state'); switchEl.classList.add('dark-state'); }
+            if(iconEl) iconEl.className = 'fa-solid fa-moon';
+            if(textEl) textEl.innerText = 'Night Mode';
+        } else {
+            if(switchEl) { switchEl.classList.remove('dark-state'); switchEl.classList.add('light-state'); }
+            if(iconEl) iconEl.className = 'fa-solid fa-sun';
+            if(textEl) textEl.innerText = 'Day Mode';
+        }
+    }
+
+    // Load theme preference
+    const savedTheme = localStorage.getItem('admin-theme');
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+        updateThemeUI(true);
+    } else {
+        updateThemeUI(false);
+    }
+
+    window.onclick = function(event) {
+        if (!event.target.closest('.admin-profile')) {
+            const dropdown = document.getElementById('profileDropdown');
+            if(dropdown) dropdown.classList.remove('active');
+        }
+        if (event.target.classList.contains('modal-overlay')) {
+            event.target.classList.remove('active');
+        }
+    }
+
+    // Initial Render
+    renderTable(currentRequests);
+    renderModerators(moderatorsList);
+</script>
+
+</body>
+</html>

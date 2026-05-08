@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EcoTrack - Admin Login</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+        --primary-green: #02451A;
+        --light-green: #E8F5E9;
+        --text-dark: #333;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #f0f2f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: 'Baloo Da 2', cursive;
+    }
+
+    /* MAIN CARD */
+    .container {
+      width: 900px;
+      height: 550px;
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* LEFT SIDE (Branding) */
+    .left {
+      width: 50%;
+      background: #ffffff;
+      padding: 50px;
+      color: var(--primary-green);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      position: relative;
+    }
+
+    .left h1 {
+      font-size: 2rem;
+      font-weight: 600;
+      line-height: 1.2;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+
+    .left p {
+      font-size: 1rem;
+      color: #555;
+      margin-bottom: 30px;
+      font-weight: 500;
+    }
+
+    .left img {
+      width: 160px;
+      filter: drop-shadow(0 10px 10px rgba(0,0,0,0.1));
+    }
+
+    /* RIGHT SIDE (Form) */
+    .right {
+      width: 50%;
+      padding: 60px 50px;
+      background: linear-gradient(135deg, #02451A, #046326);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .right h2 {
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 5px;
+    }
+
+    .right .subtitle {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 0.9rem;
+      margin-bottom: 35px;
+    }
+
+    /* INPUTS */
+    .input-group { margin-bottom: 20px; position: relative; }
+
+    .input-group input {
+      width: 100%;
+      padding: 12px 45px 12px 45px; 
+      border-radius: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      outline: none;
+      font-size: 0.95rem;
+      font-family: inherit;
+      transition: 0.3s;
+    }
+
+    .input-group input::placeholder {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .input-group input:focus {
+        border-color: #ffffff;
+        background: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.2);
+    }
+
+    /* ICONS */
+    .input-group .left-icon {
+      position: absolute;
+      left: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: rgba(255, 255, 255, 0.6);
+      pointer-events: none;
+      font-size: 1rem;
+      transition: 0.3s;
+    }
+
+    .input-group input:focus + .left-icon, 
+    .input-group input:focus ~ .left-icon {
+        color: #ffffff;
+    }
+
+    .input-group .toggle-password {
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: rgba(255, 255, 255, 0.6);
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    .input-group .toggle-password:hover { color: #ffffff; }
+
+    /* BUTTON */
+    .login-btn {
+      width: 100%;
+      padding: 12px;
+      background: #ffffff;
+      border: none;
+      color: var(--primary-green);
+      font-size: 1rem;
+      border-radius: 30px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 15px;
+      transition: 0.2s ease;
+      font-family: inherit;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+    }
+
+    .login-btn:hover {
+      background: #f0f2f5;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .login-btn:disabled {
+        background-color: #a3c4a8;
+        color: rgba(2, 69, 26, 0.6);
+        cursor: not-allowed;
+    }
+
+    .links {
+      margin-top: 25px;
+      text-align: center;
+    }
+
+    .links a {
+      color: #666;
+      font-weight: 600;
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: 0.2s;
+    }
+
+    .links a:hover {
+      color: var(--primary-green);
+      text-decoration: underline;
+    }
+
+    /* Responsive */
+    @media (max-width: 850px) {
+        .container { width: 90%; height: auto; flex-direction: column; }
+        .left { width: 100%; padding: 30px; }
+        .left img { width: 100px; display: none; } 
+        .right { width: 100%; padding: 40px 30px; }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="left">
+    <img src="image/logo.png" alt="Logo">
+    <h1>EcoTrack</h1>
+    <p>Admin Control Panel Brgy Lagundi</p>
+  </div>
+
+  <div class="right">
+    <h2>Welcome Back!</h2>
+    <p class="subtitle">Please enter your admin credentials.</p>
+
+    <form id="adminLoginForm">
+
+      <div class="input-group">
+        <input type="email" id="email" placeholder="Email Address" required>
+        <i class="fas fa-envelope left-icon"></i>
+      </div>
+
+      <div class="input-group">
+        <input type="password" id="password" placeholder="Password" required>
+        <i class="fa fa-lock left-icon"></i>
+        <i class="fa fa-eye-slash toggle-password" id="togglePassword"></i>
+      </div>
+
+      <button type="submit" id="loginBtn" class="login-btn"> Login</button>
+
+    </form>
+  </div>
+
+</div>
+
+  <script src="../supabase_config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <script>
+  // Security Lockout Configuration
+  const MAX_ATTEMPTS = 3;
+  const LOCKOUT_DURATION = 24 * 60 * 60 * 1000; // 24 Hours in ms
+
+  // --- 2. WORKING PASSWORD TOGGLE ---
+  const togglePassword = document.getElementById("togglePassword");
+  const passwordField = document.getElementById("password");
+
+  togglePassword.addEventListener("click", () => {
+    const isPassword = passwordField.type === "password";
+
+    passwordField.type = isPassword ? "text" : "password";
+
+    togglePassword.classList.toggle("fa-eye-slash", !isPassword);
+    togglePassword.classList.toggle("fa-eye", isPassword);
+  });
+
+  // --- 3. REAL LOGIN LOGIC ---
+  const loginForm = document.getElementById('adminLoginForm');
+  const loginBtn = document.getElementById('loginBtn');
+
+  loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      /* Temporarily disabled: 24h lockout check
+      const lockoutTimestamp = localStorage.getItem('admin_lockout');
+      if (lockoutTimestamp) {
+          const remainingTime = parseInt(lockoutTimestamp) - Date.now();
+          if (remainingTime > 0) {
+              const hours = Math.ceil(remainingTime / (1000 * 60 * 60));
+              Swal.fire({
+                  icon: 'error',
+                  title: 'Panel Locked',
+                  text: `Security block active. Try again in ${hours} hours.`,
+              });
+              return;
+          } else {
+              localStorage.removeItem('admin_lockout');
+              localStorage.removeItem('admin_attempts');
+          }
+      }
+      */
+
+      loginBtn.disabled = true;
+      loginBtn.innerText = "Verifying Identity...";
+
+      // 2. Perform Supabase Auth
+      const { data: authData, error: authError } = await window.supabaseClient.auth.signInWithPassword({
+          email,
+          password
+      });
+
+      if (authError) {
+          handleLoginFailure(authError.message);
+          return;
+      }
+
+      // 3. Check Role in Profiles
+      const { data: profile, error: profileError } = await window.supabaseClient
+          .from('profiles')
+          .select('role')
+          .eq('id', authData.user.id)
+          .single();
+
+      if (profileError || (profile.role !== 'admin' && profile.role !== 'moderator')) {
+          await window.supabaseClient.auth.signOut();
+          Swal.fire({
+              icon: 'warning',
+              title: 'Unauthorized Access',
+              text: 'This control panel is restricted to Admin and Moderators only.',
+          });
+          resetButton();
+          return;
+      }
+
+      // 4. Success - Reset attempts and redirect
+      localStorage.removeItem('admin_attempts');
+      localStorage.removeItem('admin_lockout');
+
+      Swal.fire({
+          icon: 'success',
+          title: 'Welcome, Admin',
+          text: 'Establishing secure session...',
+          showConfirmButton: false,
+          timer: 1500
+      }).then(() => {
+          window.location.href = "admin_dashboard.html";
+      });
+  });
+
+  function handleLoginFailure(message) {
+      // Lockout logic temporarily disabled
+      Swal.fire({
+          icon: 'error',
+          title: 'Verification Failed',
+          text: message || 'Incorrect credentials. Please try again.',
+      });
+      resetButton();
+  }
+
+  function resetButton() {
+      loginBtn.disabled = false;
+      loginBtn.innerText = "Login";
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "caps",
+  "version": "1.0.0",
+  "description": "",
+  "main": "supabase_config.js",
+ "scripts": {
+  "dev": "browser-sync start --server --files '*.html, *.css'"
+},
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "browser-sync": "^3.0.4"
+  }
+}

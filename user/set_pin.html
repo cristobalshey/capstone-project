@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoTrack | Set Your PIN</title>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase_config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <style>
+        :root {
+            --primary-green: #02451A;
+            --glass-bg: rgba(255, 255, 255, 0.9);
+            --glass-border: rgba(255, 255, 255, 0.6);
+        }
+
+        body {
+            font-family: 'Baloo Da 2', cursive;
+            background: #f0fdf4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .pin-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 30px;
+            padding: 40px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(2, 69, 26, 0.1);
+            text-align: center;
+        }
+
+        .header-icon { font-size: 3.5rem; margin-bottom: 15px; }
+        h1 { color: var(--primary-green); margin-bottom: 5px; font-weight: 800; }
+        p { color: #64748b; margin-bottom: 30px; }
+
+        .pin-display {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .pin-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 2px solid var(--primary-green);
+            transition: all 0.2s;
+        }
+
+        .pin-dot.filled {
+            background: var(--primary-green);
+            transform: scale(1.2);
+        }
+
+        .numpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            max-width: 250px;
+            margin: 0 auto;
+        }
+
+        .num-btn {
+            background: white;
+            border: 1px solid rgba(2, 69, 26, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--primary-green);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .num-btn:hover { background: var(--primary-green); color: white; transform: scale(1.05); }
+        .num-btn:active { transform: scale(0.95); }
+
+        .btn-action {
+            margin-top: 30px;
+            width: 100%;
+            background: var(--primary-green);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            font-weight: 800;
+            cursor: pointer;
+            display: none;
+        }
+
+        /* --- LOADING OVERLAY --- */
+        #loadingOverlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #f0fdf4;
+            z-index: 3000;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .spinner-shield {
+            font-size: 5rem;
+            animation: pulse 1.5s infinite ease-in-out;
+            margin-bottom: 20px;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .loading-title {
+            color: #02451A;
+            font-weight: 800;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        .loading-subtitle {
+            color: #64748b;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loadingOverlay">
+        <div class="spinner-shield">🔑</div>
+        <div class="loading-title">Registering PIN...</div>
+        <div class="loading-subtitle">Configuring biometric and pin layers</div>
+    </div>
+
+    <div class="pin-card">
+        <div class="header-icon">🔢</div>
+        <h1 id="title">Set Security PIN</h1>
+        <p id="subtitle">Create a 4-digit PIN for your transactions.</p>
+
+        <div class="pin-display" id="dots">
+            <div class="pin-dot"></div>
+            <div class="pin-dot"></div>
+            <div class="pin-dot"></div>
+            <div class="pin-dot"></div>
+        </div>
+
+        <div class="numpad">
+            <button class="num-btn" onclick="addNum(1)">1</button>
+            <button class="num-btn" onclick="addNum(2)">2</button>
+            <button class="num-btn" onclick="addNum(3)">3</button>
+            <button class="num-btn" onclick="addNum(4)">4</button>
+            <button class="num-btn" onclick="addNum(5)">5</button>
+            <button class="num-btn" onclick="addNum(6)">6</button>
+            <button class="num-btn" onclick="addNum(7)">7</button>
+            <button class="num-btn" onclick="addNum(8)">8</button>
+            <button class="num-btn" onclick="addNum(9)">9</button>
+            <button class="num-btn" onclick="clearPin()">C</button>
+            <button class="num-btn" onclick="addNum(0)">0</button>
+            <button class="num-btn" onclick="deleteNum()">⌫</button>
+        </div>
+
+        <button class="btn-action" id="submitBtn" onclick="submitPin()">Confirm PIN</button>
+    </div>
+
+    <script>
+        let pin = "";
+        let firstPin = "";
+        let isConfirming = false;
+
+        function addNum(n) {
+            if (pin.length < 4) {
+                pin += n;
+                updateDots();
+                if (pin.length === 4) {
+                    document.getElementById('submitBtn').style.display = 'block';
+                }
+            }
+        }
+
+        function deleteNum() {
+            pin = pin.slice(0, -1);
+            updateDots();
+            document.getElementById('submitBtn').style.display = 'none';
+        }
+
+        function clearPin() {
+            pin = "";
+            updateDots();
+            document.getElementById('submitBtn').style.display = 'none';
+        }
+
+        function updateDots() {
+            const dots = document.getElementById('dots').children;
+            for (let i = 0; i < 4; i++) {
+                dots[i].classList.toggle('filled', i < pin.length);
+            }
+        }
+
+        async function submitPin() {
+            if (!isConfirming) {
+                firstPin = pin;
+                pin = "";
+                isConfirming = true;
+                updateDots();
+                document.getElementById('title').innerText = "Confirm PIN";
+                document.getElementById('subtitle').innerText = "Please repeat your 4-digit PIN.";
+                document.getElementById('submitBtn').style.display = 'none';
+            } else {
+                if (pin === firstPin) {
+                    saveToSupabase();
+                } else {
+                    Swal.fire('Mismatch', 'PINs do not match. Try again.', 'error');
+                    clearPin();
+                }
+            }
+        }
+
+        async function saveToSupabase() {
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.innerText = "Saving PIN...";
+
+            const { data: { user } } = await window.supabaseClient.auth.getUser();
+            
+            const { error } = await window.supabaseClient
+                .from('profiles')
+                .update({ 
+                    has_pin: true,
+                    pin_code: pin
+                })
+                .eq('id', user.id);
+
+            if (error) {
+                Swal.fire('Error', error.message, 'error');
+                btn.disabled = false;
+            } else {
+                // Show Loading Sync
+                document.getElementById('loadingOverlay').style.display = 'flex';
+                
+                setTimeout(() => {
+                    window.location.href = "set_password.html";
+                }, 3000);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>EcoTrack | Manual Activity</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Using Lucide Icons for a modern, chill vibe -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            /* Strict White & Green Palette */
+            --primary-green: #02451A;
+            --bg-color: #ffffff;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(2, 69, 26, 0.1);
+            --card-shadow: 0 8px 32px -8px rgba(2, 69, 26, 0.1);
+            --text-main: #02451A;
+            --text-muted: rgba(2, 69, 26, 0.6);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            min-height: 100svh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .ambient-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+            background: radial-gradient(circle at 15% 50%, rgba(2, 69, 26, 0.05), transparent 50%),
+                        radial-gradient(circle at 85% 30%, rgba(2, 69, 26, 0.08), transparent 50%);
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 480px;
+            height: 100vh;
+            height: 100svh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 0 50px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 24px 24px 15px 24px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        .back-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--primary-green);
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(2, 69, 26, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: white;
+            transform: translateX(-3px);
+            box-shadow: 0 6px 15px rgba(2, 69, 26, 0.1);
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--primary-green);
+        }
+
+        .content-area {
+            flex-grow: 1;
+            padding: 10px 24px 40px 24px;
+            overflow-y: auto;
+            scrollbar-width: none;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .content-area::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Instruction Banner */
+        .instruction-banner {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px dashed rgba(2, 69, 26, 0.3);
+            border-radius: 16px;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(2, 69, 26, 0.05);
+        }
+
+        .instruction-text {
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--primary-green);
+            text-transform: uppercase;
+            line-height: 1.4;
+            max-width: 100%;
+        }
+
+        /* Filter Tabs */
+        .status-filters {
+            display: flex;
+            background: rgba(2, 69, 26, 0.05);
+            padding: 4px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .filter-btn {
+            flex: 1;
+            padding: 10px 0;
+            border-radius: 10px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 800;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-btn.active {
+            background: white;
+            color: var(--primary-green);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        /* Mission Cards List (Reused for Manual History) */
+        .missions-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding-bottom: 20px;
+        }
+
+        .mission-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: var(--card-shadow);
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            animation: slideIn 0.5s ease backwards;
+        }
+
+        .mission-title {
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--text-main);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .mission-detail {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+        }
+        
+        .mission-detail span {
+            color: var(--text-main);
+        }
+
+        .points-highlight {
+            color: var(--primary-green) !important;
+            font-size: 14px;
+            font-weight: 800 !important;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .mission-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 10px;
+            border-top: 1px dashed rgba(2, 69, 26, 0.1);
+            padding-top: 15px;
+        }
+
+        .do-it-btn {
+            background: var(--primary-green);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 12px;
+            font-family: inherit;
+            font-weight: 800;
+            font-size: 13px;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(2, 69, 26, 0.2);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .do-it-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(2, 69, 26, 0.3);
+        }
+
+        .floating-add-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 24px;
+            width: 60px;
+            height: 60px;
+            background: var(--primary-green);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 50;
+            box-shadow: 0 10px 25px rgba(2, 69, 26, 0.4);
+            border: 4px solid var(--bg-color);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        .floating-add-btn:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 15px 30px rgba(2, 69, 26, 0.5);
+        }
+
+        /* Modal Styles */
+        .qr-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(2, 69, 26, 0.4);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 100;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .qr-modal-overlay.active {
+            display: flex;
+            opacity: 1;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .qr-modal {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 320px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            position: relative;
+            animation: modalPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes modalPop {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .qr-modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(2, 69, 26, 0.1);
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--primary-green);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .qr-modal-close:hover {
+            background: rgba(2, 69, 26, 0.2);
+        }
+
+        .qr-placeholder {
+            width: 200px;
+            height: 200px;
+            background: white;
+            border-radius: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: inset 0 0 0 2px rgba(2, 69, 26, 0.1);
+        }
+
+        /* Form Card */
+        .form-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 25px;
+            box-shadow: var(--card-shadow);
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            animation: slideIn 0.5s ease backwards;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-label {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 14px;
+            border: 1px solid rgba(2, 69, 26, 0.2);
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 600;
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-green);
+            box-shadow: 0 0 0 3px rgba(2, 69, 26, 0.1);
+        }
+
+        .points-display {
+            background: rgba(2, 69, 26, 0.05);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px dashed rgba(2, 69, 26, 0.2);
+            margin-top: 10px;
+        }
+
+        .points-label {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+
+        .points-value {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--primary-green);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .points-value i {
+            color: var(--primary-green);
+            width: 24px;
+            height: 24px;
+        }
+
+        /* Action Buttons */
+        .btn-primary {
+            background: var(--primary-green);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 16px;
+            font-family: inherit;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(2, 69, 26, 0.25);
+            transition: all 0.3s ease;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: auto; /* Push to bottom if needed */
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 25px rgba(2, 69, 26, 0.35);
+        }
+
+        .btn-primary:disabled {
+            background: var(--text-muted);
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        /* Camera / Finalization View */
+        #reviewSection {
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            gap: 20px;
+            height: 100%;
+        }
+
+        .camera-view {
+            width: 100%;
+            height: 250px;
+            background: #111827;
+            border-radius: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+
+        .camera-overlay {
+            position: absolute;
+            inset: 20px;
+            border: 2px dashed rgba(255,255,255,0.4);
+            border-radius: 12px;
+        }
+
+        .camera-icon {
+            width: 48px;
+            height: 48px;
+            opacity: 0.8;
+            margin-bottom: 10px;
+        }
+
+        .camera-text {
+            font-size: 14px;
+            font-weight: 600;
+            opacity: 0.8;
+        }
+
+        .live-dot {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 10px;
+            height: 10px;
+            background: #ef4444;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        .summary-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 20px;
+            box-shadow: var(--card-shadow);
+            backdrop-filter: blur(12px);
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(2, 69, 26, 0.05);
+        }
+
+        .summary-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .summary-label {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+
+        .summary-val {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--text-main);
+            text-align: right;
+            max-width: 60%;
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <div class="ambient-layer"></div>
+
+    <div class="app-container">
+        
+        <!-- Header -->
+        <header class="header">
+            <button class="back-btn" id="backBtn" onclick="goBack()">
+                <i data-lucide="chevron-left"></i>
+            </button>
+            <div class="header-title" id="pageTitle">Manual Activity</div>
+        </header>
+
+        <!-- MANUAL LIST SECTION -->
+        <div class="content-area" id="manualListSection">
+            
+            <div class="status-filters">
+                <button class="filter-btn active" onclick="filterList('all')">All</button>
+                <button class="filter-btn" onclick="filterList('pending')">Pending</button>
+                <button class="filter-btn" onclick="filterList('completed')">Completed</button>
+            </div>
+
+            <div class="instruction-banner">
+                <div class="instruction-text">Log your activities to earn points and rewards</div>
+            </div>
+
+            <div class="missions-list">
+                
+                <div class="mission-card" data-status="pending">
+                    <div class="mission-title">5.0 kg White (Used) Paper</div>
+                    <div class="mission-detail">
+                        <i data-lucide="award" style="width: 14px; height: 14px; margin-top: 2px; color: var(--primary-green);"></i>
+                        POINTS: <span class="points-highlight">400</span>
+                    </div>
+                    <div class="mission-detail">
+                        <i data-lucide="calendar" style="width: 14px; height: 14px; margin-top: 2px;"></i>
+                        DATE: <span>Oct 20, 2026</span>
+                    </div>
+                    <div class="mission-actions" style="gap: 10px;">
+                        <button class="do-it-btn" style="background: rgba(2, 69, 26, 0.1); color: var(--primary-green); padding: 10px 15px;" onclick="showQRModal()">
+                            <i data-lucide="qr-code" style="width: 18px; height: 18px;"></i>
+                        </button>
+                        <button class="do-it-btn" style="background: #eab308; flex-grow: 1;" disabled>
+                            PENDING <i data-lucide="clock" style="width: 16px; height: 16px;"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mission-card" data-status="completed" style="opacity: 0.8;">
+                    <div class="mission-title">2.5 kg PET Bottles (clean)</div>
+                    <div class="mission-detail">
+                        <i data-lucide="award" style="width: 14px; height: 14px; margin-top: 2px; color: var(--primary-green);"></i>
+                        POINTS: <span class="points-highlight">400</span>
+                    </div>
+                    <div class="mission-detail">
+                        <i data-lucide="calendar" style="width: 14px; height: 14px; margin-top: 2px;"></i>
+                        DATE: <span>Oct 18, 2026</span>
+                    </div>
+                    <div class="mission-actions">
+                        <button class="do-it-btn" style="background: var(--text-muted);" disabled>
+                            COMPLETED <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Floating Action Button -->
+            <div class="floating-add-btn" onclick="showInputForm()">
+                <i data-lucide="plus" style="width: 28px; height: 28px;"></i>
+            </div>
+        </div>
+
+        <!-- INPUT SECTION -->
+        <div class="content-area" id="inputSection" style="display: none;">
+            <div class="form-card">
+                
+                <div class="form-group">
+                    <label class="form-label">Description (Uri ng Kalakal)</label>
+                    <select id="itemDesc" class="form-control" onchange="calculatePoints()">
+                        <option value="" disabled selected>Pumili ng Item...</option>
+                        
+                        <optgroup label="PAPER (Papel)">
+                            <option value="White (Used) Paper">Puting Papel (Used)</option>
+                            <option value="Corrugated Cardboard">Karton (Corrugated)</option>
+                            <option value="Newspaper">Dyaryo</option>
+                            <option value="Mixed Paper">Mixed Paper</option>
+                            <option value="Cardboard (informal)">Karton (Informal)</option>
+                        </optgroup>
+    
+                        <optgroup label="PLASTIC (Plastik)">
+                            <option value="PET Bottles (clean)">PET Bottles (Malinis)</option>
+                            <option value="PET Bottles (unclean)">PET Bottles (Marumi)</option>
+                            <option value="HDPE (Sibakin) Plastic">HDPE (Sibakin) Plastic</option>
+                            <option value="LDPE Plastic (lids)">LDPE Plastic (Lids/Takip)</option>
+                            <option value="Engineering Plastics">Engineering Plastics</option>
+                            <option value="Hard Plastic (sibak, informal)">Hard Plastic (Sibak)</option>
+                            <option value="Plastic Bottles (informal)">Plastic Bottles (Informal)</option>
+                            <option value="Plastic Sachet">Plastic Sachet</option>
+                        </optgroup>
+    
+                        <optgroup label="METAL (Bakal/Tanso)">
+                            <option value="Aluminum Cans">Aluminum Cans (Lata)</option>
+                            <option value="Copper Wire">Copper Wire (Tanso)</option>
+                            <option value="Steel (Iron alloys)">Steel (Bakal)</option>
+                            <option value="Stainless Steel">Stainless Steel</option>
+                            <option value="Tin Cans">Tin Cans</option>
+                            <option value="Scrap Metal (general)">Scrap Metal (General)</option>
+                        </optgroup>
+    
+                        <optgroup label="GLASS (Bote)">
+                            <option value="Glass Cullets (bubog)">Glass Cullets (Bubog)</option>
+                        </optgroup>
+    
+                        <optgroup label="OTHERS">
+                            <option value="Car Batteries">Car Batteries</option>
+                            <option value="E-Waste">Electronic Waste (E-Waste)</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Estimated Weight / Quantity (kg)</label>
+                    <input type="number" id="itemWeight" class="form-control" placeholder="e.g. 2.5" min="0.1" step="0.1" oninput="calculatePoints()">
+                </div>
+
+                <div class="points-display">
+                    <span class="points-label">Estimated Points:</span>
+                    <span class="points-value">
+                        <i data-lucide="circle-dollar-sign"></i>
+                        <span id="calculatedPoints">0</span>
+                    </span>
+                </div>
+
+            </div>
+
+            <button class="btn-primary" id="nextBtn" onclick="showCamera()" disabled>
+                Next Step <i data-lucide="arrow-right"></i>
+            </button>
+        </div>
+
+        <!-- CAMERA SECTION -->
+        <div class="content-area" id="cameraSection" style="display: none; flex-direction: column; gap: 20px; height: 100%;">
+            
+            <div class="camera-view" style="flex-grow: 1; height: auto;">
+                <div class="camera-overlay"></div>
+                <div class="live-dot"></div>
+                <i data-lucide="camera" class="camera-icon"></i>
+                <div class="camera-text">Live Camera Active</div>
+                <div style="font-size: 11px; opacity: 0.6; margin-top: 5px;">Position your item in the frame for verification.</div>
+            </div>
+
+            <button class="btn-primary" onclick="showReview()">
+                Capture & Continue <i data-lucide="camera"></i>
+            </button>
+        </div>
+
+        <!-- REVIEW SECTION -->
+        <div class="content-area" id="reviewSection" style="display: none; flex-direction: column; gap: 20px; height: 100%;">
+            
+            <div class="summary-card">
+                <div style="text-align: center; margin-bottom: 20px; font-weight: 700; color: var(--primary-green);">
+                    <i data-lucide="check-circle" style="width: 24px; height: 24px; margin-bottom: 5px;"></i><br>
+                    Image Captured Successfully
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Item</span>
+                    <span class="summary-val" id="summaryItem">--</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Weight/Qty</span>
+                    <span class="summary-val" id="summaryWeight">-- kg</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Total Points</span>
+                    <span class="summary-val" style="color: var(--primary-green); font-size: 18px;">
+                        <i data-lucide="circle-dollar-sign" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle;"></i> 
+                        <span id="summaryPoints">0</span>
+                    </span>
+                </div>
+            </div>
+
+            <button class="btn-primary" onclick="submitWaste()">
+                Submit for Verification <i data-lucide="check-circle"></i>
+            </button>
+        </div>
+
+    </div>
+
+    <!-- QR Modal -->
+    <div class="qr-modal-overlay" id="qrModal" onclick="closeQRModal(event)">
+        <div class="qr-modal">
+            <button class="qr-modal-close" onclick="closeQRModal()">
+                <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+            </button>
+            <div style="font-size: 18px; font-weight: 800; color: var(--primary-green); text-align: center;">Verification Code</div>
+            <div class="qr-placeholder">
+                <i data-lucide="qr-code" style="width: 120px; height: 120px; color: var(--primary-green); opacity: 0.8;"></i>
+            </div>
+            <div style="font-size: 24px; font-weight: 800; letter-spacing: 4px; color: var(--text-main); font-family: monospace; background: rgba(2, 69, 26, 0.05); padding: 8px 20px; border-radius: 8px; border: 1px dashed rgba(2, 69, 26, 0.2); margin-top: 5px; margin-bottom: 5px;">ECO-7X29</div>
+            <div style="font-size: 13px; font-weight: 600; color: var(--text-muted); text-align: center; line-height: 1.4;">Show this QR code to the admin to verify your activity.</div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Points Mapping Database
+        const pointsMapping = {
+            // PAPER
+            "White (Used) Paper": 80,
+            "Corrugated Cardboard": 20,
+            "Newspaper": 40,
+            "Mixed Paper": 10,
+            "Cardboard (informal)": 40,
+
+            // PLASTIC
+            "PET Bottles (clean)": 160,
+            "PET Bottles (unclean)": 120,
+            "HDPE (Sibakin) Plastic": 10,
+            "LDPE Plastic (lids)": 50,
+            "Engineering Plastics": 100,
+            "Hard Plastic (sibak, informal)": 150,
+            "Plastic Bottles (informal)": 100,
+            "Plastic Sachet": 20,
+
+            // METAL & OTHERS
+            "Aluminum Cans": 50,
+            "Copper Wire": 1500,
+            "Steel (Iron alloys)": 90,
+            "Stainless Steel": 600,
+            "Tin Cans": 30,
+            "Scrap Metal (general)": 140,
+            "Glass Cullets (bubog)": 10,
+            "Car Batteries": 140,
+            "E-Waste": 100
+        };
+
+        const itemDesc = document.getElementById('itemDesc');
+        const itemWeight = document.getElementById('itemWeight');
+        const calculatedPointsDisplay = document.getElementById('calculatedPoints');
+        const nextBtn = document.getElementById('nextBtn');
+        
+        const manualListSection = document.getElementById('manualListSection');
+        const inputSection = document.getElementById('inputSection');
+        const cameraSection = document.getElementById('cameraSection');
+        const reviewSection = document.getElementById('reviewSection');
+        const pageTitle = document.getElementById('pageTitle');
+
+        let currentPoints = 0;
+        let currentStep = 'list'; // 'list', 'input', 'camera', 'review'
+
+        function filterList(status) {
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            document.querySelectorAll('.mission-card').forEach(card => {
+                if (status === 'all' || card.getAttribute('data-status') === status) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        function showQRModal() {
+            document.getElementById('qrModal').classList.add('active');
+        }
+
+        function closeQRModal(e) {
+            if (!e || e.target.id === 'qrModal' || e.currentTarget.classList.contains('qr-modal-close')) {
+                document.getElementById('qrModal').classList.remove('active');
+            }
+        }
+
+        function showInputForm() {
+            manualListSection.style.display = 'none';
+            inputSection.style.display = 'flex';
+            pageTitle.textContent = "New Activity";
+            currentStep = 'input';
+        }
+
+        function calculatePoints() {
+            const selectedItem = itemDesc.value;
+            const weight = parseFloat(itemWeight.value);
+
+            if (selectedItem && weight > 0) {
+                const multiplier = pointsMapping[selectedItem] || 0;
+                currentPoints = Math.round(multiplier * weight);
+                calculatedPointsDisplay.textContent = currentPoints.toLocaleString();
+                nextBtn.disabled = false;
+            } else {
+                calculatedPointsDisplay.textContent = "0";
+                nextBtn.disabled = true;
+                currentPoints = 0;
+            }
+        }
+
+        function showCamera() {
+            if (nextBtn.disabled) return;
+            inputSection.style.display = 'none';
+            cameraSection.style.display = 'flex';
+            reviewSection.style.display = 'none';
+            pageTitle.textContent = "Take Photo";
+            currentStep = 'camera';
+        }
+
+        function showReview() {
+            // Populate summary
+            const selectedText = itemDesc.options[itemDesc.selectedIndex].text;
+            document.getElementById('summaryItem').textContent = selectedText;
+            document.getElementById('summaryWeight').textContent = itemWeight.value + " kg";
+            document.getElementById('summaryPoints').textContent = currentPoints.toLocaleString();
+
+            // Switch views
+            inputSection.style.display = 'none';
+            cameraSection.style.display = 'none';
+            reviewSection.style.display = 'flex';
+            pageTitle.textContent = "Finalize Submission";
+            currentStep = 'review';
+            
+            lucide.createIcons();
+        }
+
+        function goBack() {
+            if (currentStep === 'review') {
+                cameraSection.style.display = 'flex';
+                reviewSection.style.display = 'none';
+                pageTitle.textContent = "Take Photo";
+                currentStep = 'camera';
+            } else if (currentStep === 'camera') {
+                inputSection.style.display = 'flex';
+                cameraSection.style.display = 'none';
+                pageTitle.textContent = "New Activity";
+                currentStep = 'input';
+            } else if (currentStep === 'input') {
+                manualListSection.style.display = 'flex';
+                inputSection.style.display = 'none';
+                pageTitle.textContent = "Manual Activity";
+                currentStep = 'list';
+            } else {
+                window.location.href = 'menu.html';
+            }
+        }
+
+        function submitWaste() {
+            alert("Submission complete! Awaiting admin verification.");
+            window.location.href = 'manual.html';
+        }
+    </script>
+</body>
+
+</html>

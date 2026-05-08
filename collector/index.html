@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>EcoTrack Collector | Welcome</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-green: #02451A;
+            --forest-dark: #035e24;
+            --emerald: #10b981;
+            --mint: #34d399;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --transition-smooth: cubic-bezier(0.25, 1, 0.5, 1);
+            --text-shadow: 0px 1px 2px rgba(0,0,0,0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Baloo Da 2', cursive;
+            background-color: #f0fdf4;
+            color: #111827;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            min-height: 100svh;
+            overflow: hidden;
+            position: relative;
+            padding: 20px;
+        }
+
+        /* --- Ambient Background --- */
+        .ambient-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .ambient-blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.5;
+            animation: drift 15s infinite alternate ease-in-out;
+        }
+
+        .blob-1 { width: 60vw; height: 60vw; background: #dcfce7; top: -10%; right: -10%; }
+        .blob-2 { width: 70vw; height: 70vw; background: #a7f3d0; bottom: -10%; left: -10%; animation-delay: -5s; }
+
+        @keyframes drift {
+            from { transform: translate(0, 0) scale(1); }
+            to { transform: translate(5%, 5%) scale(1.1); }
+        }
+
+        /* --- Glassmorphism Card --- */
+        .glass-card {
+            width: 100%;
+            max-width: 420px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            
+            height: 85vh;
+            height: 85svh;
+            max-height: 750px;
+            padding: clamp(40px, 8vh, 60px) 30px;
+
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 40px;
+            box-shadow: 0 25px 50px -12px rgba(2, 69, 26, 0.15);
+
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideUpFade 1.2s var(--transition-smooth) forwards;
+        }
+
+        /* --- Logo Section --- */
+        .logo-section {
+            text-align: center;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .logo-wrapper {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .logo-img {
+            width: clamp(130px, 38vw, 180px);
+            height: auto;
+            position: relative;
+            z-index: 2;
+            filter: drop-shadow(0 15px 25px rgba(2, 69, 26, 0.15));
+            animation: floating 4s ease-in-out infinite;
+        }
+
+        .logo-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            border: 1px solid rgba(2, 69, 26, 0.1);
+            z-index: 1;
+        }
+
+        .ring-1 { width: 140%; height: 140%; animation: spin 15s linear infinite; border-top-color: var(--emerald); }
+
+        .app-name {
+            font-size: clamp(32px, 9vw, 42px);
+            font-weight: 800;
+            color: var(--primary-green);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-shadow: var(--text-shadow);
+            margin-top: 10px;
+        }
+
+        /* --- Controls Section --- */
+        .controls-section {
+            width: 100%;
+            text-align: center;
+        }
+
+        .btn-action {
+            width: 100%;
+            background-color: var(--primary-green);
+            color: white;
+            font-family: 'Baloo Da 2', cursive;
+            font-size: 18px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            padding: 18px 0;
+            border: none;
+            border-radius: 16px;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(2, 69, 26, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .btn-action:hover {
+            background-color: var(--forest-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 15px 25px rgba(2, 69, 26, 0.25);
+        }
+
+        .btn-action:active {
+            transform: translateY(1px);
+        }
+
+        .tagline {
+            margin-top: 20px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #111827;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: var(--text-shadow);
+        }
+
+        /* --- Animations --- */
+        @keyframes slideUpFade {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes floating {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-12px); }
+        }
+
+        @keyframes spin {
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .outro {
+            animation: slideDownFade 0.6s var(--transition-smooth) forwards !important;
+        }
+
+        @keyframes slideDownFade {
+            to { opacity: 0; transform: translateY(30px); }
+        }
+
+        /* Fix for very short screens */
+        @media (max-height: 600px) {
+            .glass-card { height: 95vh; padding: 20px; }
+            .logo-img { width: 100px; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="ambient-layer">
+        <div class="ambient-blob blob-1"></div>
+        <div class="ambient-blob blob-2"></div>
+    </div>
+
+    <div class="glass-card" id="mainCard">
+
+        <div class="logo-section">
+            <div class="logo-wrapper">
+                <div class="logo-ring ring-1"></div>
+                <img src="image/logo.png" alt="EcoTrack Logo" class="logo-img">
+            </div>
+            <h1 class="app-name">ECOTRACK</h1>
+        </div>
+
+        <div class="controls-section">
+            <button class="btn-action" onclick="handleStart()">
+                Get Started
+            </button>
+            <p class="tagline">Collector Portal</p>
+        </div>
+
+    </div>
+
+    <script>
+        function handleStart() {
+            document.getElementById('mainCard').classList.add('outro');
+            setTimeout(() => {
+                window.location.href = "login.html";
+            }, 600);
+        }
+    </script>
+</body>
+
+</html>

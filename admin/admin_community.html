@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoTrack - Community Chat</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        :root { 
+            --primary-neutral: #444444; 
+            --accent-neutral: #888888; 
+            --bg-soft: #fcfcfc; 
+            --card-bg: #ffffff;
+            --border-soft: #f0f0f0;
+            --text-main: #444444; 
+            --text-muted: #888888; 
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            --card-shadow: 0 4px 20px rgba(0,0,0,0.02);
+            --sidebar-width: 85px; 
+            --danger-red: #d32f2f;
+            --primary: #02451A;
+            --light-bg: #e8f5e9;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body { 
+            font-family: 'Baloo Da 2', cursive; 
+            background-color: var(--bg-soft); 
+            color: var(--text-main); 
+            display: flex; 
+            min-height: 100vh; 
+            font-size: 16px; 
+            letter-spacing: -0.01em;
+        }
+
+        /* --- Sidebar (Icon-only) --- */
+        .sidebar { 
+            width: var(--sidebar-width); 
+            background-color: var(--card-bg); 
+            height: 100vh; 
+            position: fixed; 
+            left: 0; 
+            top: 0; 
+            border-right: 1px solid var(--border-soft); 
+            display: flex; 
+            flex-direction: column; 
+            padding: 32px 0; 
+            z-index: 1000; 
+            overflow: hidden; 
+            transition: all 0.3s ease; 
+        }
+        
+        .sidebar-brand { 
+            padding: 0 20px 48px 20px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            transition: all 0.3s ease; 
+        }
+        
+        .sidebar-logo-img { height: 1.5rem; width: auto; display: block; opacity: 0.8; }
+        
+        .nav-menu { list-style: none; flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 0 16px; }
+        
+        .nav-link { 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            padding: 14px; 
+            color: var(--text-muted); 
+            text-decoration: none; 
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); 
+            border-radius: var(--radius-md);
+        }
+        
+        .nav-link i { 
+            font-size: 1.2rem; 
+            color: var(--text-muted);
+            transition: all 0.25s;
+        }
+        
+        .nav-link:hover { 
+            background-color: var(--bg-soft); 
+            color: var(--text-main); 
+        }
+        .nav-link:hover i { transform: scale(1.1); color: var(--text-main); }
+        
+        .nav-link.active { background: var(--bg-soft); color: var(--text-main); }
+        .nav-link.active i { color: var(--text-main); }
+
+        .sidebar-brand span, .nav-link span { display: none; }
+
+        .sidebar-footer { padding: 16px; border-top: 1px solid var(--border-soft); margin-top: auto; }
+        .logout-link { color: var(--text-muted) !important; display: flex; justify-content: center; padding: 14px; text-decoration: none; border-radius: var(--radius-md); transition: all 0.2s; }
+        .logout-link:hover { color: #d32f2f !important; background: #fff5f5 !important; }
+
+        /* --- Main Content --- */
+        .main-content { 
+            margin-left: var(--sidebar-width); 
+            flex: 1; 
+            padding: 40px 48px; 
+            position: relative; 
+            transition: margin-left 0.3s ease; 
+        }
+        .admin-profile { display: flex; align-items: center; gap: 15px; }
+
+        /* Profile Dropdown (Facebook Style) */
+        .profile-dropdown {
+            position: absolute;
+            top: 55px;
+            right: 0;
+            width: 320px;
+            background: white !important;
+            border-radius: 12px;
+            box-shadow: 0 12px 28px 0 rgba(0, 0, 0, 0.2), 0 2px 4px 0 rgba(0, 0, 0, 0.1);
+            display: none;
+            z-index: 2000;
+            padding: 12px;
+            animation: dropdownFade 0.2s ease-out;
+            text-align: left;
+        }
+        .profile-dropdown.active { display: block; }
+        @keyframes dropdownFade { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .profile-user-card {
+            padding: 8px;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            margin-bottom: 8px;
+            background: white;
+        }
+        .user-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background 0.2s;
+            text-decoration: none;
+            color: inherit;
+        }
+        .user-item:hover { background: #f2f2f2; }
+        .user-avatar-circle {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: #e4e6eb; display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; color: #1c1e21;
+        }
+        .user-name-text { font-weight: 600; font-size: 1rem; color: #050505; }
+
+        .dropdown-list { list-style: none; margin-top: 8px; }
+        .dropdown-item {
+            display: flex; align-items: center; gap: 12px; padding: 12px 8px;
+            border-radius: 8px; cursor: pointer; transition: background 0.2s;
+            text-decoration: none; color: inherit; font-weight: 500; font-size: 0.95rem;
+        }
+        .dropdown-item:hover { background: #f2f2f2; }
+        .item-icon-circle {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: #e4e6eb; display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem;
+        }
+        .item-arrow { margin-left: auto; color: #65676b; font-size: 0.8rem; }
+        
+        .dropdown-footer { padding: 8px; color: #65676b; font-size: 0.75rem; margin-top: 8px; }
+
+        /* Custom Theme Toggle (As requested) */
+        .theme-toggle-container { padding: 8px; margin-top: 4px; }
+        .theme-switch {
+            position: relative; width: 100%; height: 50px; background: #e4e6eb;
+            border-radius: 25px; display: flex; align-items: center; cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); overflow: hidden;
+            border: 2px solid transparent;
+        }
+        .toggle-circle {
+            position: absolute; width: 38px; height: 38px; background: white;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 2; font-size: 1.2rem;
+        }
+        .mode-text {
+            width: 100%; text-align: center; font-weight: 900; font-size: 0.85rem;
+            letter-spacing: 1px; text-transform: uppercase; z-index: 1; transition: 0.3s;
+        }
+        
+        /* Light Mode Styles */
+        .theme-switch.light-state .toggle-circle { left: calc(100% - 44px); color: #f59e0b; }
+        .theme-switch.light-state .mode-text { padding-right: 40px; color: #1c1e21; }
+        
+        /* Dark Mode Styles */
+        .theme-switch.dark-state { background: #000000; border-color: #334155; }
+        .theme-switch.dark-state .toggle-circle { left: 6px; color: #1e293b; }
+        .theme-switch.dark-state .mode-text { padding-left: 40px; color: white; }
+
+        /* Dark Mode Tokens */
+        body.dark-mode {
+            --bg-soft: #0f172a;
+            --card-bg: #1e293b;
+            --border-soft: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+        body.dark-mode .profile-dropdown { background: #1e293b !important; color: #f8fafc; border-color: #334155; box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+        body.dark-mode .user-avatar-circle, body.dark-mode .item-icon-circle { background: #334155; color: #f8fafc; }
+        body.dark-mode .dropdown-item:hover, body.dark-mode .user-item:hover { background: #2d3748; }
+        body.dark-mode .user-name-text { color: #f8fafc; }
+        body.dark-mode .item-arrow { color: #94a3b8; }
+        body.dark-mode .profile-user-card { background: #242f42; border: 1px solid #334155; }
+        body.dark-mode .sidebar { background: #1e293b; border-color: #334155; }
+        body.dark-mode .header { border-bottom: 1px solid #334155; }
+        body.dark-mode .dropdown-item { color: #f8fafc; }
+
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; padding-bottom: 20px; border-bottom: 1px solid var(--border-soft); }
+        /* Header Icons - Light Mode (Default) */
+        .header-icon-btn { 
+            position: relative; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; 
+            border-radius: 50%; background: white; border: 1px solid #f0f0f0; color: #888; 
+            text-decoration: none; transition: 0.3s; font-size: 1.1rem;
+        }
+        .header-icon-btn:hover { background: #f8fafc; color: #333; transform: translateY(-2px); }
+        .notif-dot::after { 
+            content: ''; position: absolute; top: 11px; right: 11px; width: 10px; height: 10px; 
+            background: #ef4444; border: 2px solid white; border-radius: 50%; 
+        }
+
+        /* Header Icons - Dark Mode */
+        body.dark-mode .header-icon-btn { background: #1e293b; border-color: #334155; color: #cbd5e1; }
+        body.dark-mode .header-icon-btn:hover { background: #334155; color: white; }
+        body.dark-mode .notif-dot::after { border-color: #1e293b; }
+
+        /* --- EcoChat Layout --- */
+        .chat-grid {
+            display: grid; 
+            grid-template-columns: 2.5fr 1fr; 
+            gap: 30px;
+            height: calc(100vh - 180px);
+        }
+
+        /* --- LEFT: Community Feed --- */
+        .feed-section { overflow-y: auto; padding-right: 10px; }
+        
+        .create-post {
+            background: var(--card-bg); padding: 24px; border-radius: var(--radius-lg);
+            box-shadow: var(--card-shadow); margin-bottom: 24px;
+            border: 1px solid var(--border-soft);
+        }
+        .cp-header { font-weight: 600; color: var(--text-main); margin-bottom: 12px; display: flex; gap: 12px; align-items: center; font-size: 0.95rem; }
+        .cp-input {
+            width: 100%; border: 1px solid var(--border-soft); border-radius: var(--radius-md); padding: 12px;
+            font-family: inherit; resize: none; outline: none; margin-bottom: 12px; background: var(--bg-soft); font-size: 0.9rem;
+        }
+        .cp-actions { display: flex; justify-content: space-between; align-items: center; }
+        
+        .btn-action-pill {
+            background-color: #e3f2fd;
+            color: #1976d2;
+            border: 1.5px solid #1976d2;
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-family: 'Baloo Da 2', cursive;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-action-pill:hover { background-color: #1976d2; color: white; transform: translateY(-2px); }
+        .btn-action-pill.danger { background-color: #ffebee; color: #d32f2f; border-color: #d32f2f; }
+        .btn-action-pill.danger:hover { background-color: #d32f2f; color: white; }
+
+        #imagePreviewContainer { position: relative; display: none; width: 100px; height: 100px; margin-bottom: 10px; }
+        #imagePreview { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; border: 1px solid #ddd; }
+        #removeImage {
+            position: absolute; top: -5px; right: -5px; background: var(--danger-red); color: white;
+            border-radius: 50%; width: 22px; height: 22px; text-align: center; line-height: 20px; cursor: pointer;
+        }
+
+        /* Feed Posts */
+        .post-card {
+            background: var(--card-bg); padding: 24px; border-radius: var(--radius-lg);
+            box-shadow: var(--card-shadow); margin-bottom: 20px; border: 1px solid var(--border-soft);
+        }
+        .post-user { display: flex; gap: 16px; align-items: center; margin-bottom: 15px; }
+        .u-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+        .u-info h4 { font-size: 0.95rem; font-weight: 600; margin: 0; color: var(--text-main); }
+        .u-info span { font-size: 0.8rem; color: var(--text-muted); }
+        .badge-admin { background: #e8f5e9; color: #2e7d32; padding: 2px 8px; border-radius: 10px; font-size: 0.65rem; margin-left: 5px; font-weight: 600; }
+
+        .post-content { color: #444; line-height: 1.5; margin-bottom: 12px; white-space: pre-wrap; font-size: 0.95rem; }
+        .post-img { width: 100%; max-height: 400px; object-fit: cover; border-radius: 10px; margin-bottom: 15px; cursor: pointer; }
+
+        .post-footer { display: flex; gap: 20px; border-top: 1px solid #f9f9f9; padding-top: 15px; }
+
+        /* --- RIGHT: Direct Messages --- */
+        .messages-section {
+            background: var(--card-bg); border-radius: var(--radius-lg); box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-soft); display: flex; flex-direction: column;
+            overflow: hidden; max-height: 80vh;
+        }
+        .msg-header { padding: 18px 20px; border-bottom: 1px solid var(--border-soft); font-weight: 700; color: var(--primary); }
+        
+        .msg-list { flex: 1; overflow-y: auto; }
+        .msg-item {
+            padding: 15px 20px; display: flex; gap: 12px; align-items: center;
+            cursor: pointer; transition: 0.2s; border-bottom: 1px solid #fcfcfc;
+        }
+        .msg-item:hover { background: #f8fcf9; }
+        
+        .msg-avatar-wrap { position: relative; }
+        .status-dot {
+            width: 12px; height: 12px; background: #ccc; border: 2.5px solid white;
+            border-radius: 50%; position: absolute; bottom: 0; right: 0;
+        }
+        .status-dot.online { background: #4caf50; }
+
+        .msg-details { flex: 1; overflow: hidden; }
+        .msg-name { font-weight: 600; font-size: 0.9rem; color: var(--text-main); }
+        .msg-preview { font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+
+        /* --- CHAT BOX POPUP --- */
+        .chat-popup {
+            position: fixed; bottom: 0; right: 40px; width: 320px; height: 420px;
+            background: white; border-radius: 15px 15px 0 0;
+            box-shadow: 0 -5px 25px rgba(0,0,0,0.1);
+            display: none; flex-direction: column; z-index: 1001;
+            border: 1px solid var(--border-soft);
+        }
+        .chat-popup.active { display: flex; }
+
+        .chat-head {
+            background: var(--primary); color: white; padding: 12px 16px;
+            border-radius: 14px 14px 0 0; display: flex; justify-content: space-between; align-items: center;
+            cursor: pointer; font-size: 0.95rem; font-weight: 600;
+        }
+        .chat-body { flex: 1; background: #f9f9f9; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        
+        .bubble { padding: 8px 12px; border-radius: 15px; max-width: 85%; font-size: 0.85rem; line-height: 1.4; }
+        .bubble-in { background: white; align-self: flex-start; border-bottom-left-radius: 2px; border: 1px solid #eee; color: #444; }
+        .bubble-out { background: var(--primary); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+
+        .chat-input-area { padding: 12px; background: white; border-top: 1px solid #eee; display: flex; gap: 8px; }
+        .chat-input { flex: 1; border: none; outline: none; font-family: inherit; font-size: 0.85rem; }
+        .chat-send { background: none; border: none; color: var(--primary); cursor: pointer; font-size: 1.1rem; }
+
+        @media (max-width: 1000px) {
+            .chat-grid { grid-template-columns: 1fr; }
+            .messages-section { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar">
+        <div class="sidebar-brand">
+            <img src="image/logo.png" alt="Logo" class="sidebar-logo-img" id="sidebarLogo"> 
+            <span>EcoTrack</span>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item"><a href="admin_dashboard.html" class="nav-link"><i class="fa-solid fa-gauge"></i> <span>Dashboard</span></a></li>
+            <li class="nav-item"><a href="admin_users_hub.html" class="nav-link"><i class="fa-solid fa-users-gear"></i> <span>User Hub</span></a></li>
+            <li class="nav-item"><a href="admin_projects_hub.html" class="nav-link"><i class="fa-solid fa-diagram-project"></i> <span>Project Hub</span></a></li>
+            <li class="nav-item"><a href="admin_financial_hub.html" class="nav-link"><i class="fa-solid fa-wallet"></i> <span>Financial Hub</span></a></li>
+        </ul>
+
+        <div class="sidebar-footer">
+            <a href="#" onclick="logout()" class="nav-link logout-link"><i class="fa-solid fa-right-from-bracket"></i> <span>Logout</span></a>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <div class="header">
+            <div class="title">
+                <h1>EcoChat Community</h1>
+                <p>Public Feed & Direct Messages</p>
+            </div>
+            
+            <div class="admin-profile" style="position: relative;">
+                <a href="admin_community.html" class="header-icon-btn active" title="Community Chat"><i class="fa-solid fa-comments"></i></a>
+                <a href="admin_notif.html" class="header-icon-btn notif-dot" title="Notifications"><i class="fa-solid fa-bell"></i></a>
+                <div class="profile-trigger" onclick="toggleProfileDropdown(event)" style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-soft); border: 1px solid var(--border-soft); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-main);" title="Admin Profile">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+
+                <!-- PROFILE DROPDOWN MENU (IMMEDIATE) -->
+                <div id="profileDropdown" class="profile-dropdown">
+                    <div class="profile-user-card">
+                        <div class="user-item">
+                            <div class="user-avatar-circle"><i class="fa-solid fa-user"></i></div>
+                            <div class="user-name-text">Hershey Cristobal</div>
+                        </div>
+                    </div>
+
+                    <div class="dropdown-list">
+                        <a href="admin_profile.html" class="dropdown-item">
+                            <div class="item-icon-circle"><i class="fa-solid fa-gear"></i></div>
+                            <span>Settings & privacy</span>
+                            <i class="fa-solid fa-chevron-right item-arrow"></i>
+                        </a>
+                        <a href="#" class="dropdown-item">
+                            <div class="item-icon-circle"><i class="fa-solid fa-circle-question"></i></div>
+                            <span>Help & support</span>
+                            <i class="fa-solid fa-chevron-right item-arrow"></i>
+                        </a>
+                        
+                        <!-- NEW THEME TOGGLE -->
+                        <div class="theme-toggle-container">
+                            <div id="themeSwitch" onclick="toggleDarkMode()" class="theme-switch light-state">
+                                <div class="toggle-circle">
+                                    <i id="themeIcon" class="fa-solid fa-sun"></i>
+                                </div>
+                                <span id="themeText" class="mode-text">Day Mode</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="dropdown-footer">
+                        Privacy · Terms · Advertising · Cookies · More
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-grid">
+            <div class="feed-section">
+                <div class="create-post">
+                    <div class="cp-header">
+                        <img src="https://ui-avatars.com/api/?name=Admin+User&background=02451A&color=fff" style="width:30px; border-radius:50%;">
+                        Create an Announcement
+                    </div>
+                    
+                    <textarea class="cp-input" id="postInput" rows="3" placeholder="What's happening in Brgy. Lagundi?"></textarea>
+                    
+                    <div id="imagePreviewContainer">
+                        <img id="imagePreview" src="#">
+                        <div id="removeImage" onclick="clearImage()">×</div>
+                    </div>
+                    
+                    <div class="cp-actions">
+                        <div style="font-size: 1.2rem; color: #888; cursor: pointer;">
+                            <input type="file" id="imageInput" accept="image/*" style="display: none;" onchange="previewImage()">
+                            <i class="fa-regular fa-image" title="Add Image" onclick="document.getElementById('imageInput').click()"></i>
+                        </div>
+                        <button class="btn-action-pill" id="btnPost" onclick="createPost()">Post</button>
+                    </div>
+                </div>
+
+                <div id="feedContainer">
+                    <div class="empty-feed">
+                        <i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem;"></i>
+                        <p>Loading posts...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="messages-section">
+                <div class="msg-header">Direct Messages</div>
+                <div class="msg-list" id="msgList">
+                    <div class="empty-msgs">Loading messages...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Popup -->
+    <div class="chat-popup" id="chatPopup">
+        <div class="chat-head" onclick="closeChat()">
+            <span id="chatUser">Name</span>
+            <i class="fa-solid fa-xmark"></i>
+        </div>
+        <div class="chat-body" id="chatBody"></div>
+        <form class="chat-input-area" onsubmit="sendMessage(event)">
+            <input type="text" class="chat-input" id="chatInput" placeholder="Type a message..." autocomplete="off">
+            <button type="submit" class="chat-send"><i class="fa-solid fa-paper-plane"></i></button>
+        </form>
+    </div>
+
+    <script>
+        let selectedImage = null;
+        let currentUser = { id: 'admin_id', user_metadata: { full_name: 'Admin EcoTrack' } };
+        let currentChatId = null;
+
+        let posts = [
+            { id: '1', user_id: 'admin_id', full_name: 'Admin EcoTrack', created_at: new Date().toISOString(), content: 'Welcome to the EcoTrack Community!', image_url: null },
+            { id: '2', user_id: 'u1', full_name: 'Juan Dela Cruz', created_at: new Date(Date.now() - 3600000).toISOString(), content: 'Just recycled 5kg of plastic today!', image_url: null }
+        ];
+
+        let directMessages = [
+            { id: '1', sender_id: 'u1', sender_name: 'Juan Dela Cruz', receiver_id: 'admin_id', message: 'Hello admin, I need help with my account.', created_at: new Date().toISOString() }
+        ];
+
+        function initPage() {
+            fetchPosts();
+            fetchMessageList();
+        }
+
+        function previewImage() {
+            const fileInput = document.getElementById('imageInput');
+            if (fileInput.files && fileInput.files[0]) {
+                selectedImage = fileInput.files[0];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('imagePreview').src = e.target.result;
+                    document.getElementById('imagePreviewContainer').style.display = 'block';
+                }
+                reader.readAsDataURL(selectedImage);
+            }
+        }
+
+        function clearImage() {
+            selectedImage = null;
+            document.getElementById('imageInput').value = "";
+            document.getElementById('imagePreviewContainer').style.display = 'none';
+        }
+
+        function createPost() {
+            const content = document.getElementById('postInput').value.trim();
+            if (!content && !selectedImage) return;
+
+            const btn = document.getElementById('btnPost');
+            btn.innerText = 'Posting...';
+            btn.disabled = true;
+
+            setTimeout(() => {
+                let imageUrl = null;
+                if (selectedImage) { imageUrl = URL.createObjectURL(selectedImage); }
+
+                posts.unshift({
+                    id: Date.now().toString(),
+                    user_id: currentUser.id,
+                    full_name: 'Admin EcoTrack',
+                    content: content,
+                    image_url: imageUrl,
+                    created_at: new Date().toISOString()
+                });
+
+                document.getElementById('postInput').value = '';
+                clearImage();
+                fetchPosts();
+                
+                Swal.fire({ icon: 'success', title: 'Announcement Posted!', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
+                btn.innerText = 'Post';
+                btn.disabled = false;
+            }, 500);
+        }
+
+        function fetchPosts() {
+            const container = document.getElementById('feedContainer');
+            if (posts.length === 0) { 
+                container.innerHTML = `<div class="empty-feed"><p>No posts yet.</p></div>`; 
+                return; 
+            }
+
+            container.innerHTML = '';
+            posts.forEach(post => {
+                const date = new Date(post.created_at).toLocaleDateString() + ' ' + new Date(post.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const imgHTML = post.image_url ? `<img src="${post.image_url}" class="post-img" onclick="window.open(this.src)">` : '';
+                const deleteBtn = (post.user_id === currentUser.id) ? `<button class="btn-action-pill danger" style="padding: 4px 12px; font-size: 0.75rem; margin-left: auto;" onclick="deletePost('${post.id}')"><i class="fa-solid fa-trash"></i></button>` : '';
+
+                container.innerHTML += `
+                    <div class="post-card">
+                        <div class="post-user">
+                            <img src="https://ui-avatars.com/api/?name=${post.full_name}&background=random" class="u-avatar">
+                            <div class="u-info">
+                                <h4>${post.full_name} ${post.user_id === 'admin_id' ? '<span class="badge-admin">Admin</span>' : ''}</h4>
+                                <span>${date}</span>
+                            </div>
+                            ${deleteBtn}
+                        </div>
+                        <div class="post-content">${post.content || ''}</div>
+                        ${imgHTML}
+                        <div class="post-footer">
+                            <button class="btn-action-pill" style="padding: 4px 12px; font-size: 0.75rem;"><i class="fa-regular fa-heart"></i> Like</button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        async function deletePost(id) {
+            const result = await Swal.fire({ title: 'Delete announcement?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33' });
+            if(result.isConfirmed) {
+                posts = posts.filter(p => p.id !== id);
+                fetchPosts();
+            }
+        }
+
+        function fetchMessageList() {
+            const listContainer = document.getElementById('msgList');
+            const data = directMessages.filter(m => m.sender_id !== currentUser.id);
+
+            if(data.length === 0) {
+                listContainer.innerHTML = '<div class="empty-msgs">No messages yet.</div>';
+                return;
+            }
+
+            const senders = {};
+            data.forEach(msg => { if (!senders[msg.sender_id]) senders[msg.sender_id] = msg; });
+
+            listContainer.innerHTML = '';
+            Object.values(senders).forEach(msg => {
+                listContainer.innerHTML += `
+                    <div class="msg-item" onclick="openChat('${msg.sender_id}', '${msg.sender_name}')">
+                        <div class="msg-avatar-wrap">
+                            <img src="https://ui-avatars.com/api/?name=${msg.sender_name}&background=random" class="u-avatar">
+                            <div class="status-dot online"></div>
+                        </div>
+                        <div class="msg-details">
+                            <span class="msg-name">${msg.sender_name}</span>
+                            <span class="msg-preview">${msg.message}</span>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function openChat(userId, userName) {
+            document.getElementById('chatPopup').classList.add('active');
+            document.getElementById('chatUser').innerText = userName;
+            currentChatId = userId;
+            loadChatMessages(userId);
+        }
+
+        function closeChat() {
+            document.getElementById('chatPopup').classList.remove('active');
+            currentChatId = null;
+        }
+
+        function loadChatMessages(targetId) {
+            const chatBody = document.getElementById('chatBody');
+            const data = directMessages.filter(m => (m.sender_id === currentUser.id && m.receiver_id === targetId) || (m.sender_id === targetId && m.receiver_id === currentUser.id));
+            chatBody.innerHTML = '';
+            data.forEach(msg => {
+                const type = (msg.sender_id === currentUser.id) ? 'bubble-out' : 'bubble-in';
+                chatBody.innerHTML += `<div class="bubble ${type}">${msg.message}</div>`;
+            });
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
+        function sendMessage(e) {
+            e.preventDefault();
+            const input = document.getElementById('chatInput');
+            const msg = input.value.trim();
+            if(!msg || !currentChatId) return;
+
+            directMessages.push({
+                id: Date.now().toString(),
+                sender_id: currentUser.id,
+                sender_name: 'Admin',
+                receiver_id: currentChatId,
+                message: msg,
+                created_at: new Date().toISOString()
+            });
+
+            loadChatMessages(currentChatId);
+            input.value = '';
+        }
+
+        async function logout() { if((await Swal.fire({ title: 'Logout?', showCancelButton: true })).isConfirmed) window.location.href="login.html"; }
+
+        function toggleProfileDropdown(e) {
+            e.stopPropagation();
+            document.getElementById('profileDropdown').classList.toggle('active');
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('admin-theme', isDark ? 'dark' : 'light');
+            updateThemeUI(isDark);
+        }
+
+        function updateThemeUI(isDark) {
+            const switchEl = document.getElementById('themeSwitch');
+            const iconEl = document.getElementById('themeIcon');
+            const textEl = document.getElementById('themeText');
+            
+            if (isDark) {
+                if(switchEl) { switchEl.classList.remove('light-state'); switchEl.classList.add('dark-state'); }
+                if(iconEl) iconEl.className = 'fa-solid fa-moon';
+                if(textEl) textEl.innerText = 'Night Mode';
+            } else {
+                if(switchEl) { switchEl.classList.remove('dark-state'); switchEl.classList.add('light-state'); }
+                if(iconEl) iconEl.className = 'fa-solid fa-sun';
+                if(textEl) textEl.innerText = 'Day Mode';
+            }
+        }
+
+        // Load theme preference
+        const savedTheme = localStorage.getItem('admin-theme');
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-mode');
+            updateThemeUI(true);
+        } else {
+            updateThemeUI(false);
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.closest('.admin-profile')) {
+                const dropdown = document.getElementById('profileDropdown');
+                if(dropdown) dropdown.classList.remove('active');
+            }
+        }
+
+        initPage();
+    </script>
+</body>
+</html>

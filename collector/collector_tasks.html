@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>EcoTrack - My Tasks</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --primary-green: #02451A;
+            --emerald: #10b981;
+            --bg-color: #ffffff;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(2, 69, 26, 0.1);
+            --card-shadow: 0 8px 32px -8px rgba(2, 69, 26, 0.1);
+            --text-main: #02451A;
+            --text-muted: rgba(2, 69, 26, 0.6);
+            --pending-orange: #ff9800;
+            --blue-otw: #2196F3;
+            --yellow-here: #FBC02D;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100svh; overflow: hidden; position: relative;
+        }
+
+        .ambient-layer {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none;
+            background: radial-gradient(circle at 15% 50%, rgba(2, 69, 26, 0.05), transparent 50%),
+                        radial-gradient(circle at 85% 30%, rgba(2, 69, 26, 0.08), transparent 50%);
+        }
+
+        .app-container {
+            width: 100%; max-width: 480px; height: 100svh; display: flex; flex-direction: column;
+            position: relative; background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px); box-shadow: 0 0 50px rgba(0,0,0,0.05); overflow: hidden;
+        }
+
+        /* --- HEADER --- */
+        .header { padding: 24px 24px 15px 24px; z-index: 10; display: flex; justify-content: space-between; align-items: center; }
+        .page-title { font-family: 'Baloo Da 2', cursive; color: var(--primary-green); font-size: 1.4rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .history-link-container { padding: 0 24px 15px 24px; display: flex; justify-content: flex-end; }
+        .btn-history {
+            background: var(--glass-bg); border: 1px solid var(--glass-border); padding: 8px 16px;
+            border-radius: 20px; font-weight: 700; color: var(--primary-green); cursor: pointer;
+            display: flex; align-items: center; gap: 8px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(2, 69, 26, 0.05);
+            text-decoration: none; font-size: 0.85rem;
+        }
+        .btn-history:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(2, 69, 26, 0.1); background: white; }
+
+        /* --- CONTENT --- */
+        .content-area { flex-grow: 1; overflow-y: auto; padding: 10px 24px 120px 24px; scrollbar-width: none; }
+        .content-area::-webkit-scrollbar { display: none; }
+
+        .section-label { font-size: 1.1rem; font-weight: 800; color: var(--primary-green); margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+        .count-badge { background: var(--pending-orange); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; }
+
+        /* Card Style */
+        .active-card {
+            background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 24px;
+            padding: 20px; margin-bottom: 15px; box-shadow: var(--card-shadow); backdrop-filter: blur(12px);
+            position: relative; transition: transform 0.3s ease, border-left-color 0.3s ease;
+            border-left: 5px solid #ccc;
+        }
+        
+        .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
+        .user-name { font-weight: 800; color: var(--text-main); font-size: 1.1rem; }
+        .user-loc { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; margin-top: 2px; display: block; } 
+
+        .status-pill { font-size: 0.7rem; font-weight: 800; background: rgba(2, 69, 26, 0.08); color: var(--primary-green); padding: 6px 12px; border-radius: 12px; text-transform: uppercase; }
+
+        .waste-info { background: rgba(255, 255, 255, 0.5); border: 1px solid rgba(2, 69, 26, 0.05); padding: 12px; border-radius: 16px; display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
+        .info-text b { font-size: 0.95rem; color: var(--primary-green); font-weight: 800; }
+        .info-text span { font-size: 0.8rem; display: block; color: var(--text-muted); font-weight: 600; }
+
+        .card-actions { display: flex; gap: 10px; margin-top: 15px; }
+        .btn-proof {
+            background: rgba(255, 255, 255, 0.8); color: var(--primary-green); border: 1px solid var(--glass-border);
+            padding: 12px; border-radius: 16px; font-weight: 700; font-size: 0.85rem; cursor: pointer;
+            display: flex; justify-content: center; align-items: center; gap: 8px; transition: all 0.3s ease;
+            width: 35%; flex-shrink: 0; box-shadow: 0 4px 10px rgba(2, 69, 26, 0.05);
+        }
+        .btn-proof:hover { background: white; transform: translateY(-2px); }
+
+        .btn-dynamic {
+            width: 65%; padding: 12px; border-radius: 16px; font-weight: 800; font-size: 0.9rem;
+            cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px;
+            transition: all 0.3s ease; border: none; color: white; text-transform: uppercase;
+            box-shadow: 0 8px 20px rgba(2, 69, 26, 0.2);
+        }
+        .btn-dynamic:hover { transform: translateY(-2px); box-shadow: 0 12px 25px rgba(2, 69, 26, 0.3); }
+        .btn-dynamic:active { transform: scale(0.98); }
+
+        .state-accept { background-color: var(--primary-green); }
+        .state-otw { background-color: var(--blue-otw); box-shadow: 0 8px 20px rgba(33, 150, 243, 0.3); }
+        .state-here { background-color: var(--yellow-here); color: #333; box-shadow: 0 8px 20px rgba(251, 192, 45, 0.3); }
+        .state-start { background-color: #000; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+
+        /* --- MODAL --- */
+        .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(255, 255, 255, 0.2); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); justify-content: center; align-items: center; }
+        .modal.active { display: flex; }
+        .modal-content { position: relative; width: 90%; max-width: 400px; background: white; border-radius: 24px; padding: 20px; box-shadow: 0 20px 50px rgba(2, 69, 26, 0.15); border: 1px solid rgba(255,255,255,1); animation: zoom 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .modal-content img { width: 100%; height: auto; border-radius: 16px; display: block; }
+        .close { position: absolute; top: -15px; right: -15px; background: white; width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 24px; color: var(--primary-green); cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: all 0.2s ease; border: 1px solid var(--glass-border); }
+        .close:hover { transform: scale(1.1); }
+        @keyframes zoom { from {transform:scale(0.9); opacity:0;} to {transform:scale(1); opacity:1;} }
+        
+        .upload-area { border: 2px dashed var(--emerald); border-radius: 16px; padding: 30px; cursor: pointer; background: rgba(16, 185, 129, 0.05); margin-bottom: 20px; transition: all 0.3s ease; display:flex; flex-direction:column; align-items:center; }
+        .upload-area:hover { background: rgba(16, 185, 129, 0.1); }
+
+        /* --- BOTTOM NAV --- */
+        .bottom-nav {
+            position: absolute; bottom: 0; left: 0; width: 100%; padding: 15px 30px 25px 30px;
+            background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(25px); border-top: 1px solid rgba(2, 69, 26, 0.1);
+            display: flex; justify-content: space-between; align-items: center; border-radius: 35px 35px 0 0;
+            box-shadow: 0 -5px 40px rgba(2, 69, 26, 0.08); z-index: 20;
+        }
+        .nav-btn {
+            background: transparent; border: none; display: flex; flex-direction: column; align-items: center; gap: 6px;
+            font-family: inherit; color: var(--text-muted); cursor: pointer; transition: all 0.3s ease; position: relative; text-decoration: none;
+        }
+        .nav-btn.active { color: var(--primary-green); }
+        .nav-icon { width: 24px; height: 24px; stroke-width: 2.2px; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .nav-btn:hover .nav-icon, .nav-btn.active .nav-icon { transform: translateY(-3px); }
+        .nav-btn.active::after { content: ''; position: absolute; bottom: -8px; width: 5px; height: 5px; background: var(--primary-green); border-radius: 50%; }
+
+    </style>
+</head>
+<body>
+
+    <div class="ambient-layer"></div>
+
+    <div class="app-container">
+        
+        <header class="header">
+            <div class="page-title">My Tasks</div>
+        </header>
+
+        <main class="content-area">
+            
+            <div class="section-label" style="justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    To Do List <span class="count-badge" id="task-count">2</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <a href="collector_history.html" style="background: var(--glass-bg); border: 1px solid var(--glass-border); width: 36px; height: 36px; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: var(--primary-green); box-shadow: 0 4px 12px rgba(2, 69, 26, 0.05); text-decoration: none;">
+                        <i data-lucide="history" style="width: 18px; height: 18px;"></i>
+                    </a>
+                    <a href="collector_message.html" style="background: var(--glass-bg); border: 1px solid var(--glass-border); width: 36px; height: 36px; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: var(--primary-green); box-shadow: 0 4px 12px rgba(2, 69, 26, 0.05); text-decoration: none;">
+                        <i data-lucide="message-square" style="width: 18px; height: 18px;"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div id="tasks-list">
+                
+                <!-- Static Task 1 -->
+                <div class="active-card" id="card-1" style="border-left-color: var(--pending-orange)">
+                    <div class="card-top">
+                        <div>
+                            <div class="user-name">Juan Dela Cruz</div>
+                            <span class="user-loc">123 Rizal St. Brgy. San Jose</span> 
+                        </div>
+                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                            <span class="status-pill" id="pill-1" style="background:var(--pending-orange); color:white;">PENDING</span>
+                            <a href="collector_message.html?openChat=1" style="background: var(--glass-bg); border: 1px solid var(--glass-border); width: 32px; height: 32px; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: var(--primary-green); text-decoration: none; box-shadow: 0 2px 8px rgba(0,0,0,0.05);"><i data-lucide="message-circle" style="width: 16px; height: 16px;"></i></a>
+                        </div>
+                    </div>
+
+                    <div class="waste-info">
+                        <i data-lucide="package" style="width: 28px; height: 28px; color:var(--primary-green)"></i>
+                        <div class="info-text">
+                            <b>5.0kg Plastic Bottles</b> 
+                            <span>Mission - Recyclable Plastics</span>
+                        </div>
+                    </div>
+                    
+                    <div class="card-actions">
+                        <button class="btn-proof" onclick="viewProof('https://images.unsplash.com/photo-1605600659873-d808a13e4d2a?w=500&q=80')">
+                            <i data-lucide="image"></i> Proof
+                        </button>
+                        
+                        <button class="btn-dynamic state-accept" id="btn-1" onclick="cycleStatus(1)">
+                            ACCEPT TASK <i data-lucide="check" style="width:18px; height:18px;"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Static Task 2 -->
+                <div class="active-card" id="card-2" style="border-left-color: var(--blue-otw)">
+                    <div class="card-top">
+                        <div>
+                            <div class="user-name">Maria Clara</div>
+                            <span class="user-loc">45 Mabini Ave, Brgy. Poblacion</span> 
+                        </div>
+                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                            <span class="status-pill" id="pill-2" style="background:#E3F2FD; color:var(--blue-otw);">ON THE WAY</span>
+                            <a href="collector_message.html?openChat=2" style="background: var(--glass-bg); border: 1px solid var(--glass-border); width: 32px; height: 32px; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: var(--primary-green); text-decoration: none; box-shadow: 0 2px 8px rgba(0,0,0,0.05);"><i data-lucide="message-circle" style="width: 16px; height: 16px;"></i></a>
+                        </div>
+                    </div>
+
+                    <div class="waste-info">
+                        <i data-lucide="file-text" style="width: 28px; height: 28px; color:var(--primary-green)"></i>
+                        <div class="info-text">
+                            <b>2.3kg Paper/Cardboard</b> 
+                            <span>Manual Activity - Newspapers</span>
+                        </div>
+                    </div>
+                    
+                    <div class="card-actions">
+                        <button class="btn-proof" onclick="viewProof('https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=500&q=80')">
+                            <i data-lucide="image"></i> Proof
+                        </button>
+                        
+                        <button class="btn-dynamic state-otw" id="btn-2" onclick="cycleStatus(2)">
+                            I'M HERE <i data-lucide="map-pin" style="width:18px; height:18px;"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+        </main>
+
+        <div id="proofModal" class="modal" onclick="closeModal(event)"> 
+            <div class="modal-content">
+                <div class="close" onclick="closeModalForce()">&times;</div>
+                <img id="proofImage" src="">
+            </div>
+        </div>
+
+        <!-- Upload Proof Modal -->
+        <div id="uploadProofModal" class="modal" style="background-color: #000; backdrop-filter: none;">
+            <div class="modal-content" style="width: 100%; height: 100%; max-width: none; border-radius: 0; padding: 0; border: none; background: #000; display: flex; flex-direction: column;">
+                
+                <!-- Top Bar -->
+                <div style="position: absolute; top: 0; left: 0; width: 100%; padding: 20px; z-index: 10; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);">
+                    <div onclick="closeUploadModalForce()" style="color: white; cursor: pointer; background: rgba(255,255,255,0.2); width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(10px);">
+                        <i data-lucide="x" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <div style="color: white; font-weight: 700; font-size: 1rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">Capture Proof</div>
+                    <div style="width: 40px;"></div> <!-- Spacer -->
+                </div>
+
+                <!-- Camera Container -->
+                <div class="camera-container" style="flex-grow: 1; position: relative; width: 100%; height: 100%; overflow: hidden; background: #000;">
+                    <video id="proofVideo" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
+                    <canvas id="proofCanvas" style="display: none;"></canvas>
+                    <img id="proofPreviewLive" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                
+                <!-- Bottom Controls Bar -->
+                <div id="cameraControls" style="position: absolute; bottom: 0; left: 0; width: 100%; padding: 30px 20px 40px 20px; display: flex; justify-content: center; align-items: center; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); z-index: 10;">
+                    <button id="btn-capture" style="background: white; border: 4px solid rgba(255,255,255,0.3); background-clip: padding-box; width: 70px; height: 70px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);" onclick="takeProofSnapshot()">
+                    </button>
+                </div>
+                
+                <div id="retakeControls" style="position: absolute; bottom: 0; left: 0; width: 100%; padding: 20px 20px 40px 20px; display: none; gap: 15px; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); z-index: 10;">
+                    <button style="flex: 1; padding: 16px; border-radius: 16px; font-weight: 700; background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(10px); cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px;" onclick="retakeProof()">
+                        <i data-lucide="refresh-ccw" style="width: 18px; height: 18px;"></i> RETAKE
+                    </button>
+                    <button class="btn-dynamic" id="btn-proceed-scan" style="flex: 2; padding: 16px; background: var(--emerald); color: white; border: none; border-radius: 16px; font-weight: 800; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);" onclick="proceedToScan()">
+                        SCAN QR <i data-lucide="qr-code" style="width:18px;height:18px;"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <nav class="bottom-nav">
+            <a href="collector_dashboard.html" class="nav-btn">
+                <i data-lucide="layout-dashboard" class="nav-icon"></i>
+            </a>
+            <a href="collector_tasks.html" class="nav-btn active">
+                <i data-lucide="clipboard-list" class="nav-icon"></i>
+            </a>
+            <a href="collector_profile.html" class="nav-btn">
+                <i data-lucide="user" class="nav-icon"></i>
+            </a>
+        </nav>
+
+    </div>
+
+<script>
+    lucide.createIcons();
+
+    // Static Status State Machine
+    let taskStates = {
+        1: 0, // Pending
+        2: 2  // On The Way
+    }; 
+    
+    const statusMap = {
+        1: { pill: 'ACCEPTED', btn: "I'M OTW", icon: 'bike', card: 'var(--primary-green)', class: 'state-accept', bg: 'rgba(2, 69, 26, 0.1)', color: 'var(--primary-green)' },
+        2: { pill: 'ON THE WAY', btn: "I'M HERE", icon: 'map-pin', card: 'var(--blue-otw)', class: 'state-otw', bg: '#E3F2FD', color: 'var(--blue-otw)' },
+        3: { pill: 'READY', btn: 'START COLLECTION', icon: 'camera', card: '#000', class: 'state-start', bg: '#E8F5E9', color: 'var(--primary-green)' }
+    };
+
+    function cycleStatus(id) {
+        const btn = document.getElementById('btn-' + id);
+        const pill = document.getElementById('pill-' + id);
+        const card = document.getElementById('card-' + id);
+        
+        let currentState = taskStates[id];
+        
+        // Final state -> Redirect to collection process
+        if (currentState === 3) {
+            currentUploadTaskId = id;
+            document.getElementById('uploadProofModal').classList.add('active');
+            startProofCamera();
+            return;
+        }
+        
+        const nextState = currentState + 1;
+        taskStates[id] = nextState;
+        
+        const newStateData = statusMap[nextState];
+        
+        // Update UI
+        btn.className = `btn-dynamic ${newStateData.class}`; 
+        btn.innerHTML = `${newStateData.btn} <i data-lucide="${newStateData.icon}" style="width:18px; height:18px;"></i>`;
+        
+        pill.innerText = newStateData.pill;
+        pill.style.background = newStateData.bg; 
+        pill.style.color = newStateData.color;
+        card.style.borderLeftColor = newStateData.card;
+        
+        lucide.createIcons();
+    }
+
+    function viewProof(url) {
+        const modal = document.getElementById('proofModal');
+        const modalImg = document.getElementById('proofImage');
+        modal.classList.add('active');
+        modalImg.src = url;
+    }
+
+    function closeModal(event) {
+        const modal = document.getElementById('proofModal');
+        if (event.target === modal) {
+            modal.classList.remove('active');
+        }
+    }
+    
+    function closeModalForce() {
+        document.getElementById('proofModal').classList.remove('active');
+    }
+
+    // Upload Proof Logic
+    let currentUploadTaskId = null;
+
+    function closeUploadModalOnOutside(event) {
+        const modal = document.getElementById('uploadProofModal');
+        if (event.target === modal) {
+            closeUploadModalForce();
+        }
+    }
+
+    function closeUploadModalForce() {
+        document.getElementById('uploadProofModal').classList.remove('active');
+        stopProofCamera();
+    }
+
+    let proofStream = null;
+
+    function startProofCamera() {
+        const video = document.getElementById('proofVideo');
+        video.style.display = 'block';
+        document.getElementById('proofPreviewLive').style.display = 'none';
+        document.getElementById('cameraControls').style.display = 'flex';
+        document.getElementById('retakeControls').style.display = 'none';
+        
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            .then(stream => {
+                proofStream = stream;
+                video.srcObject = stream;
+            })
+            .catch(err => {
+                console.error("Camera access denied", err);
+                alert("Could not access camera. Please check your browser permissions.");
+            });
+    }
+
+    function stopProofCamera() {
+        if (proofStream) {
+            proofStream.getTracks().forEach(track => track.stop());
+            proofStream = null;
+        }
+    }
+
+    function takeProofSnapshot() {
+        const video = document.getElementById('proofVideo');
+        const canvas = document.getElementById('proofCanvas');
+        const preview = document.getElementById('proofPreviewLive');
+        
+        if (!proofStream) return;
+
+        // Draw image on canvas
+        canvas.width = video.videoWidth || 300;
+        canvas.height = video.videoHeight || 400;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Stop video
+        stopProofCamera();
+        video.style.display = 'none';
+
+        // Show captured image
+        const imgData = canvas.toDataURL('image/png');
+        preview.src = imgData;
+        preview.style.display = 'block';
+        
+        document.getElementById('cameraControls').style.display = 'none';
+        document.getElementById('retakeControls').style.display = 'flex';
+        lucide.createIcons();
+    }
+
+    function retakeProof() {
+        startProofCamera();
+    }
+
+    function proceedToScan() {
+        const btn = document.getElementById('btn-proceed-scan');
+        btn.style.opacity = '0.7';
+        btn.innerHTML = `<i data-lucide="loader" class="spin"></i> PROCEEDING...`;
+        lucide.createIcons();
+        setTimeout(() => {
+            window.location.href = 'process_collection.html?activity_id=' + currentUploadTaskId;
+        }, 500);
+    }
+</script>
+</body>
+</html>

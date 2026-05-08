@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>EcoTrack - History</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --primary-green: #02451A;
+            --emerald: #10b981;
+            --bg-color: #ffffff;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(2, 69, 26, 0.1);
+            --card-shadow: 0 8px 32px -8px rgba(2, 69, 26, 0.1);
+            --text-main: #02451A;
+            --text-muted: rgba(2, 69, 26, 0.6);
+            --success-green: #00C853;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100svh; overflow: hidden; position: relative;
+        }
+
+        .ambient-layer {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none;
+            background: radial-gradient(circle at 15% 50%, rgba(2, 69, 26, 0.05), transparent 50%),
+                        radial-gradient(circle at 85% 30%, rgba(2, 69, 26, 0.08), transparent 50%);
+        }
+
+        .app-container {
+            width: 100%; max-width: 480px; height: 100svh; display: flex; flex-direction: column;
+            position: relative; background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px); box-shadow: 0 0 50px rgba(0,0,0,0.05); overflow: hidden;
+        }
+
+        /* --- HEADER --- */
+        .header { padding: 24px 24px 15px 24px; z-index: 10; display: flex; justify-content: space-between; align-items: center; }
+        .page-title { font-family: 'Baloo Da 2', cursive; color: var(--primary-green); font-size: 1.4rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; display:flex; align-items:center; gap: 10px; }
+        
+        .btn-back { background: var(--glass-bg); border: 1px solid var(--glass-border); width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; color: var(--primary-green); box-shadow: 0 4px 12px rgba(2, 69, 26, 0.05); transition: all 0.3s ease; text-decoration: none; }
+        .btn-back:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(2, 69, 26, 0.1); background: white; }
+
+        /* --- CONTENT --- */
+        .content-area { flex-grow: 1; overflow-y: auto; padding: 10px 24px 120px 24px; scrollbar-width: none; }
+        .content-area::-webkit-scrollbar { display: none; }
+
+        /* Download Card */
+        .download-card {
+            background: var(--primary-green); border-radius: 24px; padding: 25px 20px;
+            display: flex; flex-direction: column; align-items: center; text-align: center;
+            color: white; margin-bottom: 25px; box-shadow: 0 15px 35px rgba(2, 69, 26, 0.2);
+            position: relative; overflow: hidden;
+        }
+        .download-card::after { content: ''; position: absolute; top: -50%; right: -50%; width: 200px; height: 200px; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); border-radius: 50%; pointer-events: none; }
+        
+        .download-card p { font-size: 0.95rem; font-weight: 600; margin-bottom: 15px; opacity: 0.9; }
+        
+        .btn-download {
+            background: var(--glass-bg); border: 1px solid var(--glass-border); width: 40px; height: 40px; border-radius: 50%; 
+            display: flex; justify-content: center; align-items: center; color: var(--primary-green); 
+            box-shadow: 0 4px 12px rgba(2, 69, 26, 0.05); cursor: pointer; transition: all 0.3s ease;
+        }
+        .btn-download:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(2, 69, 26, 0.1); background: white; }
+        .btn-download:active { transform: scale(0.95); }
+
+        .section-label { font-size: 1.1rem; font-weight: 800; color: var(--primary-green); margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+
+        /* History List */
+        .history-card {
+            background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 20px;
+            padding: 18px; margin-bottom: 15px; box-shadow: var(--card-shadow); backdrop-filter: blur(12px);
+            display: flex; flex-direction: column; gap: 12px; transition: transform 0.3s ease;
+            border-left: 5px solid var(--success-green);
+        }
+        .history-card:hover { transform: translateY(-2px); }
+
+        .card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+        .user-name { font-weight: 800; color: var(--text-main); font-size: 1.05rem; }
+        .status-badge { background: rgba(0, 200, 83, 0.1); color: var(--success-green); padding: 4px 10px; border-radius: 10px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; }
+        
+        .card-details { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; display: flex; flex-direction: column; gap: 4px; }
+        .card-details b { color: var(--primary-green); font-weight: 700; }
+        .waste-type { display: flex; align-items: center; gap: 6px; font-weight: 700; color: var(--primary-green); margin-top: 4px; }
+
+        .timestamp { font-size: 0.75rem; color: rgba(2, 69, 26, 0.4); font-weight: 600; text-align: right; margin-top: 5px; }
+
+    </style>
+</head>
+<body>
+
+    <div class="ambient-layer"></div>
+
+    <div class="app-container">
+        
+        <header class="header">
+            <a href="collector_tasks.html" class="btn-back">
+                <i data-lucide="chevron-left"></i>
+            </a>
+            <div class="page-title">History</div>
+            <button class="btn-download" onclick="downloadHistory()">
+                <i data-lucide="download" style="width: 20px; height: 20px;"></i>
+            </button>
+        </header>
+
+        <main class="content-area">
+            
+
+
+            <div class="section-label">
+                <i data-lucide="check-circle-2"></i> Completed Collections
+            </div>
+
+            <div id="history-list">
+                
+                <!-- Static History 1 -->
+                <div class="history-card">
+                    <div class="card-top">
+                        <div class="user-name">Juan Dela Cruz</div>
+                        <span class="status-badge">Collected</span>
+                    </div>
+                    <div class="card-details">
+                        <span><b>Location:</b> 123 Rizal St. Brgy. San Jose</span>
+                        <span><b>Points Awarded:</b> 50</span>
+                        <div class="waste-type"><i data-lucide="package" style="width:14px;height:14px;"></i> 5.0kg Plastic Bottles</div>
+                    </div>
+                    <div class="timestamp">Today at 2:30 PM</div>
+                </div>
+
+                <!-- Static History 2 -->
+                <div class="history-card">
+                    <div class="card-top">
+                        <div class="user-name">Maria Clara</div>
+                        <span class="status-badge">Collected</span>
+                    </div>
+                    <div class="card-details">
+                        <span><b>Location:</b> 45 Mabini Ave, Brgy. Poblacion</span>
+                        <span><b>Points Awarded:</b> 23</span>
+                        <div class="waste-type"><i data-lucide="file-text" style="width:14px;height:14px;"></i> 2.3kg Paper/Cardboard</div>
+                    </div>
+                    <div class="timestamp">Yesterday at 10:15 AM</div>
+                </div>
+
+                <!-- Static History 3 -->
+                <div class="history-card">
+                    <div class="card-top">
+                        <div class="user-name">Pedro Penduko</div>
+                        <span class="status-badge">Collected</span>
+                    </div>
+                    <div class="card-details">
+                        <span><b>Location:</b> 78 Bonifacio St, Brgy. San Antonio</span>
+                        <span><b>Points Awarded:</b> 120</span>
+                        <div class="waste-type"><i data-lucide="battery" style="width:14px;height:14px;"></i> 1.2kg E-Waste</div>
+                    </div>
+                    <div class="timestamp">Oct 24, 2023 at 4:45 PM</div>
+                </div>
+
+            </div>
+
+        </main>
+
+    </div>
+
+<script>
+    lucide.createIcons();
+
+    function downloadHistory() {
+        const btn = document.querySelector('.btn-download');
+        const originalContent = btn.innerHTML;
+        
+        btn.innerHTML = `<i data-lucide="loader" class="spin" style="width: 20px; height: 20px;"></i>`;
+        lucide.createIcons();
+        btn.style.opacity = '0.8';
+        
+        setTimeout(() => {
+            btn.innerHTML = `<i data-lucide="check" style="width: 20px; height: 20px;"></i>`;
+            lucide.createIcons();
+            btn.style.color = 'var(--primary-green)';
+            
+            // Trigger fake download
+            const link = document.createElement('a');
+            link.href = 'data:text/csv;charset=utf-8,Date,User,Location,Waste,Weight,Points\n2023-10-26,Juan Dela Cruz,123 Rizal St,Plastic Bottles,5.0kg,50';
+            link.download = 'collection_history.csv';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            setTimeout(() => {
+                btn.innerHTML = originalContent;
+                btn.style.color = 'var(--primary-green)';
+                btn.style.opacity = '1';
+                lucide.createIcons();
+            }, 2000);
+        }, 1500);
+    }
+</script>
+</body>
+</html>

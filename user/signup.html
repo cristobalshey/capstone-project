@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>EcoTrack | Sign Up</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase_config.js"></script>
+
+    <style>
+        :root {
+            --primary-green: #02451A;
+            --forest-dark: #035e24;
+            --emerald: #10b981;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --transition-smooth: cubic-bezier(0.25, 1, 0.5, 1);
+            --text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Baloo Da 2', cursive;
+            background-color: #f0fdf4;
+            color: #111827;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            min-height: 100svh;
+            overflow-x: hidden;
+            overflow-y: auto;
+            position: relative;
+            padding: 30px 20px;
+        }
+
+        /* --- Background --- */
+        .ambient-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .ambient-blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.5;
+            animation: drift 15s infinite alternate ease-in-out;
+        }
+
+        .blob-1 {
+            width: 60vw;
+            height: 60vw;
+            background: #dcfce7;
+            top: -10%;
+            right: -10%;
+        }
+
+        .blob-2 {
+            width: 70vw;
+            height: 70vw;
+            background: #a7f3d0;
+            bottom: -10%;
+            left: -10%;
+            animation-delay: -5s;
+        }
+
+        @keyframes drift {
+            from {
+                transform: translate(0, 0) scale(1);
+            }
+
+            to {
+                transform: translate(5%, 5%) scale(1.1);
+            }
+        }
+
+        /* --- Glassmorphism Card --- */
+        .glass-card {
+            width: 100%;
+            max-width: 400px;
+            margin: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 25px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 32px;
+            box-shadow: 0 25px 50px -12px rgba(2, 69, 26, 0.15);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideUpFade 0.8s var(--transition-smooth) forwards;
+        }
+
+        @keyframes slideUpFade {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header-section {
+            text-align: center;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        .logo-img {
+            width: 60px;
+            height: auto;
+            margin-bottom: 8px;
+            filter: drop-shadow(0 10px 15px rgba(2, 69, 26, 0.15));
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--primary-green);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: var(--text-shadow);
+            line-height: 1.2;
+        }
+
+        .page-subtitle {
+            font-size: 14px;
+            font-weight: 600;
+            color: #4b5563;
+            margin-top: 2px;
+        }
+
+        /* --- Form Section --- */
+        .login-form {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .input-group {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            position: relative;
+        }
+
+        .input-group label {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--primary-green);
+            margin-left: 5px;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 12px 16px;
+            padding-right: 44px;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 500;
+            color: #111827;
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid rgba(2, 69, 26, 0.1);
+            border-radius: 12px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .input-field:focus {
+            border-color: var(--primary-green);
+            box-shadow: 0 0 0 4px rgba(2, 69, 26, 0.1);
+        }
+
+        /* --- Password Toggle Eye --- */
+        .password-toggle {
+            position: absolute;
+            right: 14px;
+            top: 45px;
+            cursor: pointer;
+            color: var(--primary-green);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+            width: 20px;
+            height: 20px;
+        }
+
+        .password-toggle:hover {
+            opacity: 1;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #4b5563;
+            margin-top: 2px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            margin-top: 1px;
+            accent-color: var(--primary-green);
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            line-height: 1.4;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .checkbox-group a {
+            color: var(--primary-green);
+            text-decoration: none;
+            font-weight: 700;
+        }
+        
+        .checkbox-group a:hover {
+            text-decoration: underline;
+        }
+
+        .btn-action {
+            width: 100%;
+            background-color: var(--primary-green);
+            color: white;
+            font-family: inherit;
+            font-size: 16px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            padding: 14px 0;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(2, 69, 26, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .btn-action:hover {
+            background-color: var(--forest-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(2, 69, 26, 0.25);
+        }
+        
+        .social-divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: #6b7280;
+            font-size: 13px;
+            font-weight: 600;
+            margin: 4px 0;
+        }
+
+        .social-divider::before,
+        .social-divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 2px solid rgba(0,0,0,0.05);
+        }
+
+        .social-divider span {
+            padding: 0 15px;
+        }
+
+        .btn-social {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            background-color: #ffffff;
+            color: #5f6368;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            padding: 12px 0;
+            border: 1px solid #dadce0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-social:hover:not(:disabled) {
+            background-color: #f8f9fa;
+            border-color: #d2d2d2;
+            box-shadow: 0 1px 3px rgba(60,64,67, 0.1);
+        }
+
+        .btn-social:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(1);
+        }
+
+        .auth-footer {
+            margin-top: 15px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #4b5563;
+            text-align: center;
+        }
+
+        .auth-link {
+            color: var(--primary-green);
+            font-weight: 800;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+
+        .auth-link:hover {
+            opacity: 0.8;
+            text-decoration: underline;
+        }
+
+        .outro {
+            animation: slideDownFade 0.5s var(--transition-smooth) forwards !important;
+        }
+
+        @keyframes slideDownFade {
+            to {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="ambient-layer">
+        <div class="ambient-blob blob-1"></div>
+        <div class="ambient-blob blob-2"></div>
+    </div>
+
+    <div class="glass-card" id="signupCard">
+
+        <div class="header-section">
+            <img src="image/logo.png" alt="EcoTrack Logo" class="logo-img">
+            <h1 class="page-title">Join EcoTrack</h1>
+            <p class="page-subtitle">Start your sustainability journey today</p>
+        </div>
+
+        <form class="login-form" onsubmit="handleSignup(event)">
+
+            <div class="input-group">
+                <label for="name">Full Name</label>
+                <input type="text" id="name" class="input-field" placeholder="John Doe" required>
+            </div>
+
+            <div class="input-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" class="input-field" placeholder="you@example.com" required>
+            </div>
+
+            <div class="input-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" class="input-field" placeholder="••••••••" required>
+                
+                <div class="password-toggle" onclick="togglePassword()">
+                    <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"></path>
+                        <line x1="1" y1="1" x2="23" y2="23"></line>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="terms" required>
+                <label for="terms">I have read and agree to the <a href="term.html">Terms</a> & <a href="privacy.html">Privacy Policy</a>.</label>
+            </div>
+
+            <button type="submit" class="btn-action">Sign Up</button>
+            
+            <div class="social-divider">
+                <span>Or</span>
+            </div>
+
+            <button type="button" class="btn-social google-btn" id="googleBtn" disabled onclick="signInWithGoogle()">
+                <svg width="18" height="18" viewBox="0 0 18 18">
+                    <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" fill="#4285f4"/>
+                    <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.859-3.048.859-2.344 0-4.328-1.584-5.036-3.711H.957v2.331C2.438 15.938 5.464 18 9 18z" fill="#34a853"/>
+                    <path d="M3.964 10.712c-.18-.54-.282-1.117-.282-1.712s.102-1.173.282-1.712V4.957H.957C.347 6.173 0 7.548 0 9s.347 2.827.957 4.043l3.007-2.331z" fill="#fbbc05"/>
+                    <path d="M9 3.579c1.321 0 2.508.454 3.44 1.345l2.582-2.582C13.463.891 11.426 0 9 0 5.464 0 2.438 2.062.957 5.043l3.007 2.331C4.672 5.163 6.656 3.579 9 3.579z" fill="#ea4335"/>
+                </svg>
+                Continue with Google
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            Already have an account? <a href="login.html" class="auth-link">Log In</a>
+        </div>
+
+    </div>
+
+    <script>
+        // Checkbox monitoring for Google Button
+        const termsCheckbox = document.getElementById('terms');
+        const googleBtn = document.getElementById('googleBtn');
+
+        termsCheckbox.addEventListener('change', () => {
+            googleBtn.disabled = !termsCheckbox.checked;
+        });
+
+        async function signInWithGoogle() {
+            if (!termsCheckbox.checked) return;
+            
+            const { data, error } = await window.supabaseClient.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: window.location.origin + '/user/menu.html',
+                    queryParams: {
+                        prompt: 'select_account'
+                    },
+                    data: {
+                        accepted_terms: true
+                    }
+                }
+            });
+
+            if (error) {
+                alert("Error with Google Sign-In: " + error.message);
+            }
+        }
+
+        function handleSignup(e) {
+            e.preventDefault();
+            // Traditional signup logic would go here
+            document.getElementById('signupCard').classList.add('outro');
+            setTimeout(() => {
+                window.location.href = "login.html";
+            }, 500);
+        }
+    </script>
+</body>
+</html>

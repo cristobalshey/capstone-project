@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>EcoTrack | Profile</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Using Lucide Icons for a modern, chill vibe -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase_config.js"></script>
+    <script src="../auth_guard.js"></script>
+
+    <style>
+        :root {
+            /* Strict White & Green Palette from menu.html */
+            --primary-green: #02451A;
+            --bg-color: #ffffff;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(2, 69, 26, 0.1);
+            --card-shadow: 0 8px 32px -8px rgba(2, 69, 26, 0.1);
+            --text-main: #02451A;
+            --text-muted: rgba(2, 69, 26, 0.6);
+            --danger: #ef4444; /* Standard alert red for logout */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            min-height: 100svh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Subtle Ambient Background */
+        .ambient-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+            background: radial-gradient(circle at 15% 50%, rgba(2, 69, 26, 0.05), transparent 50%),
+                        radial-gradient(circle at 85% 30%, rgba(2, 69, 26, 0.08), transparent 50%);
+        }
+
+        /* Mobile App Container */
+        .app-container {
+            width: 100%;
+            max-width: 480px;
+            height: 100vh;
+            height: 100svh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 0 50px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        /* Header Section */
+        .header {
+            padding: 24px 24px 15px 24px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        .back-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--primary-green);
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(2, 69, 26, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: white;
+            transform: translateX(-3px);
+            box-shadow: 0 6px 15px rgba(2, 69, 26, 0.1);
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--primary-green);
+        }
+
+        /* Main Content Section */
+        .profile-content {
+            flex-grow: 1;
+            padding: 10px 24px 40px 24px;
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+        
+        .profile-content::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Profile Banner */
+        .profile-banner {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 28px;
+            padding: 30px 20px;
+            margin-bottom: 25px;
+            box-shadow: var(--card-shadow);
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            animation: slideIn 0.5s ease backwards;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .profile-avatar {
+            width: 90px;
+            height: 90px;
+            border-radius: 24px; /* Squircle */
+            background: var(--primary-green);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 4px solid white;
+            box-shadow: 0 12px 25px rgba(2, 69, 26, 0.2);
+            margin-bottom: 15px;
+        }
+        
+        .profile-avatar i {
+            width: 45px;
+            height: 45px;
+            stroke-width: 2px;
+        }
+
+        .profile-name {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 4px;
+        }
+
+        .profile-email {
+            font-size: 14px;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .profile-stats {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+            justify-content: center;
+            padding-top: 15px;
+            border-top: 1px dashed rgba(2, 69, 26, 0.15);
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--primary-green);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        /* Settings List */
+        .section-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding-left: 5px;
+            animation: slideIn 0.5s ease 0.1s backwards;
+        }
+
+        .settings-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 10px;
+            box-shadow: var(--card-shadow);
+            backdrop-filter: blur(12px);
+            margin-bottom: 25px;
+            animation: slideIn 0.5s ease 0.2s backwards;
+        }
+
+        .setting-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: transparent;
+            border: none;
+            padding: 15px 15px;
+            border-radius: 16px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .setting-btn:hover {
+            background: rgba(2, 69, 26, 0.03);
+        }
+
+        .setting-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .setting-icon-box {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: rgba(2, 69, 26, 0.08);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--primary-green);
+        }
+
+        .setting-icon-box i {
+            width: 20px;
+            height: 20px;
+            stroke-width: 2.5px;
+        }
+
+        .setting-text {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .setting-arrow {
+            color: var(--text-muted);
+        }
+
+        /* Specific Setting Colors */
+        .setting-btn.verify .setting-icon-box {
+            background: rgba(2, 69, 26, 0.1);
+        }
+        
+        .verify-badge {
+            background: var(--primary-green);
+            color: white;
+            font-size: 10px;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-weight: 800;
+            margin-left: 10px;
+        }
+
+        .setting-btn.danger .setting-icon-box {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        .setting-btn.danger .setting-text {
+            color: var(--danger);
+        }
+
+        .setting-btn:not(:last-child) {
+            border-bottom: 1px solid rgba(2, 69, 26, 0.05);
+            border-radius: 0;
+            margin-bottom: 5px;
+        }
+        
+        .setting-btn:first-child {
+            border-top-left-radius: 16px;
+            border-top-right-radius: 16px;
+        }
+        
+        .setting-btn:last-child {
+            border-bottom-left-radius: 16px;
+            border-bottom-right-radius: 16px;
+        }
+
+        /* --- LOGOUT MODAL --- */
+        .modal { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.3); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); justify-content: center; align-items: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; border-radius: 24px; padding: 30px; width: 85%; max-width: 340px; text-align: center; box-shadow: 0 20px 50px rgba(2, 69, 26, 0.15); border: 1px solid rgba(255,255,255,1); animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        
+        @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .modal-icon { width: 60px; height: 60px; background: rgba(239, 68, 68, 0.1); border-radius: 50%; display: flex; justify-content: center; align-items: center; margin: 0 auto 20px auto; color: var(--danger); }
+        .modal-title { font-size: 1.3rem; font-weight: 800; color: var(--text-main); margin-bottom: 10px; font-family: 'Baloo Da 2'; }
+        .modal-text { font-size: 0.9rem; color: var(--text-muted); font-weight: 500; margin-bottom: 25px; line-height: 1.5; }
+        
+        .modal-actions { display: flex; gap: 10px; }
+        .btn-modal { flex: 1; padding: 14px; border-radius: 14px; font-weight: 800; cursor: pointer; transition: all 0.2s ease; border: none; font-size: 0.9rem; }
+        .btn-cancel { background: #f0f0f0; color: var(--text-main); }
+        .btn-cancel:hover { background: #e0e0e0; }
+        .btn-confirm { background: var(--danger); color: white; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); }
+        .btn-confirm:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4); }
+
+    </style>
+</head>
+
+<body>
+
+    <div class="ambient-layer"></div>
+
+    <div class="app-container">
+        
+        <!-- Header -->
+        <header class="header">
+            <button class="back-btn" onclick="window.location.href='menu.html'">
+                <i data-lucide="chevron-left"></i>
+            </button>
+            <div class="header-title">My Profile</div>
+        </header>
+
+        <!-- Profile Content -->
+        <main class="profile-content">
+            
+            <!-- Banner -->
+            <div class="profile-banner">
+                <div class="profile-avatar">
+                    <i data-lucide="user"></i>
+                </div>
+                <h1 class="profile-name" id="profileName">Loading...</h1>
+                <p class="profile-email" id="profileEmail">...</p>
+            </div>
+
+            <!-- Security Upgrade (Only for Google users without password) -->
+            <div id="securityUpgradeSection" style="display: none;">
+                <h3 class="section-title">Security Upgrade</h3>
+                <div class="settings-card" style="border: 2px solid var(--primary-green); background: rgba(2, 69, 26, 0.05);">
+                    <button class="setting-btn" onclick="window.location.href='set_password.html'">
+                        <div class="setting-left">
+                            <div class="setting-icon-box" style="background: var(--primary-green); color: white;">
+                                <i data-lucide="key-round"></i>
+                            </div>
+                            <div>
+                                <div class="setting-text">Set Login Password</div>
+                                <div style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Enable manual login for this account</div>
+                            </div>
+                        </div>
+                        <i data-lucide="chevron-right" class="setting-arrow"></i>
+                    </button>
+                </div>
+            </div>
+
+            <h3 class="section-title">Account</h3>
+            
+            <!-- Settings Card -->
+            <div class="settings-card">
+                
+                <button class="setting-btn verify" onclick="window.location.href='verification.html'">
+                    <div class="setting-left">
+                        <div class="setting-icon-box">
+                            <i data-lucide="shield-check"></i>
+                        </div>
+                        <span class="setting-text">Verification</span>
+                        <span class="verify-badge">GET VERIFIED</span>
+                    </div>
+                    <i data-lucide="chevron-right" class="setting-arrow"></i>
+                </button>
+
+                <button class="setting-btn" onclick="window.location.href='security.html'">
+                    <div class="setting-left">
+                        <div class="setting-icon-box">
+                            <i data-lucide="lock"></i>
+                        </div>
+                        <span class="setting-text">Security</span>
+                    </div>
+                    <i data-lucide="chevron-right" class="setting-arrow"></i>
+                </button>
+
+            </div>
+
+            <h3 class="section-title">Other</h3>
+
+            <div class="settings-card">
+                <button class="setting-btn" onclick="window.location.href='help.html'">
+                    <div class="setting-left">
+                        <div class="setting-icon-box">
+                            <i data-lucide="help-circle"></i>
+                        </div>
+                        <span class="setting-text">Help & Support</span>
+                    </div>
+                    <i data-lucide="chevron-right" class="setting-arrow"></i>
+                </button>
+
+                <button class="setting-btn danger" onclick="openLogoutModal()">
+                    <div class="setting-left">
+                        <div class="setting-icon-box">
+                            <i data-lucide="log-out"></i>
+                        </div>
+                        <span class="setting-text">Logout</span>
+                    </div>
+                </button>
+            </div>
+
+        </main>
+
+        <!-- Logout Modal -->
+        <div id="logoutModal" class="modal" onclick="closeModalOnOutsideClick(event)">
+            <div class="modal-content">
+                <div class="modal-icon">
+                    <i data-lucide="log-out" style="width:30px; height:30px;"></i>
+                </div>
+                <div class="modal-title">Log Out?</div>
+                <div class="modal-text">Are you sure you want to log out of your user account?</div>
+                <div class="modal-actions">
+                    <button class="btn-modal btn-cancel" onclick="closeLogoutModal()">Cancel</button>
+                    <button class="btn-modal btn-confirm" onclick="confirmLogout()">Log Out</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // 1. Fetch Real Profile Data
+        async function loadProfile() {
+            const { data: { session } } = await window.supabaseClient.auth.getSession();
+            if (!session) return;
+
+            // Update email from auth
+            document.getElementById('profileEmail').innerText = session.user.email;
+
+            // Fetch name and password status from profiles table
+            const { data: profile, error } = await window.supabaseClient
+                .from('profiles')
+                .select('full_name, has_password, status')
+                .eq('id', session.user.id)
+                .single();
+
+            if (profile) {
+                document.getElementById('profileName').innerText = profile.full_name || "Eco Warrior";
+                
+                // If they don't have a password, show the upgrade section
+                if (!profile.has_password) {
+                    document.getElementById('securityUpgradeSection').style.display = 'block';
+                }
+
+                // Update Verification Badge
+                const badge = document.querySelector('.verify-badge');
+                if (profile.status === 'pending') {
+                    badge.innerText = "PENDING";
+                    badge.style.background = "#f59e0b"; // Orange/Amber
+                } else if (profile.status === 'verified') {
+                    badge.innerText = "VERIFIED";
+                    badge.style.background = "#22c55e"; // Success Green
+                }
+            }
+        }
+
+        loadProfile();
+
+        function openLogoutModal() {
+            document.getElementById('logoutModal').classList.add('active');
+        }
+
+        function closeLogoutModal() {
+            document.getElementById('logoutModal').classList.remove('active');
+        }
+
+        function closeModalOnOutsideClick(e) {
+            if (e.target.id === 'logoutModal') {
+                closeLogoutModal();
+            }
+        }
+
+        async function confirmLogout() {
+            const btn = document.querySelector('.btn-confirm');
+            btn.disabled = true;
+            btn.innerHTML = `<i data-lucide="loader" class="spin" style="width:18px;height:18px;vertical-align:middle;"></i>`;
+            lucide.createIcons();
+            
+            const { error } = await window.supabaseClient.auth.signOut();
+            sessionStorage.clear();
+            
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 800);
+        }
+    </script>
+</body>
+
+</html>

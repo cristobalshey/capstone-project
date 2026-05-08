@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>EcoTrack | Legal Agreement</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="../supabase_config.js"></script>
+
+    <style>
+        :root {
+            --primary-green: #02451A;
+            --bg-color: #ffffff;
+            --glass-bg: rgba(255, 255, 255, 0.9);
+            --glass-border: rgba(2, 69, 26, 0.1);
+            --text-main: #02451A;
+            --text-muted: rgba(2, 69, 26, 0.6);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8faf9; color: var(--text-main); height: 100vh; overflow: hidden; }
+
+        .app-container {
+            width: 100%; max-width: 480px; height: 100vh; margin: 0 auto;
+            background: white; display: flex; flex-direction: column; position: relative;
+        }
+
+        header { padding: 30px 24px 20px; text-align: center; }
+        header h1 { font-size: 28px; font-weight: 800; letter-spacing: 2px; color: var(--primary-green); margin-bottom: 8px; }
+        .date-badge { display: inline-block; padding: 4px 12px; background: rgba(2, 69, 26, 0.08); border-radius: 20px; font-size: 11px; font-weight: 700; color: var(--primary-green); }
+
+        .tabs { display: flex; padding: 0 24px; gap: 10px; margin-bottom: 20px; }
+        .tab-btn {
+            flex: 1; padding: 12px; border: 1px solid var(--glass-border); background: white;
+            border-radius: 12px; font-family: inherit; font-size: 14px; font-weight: 700; color: var(--text-muted); cursor: pointer;
+        }
+        .tab-btn.active { background: var(--primary-green); color: white; border-color: var(--primary-green); }
+
+        .content-wrap { flex-grow: 1; overflow-y: auto; padding: 0 24px 120px; scroll-behavior: smooth; }
+        .document-content { display: none; }
+        .document-content.active { display: block; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .document-content p { font-size: 14px; line-height: 1.6; margin-bottom: 15px; color: var(--text-muted); }
+        .document-content h3 { font-size: 16px; font-weight: 800; margin: 25px 0 12px; color: var(--text-main); }
+        .document-content ul { padding-left: 20px; margin-bottom: 15px; }
+        .document-content li { font-size: 14px; color: var(--text-muted); margin-bottom: 8px; }
+        .document-content h5 { font-size: 13px; font-weight: 700; color: var(--primary-green); background: rgba(2, 69, 26, 0.05); padding: 12px; border-radius: 10px; border-left: 4px solid var(--primary-green); margin: 20px 0; }
+
+        .contact-box { margin-top: 30px; padding: 20px; background: #f1f5f3; border-radius: 16px; text-align: center; }
+        .email-link { color: var(--primary-green); font-weight: 700; text-decoration: none; font-size: 14px; }
+
+        .footer-actions {
+            position: absolute; bottom: 0; width: 100%; padding: 20px 24px 30px;
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-top: 1px solid var(--glass-border);
+        }
+        .checkbox-row { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 20px; }
+        .checkbox-row input { width: 20px; height: 20px; margin-top: 2px; cursor: pointer; accent-color: var(--primary-green); }
+        .checkbox-row label { font-size: 13px; font-weight: 600; color: var(--text-muted); line-height: 1.5; cursor: pointer; }
+
+        .btn-accept {
+            width: 100%; padding: 16px; border-radius: 16px; border: none; font-family: inherit;
+            font-size: 16px; font-weight: 800; cursor: pointer; transition: all 0.3s ease;
+        }
+        .btn-accept:disabled { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; }
+        .btn-accept:not(:disabled) { background: var(--primary-green); color: white; box-shadow: 0 8px 20px rgba(2, 69, 26, 0.2); }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>ECOTRACK</h1>
+            <div id="effectiveDate" class="date-badge">Effective Date: November 25, 2025</div>
+        </header>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('terms')">Terms of Service</button>
+            <button class="tab-btn" onclick="switchTab('privacy')">Privacy Policy</button>
+        </div>
+
+        <!-- Scrollable Content Area -->
+        <div class="content-wrap" id="scrollArea">
+            
+            <!-- Terms Content -->
+            <div id="termsContent" class="document-content active">
+                <p>These Terms of Service (“Terms”) govern the use of Ecotrack: A Gamified Recycling Mobile Web App for Enhancing Waste Recycling Practices (“Ecotrack”, “we”, “us”, or “our”). By accessing or using Ecotrack, you agree to be bound by these Terms.</p>
+
+                <h3>1. About Ecotrack</h3>
+                <p>Ecotrack is a gamified mobile web application designed to promote proper recycling behavior through:</p>
+                <ul>
+                    <li>Missions, Quizzes, & Rewards</li>
+                    <li>Leaderboards & Mini-games</li>
+                </ul>
+                <p>Users/facilitators may also submit photos, recycling proof, and identification documents for reward validation and account verification.</p>
+
+                <h3>2. Eligibility</h3>
+                <p>To create an account on Ecotrack, you must be at least 14 years old and provide accurate information during registration.</p>
+
+                <h3>3. Account Creation & Verification</h3>
+                <p>To ensure fairness and prevent fraud, Ecotrack may require a valid government ID, a selfie for matching, and photos of recycling activities.</p>
+                <h5>Failure to provide accurate information or falsifying images may result in suspension or removal of your account.</h5>
+
+                <h3>4. User Responsibilities</h3>
+                <p>You agree NOT to upload false identification, manipulated proof, or attempt to cheat the gamification system.</p>
+                <h5>We reserve the right to investigate suspicious activity.</h5>
+
+                <h3>5. User Content & Image Submissions</h3>
+                <p>By submitting proof, you grant Ecotrack permission to process and store images for validation. We <strong>do NOT</strong> sell your images or share them with advertisers.</p>
+
+                <h3>6. Rewards & Points</h3>
+                <p>Earned points are subject to verification. Ecotrack may reject submissions that do not meet standards or deduct points for fraudulent behavior.</p>
+
+                <h3>7. Prohibited Conduct</h3>
+                <p>You must not create multiple accounts, upload harmful content, or attempt to hack the platform.</p>
+
+                <h3>8. Intellectual Property</h3>
+                <p>All app design, graphics, and game elements belong to Ecotrack. Unauthorized copying or redistribution is prohibited.</p>
+
+                <h3>9. Limitation of Liability</h3>
+                <p>Ecotrack is provided “as is”. We are not responsible for device damage, data loss, or incorrect recycling information submitted by users.</p>
+
+                <h3>10. Account Termination</h3>
+                <p>We may suspend accounts for fraud, abusive behavior, or illegal activities.</p>
+
+                <h3>11. Changes to the Terms</h3>
+                <p>We may update these Terms. Continued use of the app means you accept the updated Terms.</p>
+
+                <div class="contact-box">
+                    <p>Questions regarding terms?</p>
+                    <a href="mailto:EcotrackSystem@gmail.com" class="email-link">EcotrackSystem@gmail.com</a>
+                </div>
+            </div>
+
+            <!-- Privacy Content -->
+            <div id="privacyContent" class="document-content">
+                <p>This Privacy Policy explains how Ecotrack collects, uses, stores, and protects your personal data. By using Ecotrack, you consent to the practices described here.</p>
+
+                <h3>1. Information We Collect</h3>
+                <p><strong>A. Information You Provide</strong></p>
+                <ul>
+                    <li>Name, Email, & Password</li>
+                    <li>Government ID & Selfie/Profile Photo</li>
+                    <li>Recycling proof & Quiz answers</li>
+                    <li>Location (for mapping address)</li>
+                </ul>
+                <p><strong>B. Automatically Collected</strong></p>
+                <ul>
+                    <li>Device info, IP address, & Usage behavior</li>
+                    <li>Note: No sensitive biometric data is collected.</li>
+                </ul>
+
+                <h3>2. How We Use Your Data</h3>
+                <ul>
+                    <li>Verify identity & prevent duplicate accounts</li>
+                    <li>Validate submissions & award rewards fairly</li>
+                    <li>Improve game difficulty & prevent fraud</li>
+                </ul>
+                <p>We do <strong>NOT</strong> sell your information or share verification data publicly.</p>
+
+                <h3>3. Why We Collect ID & Proof</h3>
+                <ul>
+                    <li>Confirm users are real & reduce fraud</li>
+                    <li>Validate recycling activity & improve credibility</li>
+                </ul>
+
+                <h3>4. Storage & Protection</h3>
+                <ul>
+                    <li>Encrypted database & Secure HTTPS</li>
+                    <li>Limited admin access & Regular audits</li>
+                </ul>
+
+                <h3>5. Data Sharing</h3>
+                <p>We only share data with authorized admins, cloud hosting providers, or law enforcement when required by law.</p>
+
+                <h3>6. Data Retention</h3>
+                <ul>
+                    <li>ID images: only until verification is complete</li>
+                    <li>Account data: while account is active</li>
+                </ul>
+
+                <h3>7. User Rights</h3>
+                <p>You may access, correct, or request deletion of your data at any time.</p>
+
+                <h3>8. Children’s Privacy</h3>
+                <p>Ecotrack does not knowingly collect data from children under 13.</p>
+
+                <div class="contact-box">
+                    <p>Questions regarding your data?</p>
+                    <a href="mailto:EcotrackSystem@gmail.com" class="email-link">EcotrackSystem@gmail.com</a>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Action Footer -->
+        <div class="footer-actions">
+            <div class="checkbox-row">
+                <input type="checkbox" id="agreeCheck" onchange="toggleButton()">
+                <label for="agreeCheck">I have read and agree to the Terms of Service and Privacy Policy.</label>
+            </div>
+            <button class="btn-accept" id="acceptBtn" disabled onclick="acceptTerms()">Accept & Continue</button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        function switchTab(tab) {
+            const termsTab = document.querySelector('.tab-btn:nth-child(1)');
+            const privacyTab = document.querySelector('.tab-btn:nth-child(2)');
+            const termsContent = document.getElementById('termsContent');
+            const privacyContent = document.getElementById('privacyContent');
+            const dateBadge = document.getElementById('effectiveDate');
+
+            if (tab === 'terms') {
+                termsTab.classList.add('active');
+                privacyTab.classList.remove('active');
+                termsContent.classList.add('active');
+                privacyContent.classList.remove('active');
+                dateBadge.innerText = "Effective Date: November 25, 2025";
+            } else {
+                termsTab.classList.remove('active');
+                privacyTab.classList.add('active');
+                termsContent.classList.remove('active');
+                privacyContent.classList.add('active');
+                dateBadge.innerText = "Effective Date: November 26, 2025";
+            }
+            document.getElementById('scrollArea').scrollTop = 0;
+        }
+
+        function toggleButton() {
+            const check = document.getElementById('agreeCheck');
+            const btn = document.getElementById('acceptBtn');
+            btn.disabled = !check.checked;
+        }
+
+        async function acceptTerms() {
+            const btn = document.getElementById('acceptBtn');
+            btn.innerText = "Processing...";
+            btn.disabled = true;
+
+            try {
+                const { data: { user } } = await window.supabaseClient.auth.getUser();
+                if (!user) throw new Error("No user session found.");
+
+                const { error } = await window.supabaseClient
+                    .from('profiles')
+                    .update({ accepted_terms: true })
+                    .eq('id', user.id);
+
+                if (error) throw error;
+
+                window.location.href = 'menu.html';
+            } catch (err) {
+                console.error("Error accepting terms:", err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Failed to update your agreement. Please try again.',
+                    confirmButtonColor: '#02451A'
+                });
+                btn.innerText = "Accept & Continue";
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
