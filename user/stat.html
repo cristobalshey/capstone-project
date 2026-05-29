@@ -11,6 +11,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
     
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase_config.js"></script>
 
     <style>
         :root {
@@ -100,13 +102,47 @@
         .chart-filter { font-size: 12px; font-weight: 700; color: var(--text-muted); background: rgba(2, 69, 26, 0.05); padding: 4px 10px; border-radius: 10px; cursor: pointer; }
 
         .mock-chart {
-            display: flex; justify-content: space-between; align-items: flex-end; height: 120px; padding: 0 10px; border-bottom: 2px solid rgba(2, 69, 26, 0.05);
+            display: flex; justify-content: space-between; align-items: flex-end; height: 140px; padding: 0 10px 20px 40px; position: relative;
         }
+        .mock-chart::before {
+            content: '';
+            position: absolute;
+            left: 32px;
+            top: 8px;
+            bottom: 20px;
+            width: 1px;
+            background: rgba(2, 69, 26, 0.15);
+        }
+        .mock-chart::after {
+            content: '';
+            position: absolute;
+            left: 32px;
+            right: 10px;
+            bottom: 20px;
+            height: 1px;
+            background: rgba(2, 69, 26, 0.2);
+        }
+        .mock-chart .chart-y-labels {
+            position: absolute;
+            left: 6px;
+            top: 8px;
+            bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            font-size: 10px;
+            color: var(--text-muted);
+            align-items: flex-start;
+            line-height: 1;
+        }
+        .chart-bar-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 11%; min-width: 24px; }
         
-        .chart-bar-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 12%; }
-        
+        .chart-count {
+            font-size: 11px; font-weight: 700; color: var(--text-main); line-height: 1.2;
+        }
+
         .chart-bar {
-            width: 100%; background: rgba(2, 69, 26, 0.15); border-radius: 6px 6px 0 0; transition: all 0.3s ease; position: relative;
+            width: 100%; min-height: 8px; background: rgba(2, 69, 26, 0.15); border-radius: 12px 12px 0 0; transition: all 0.3s ease;
         }
         
         .chart-bar.active { background: var(--primary-green); }
@@ -251,7 +287,7 @@
                 <div class="stat-card accent">
                     <div class="stat-icon"><i data-lucide="coins"></i></div>
                     <div class="stat-info">
-                        <span class="stat-val">1,250</span>
+                        <span class="stat-val" id="totalPoints">0</span>
                         <span class="stat-label">Total Points</span>
                     </div>
                 </div>
@@ -259,7 +295,7 @@
                 <div class="stat-card clickable" onclick="window.location.href='taskhistory.html'">
                     <div class="stat-icon"><i data-lucide="leaf"></i></div>
                     <div class="stat-info">
-                        <span class="stat-val" style="display: flex; justify-content: space-between; align-items: center;">42 <i data-lucide="chevron-right" style="width: 14px; color: var(--primary-green);"></i></span>
+                        <span class="stat-val" style="display: flex; justify-content: space-between; align-items: center;"><span id="tasksDone">0</span> <i data-lucide="chevron-right" style="width: 14px; color: var(--primary-green);"></i></span>
                         <span class="stat-label">Tasks Done</span>
                     </div>
                 </div>
@@ -267,7 +303,7 @@
                 <div class="stat-card">
                     <div class="stat-icon"><i data-lucide="flame"></i></div>
                     <div class="stat-info">
-                        <span class="stat-val">12</span>
+                        <span class="stat-val" id="dayStreak">0</span>
                         <span class="stat-label">Day Streak</span>
                     </div>
                 </div>
@@ -275,7 +311,7 @@
                 <div class="stat-card clickable" onclick="window.location.href='leaderboard.html'">
                     <div class="stat-icon"><i data-lucide="award"></i></div>
                     <div class="stat-info">
-                        <span class="stat-val" style="display: flex; justify-content: space-between; align-items: center;">Top 5% <i data-lucide="chevron-right" style="width: 14px; color: var(--primary-green);"></i></span>
+                        <span class="stat-val" style="display: flex; justify-content: space-between; align-items: center;"><span id="topCollectorRank">N/A</span> <i data-lucide="chevron-right" style="width: 14px; color: var(--primary-green);"></i></span>
                         <span class="stat-label">Brgy Collector</span>
                     </div>
                 </div>
@@ -285,16 +321,10 @@
             <div class="chart-card">
                 <div class="chart-header">
                     <span class="chart-title">Activity Flow</span>
-                    <span class="chart-filter">This Week <i data-lucide="chevron-down" style="width:12px; display:inline-block; vertical-align:middle;"></i></span>
+                    <span class="chart-filter" id="weekFilter">This Week <i data-lucide="chevron-down" style="width:12px; display:inline-block; vertical-align:middle;"></i></span>
                 </div>
-                <div class="mock-chart">
-                    <div class="chart-bar-wrap"><div class="chart-bar" style="height: 30%"></div><span class="chart-day">M</span></div>
-                    <div class="chart-bar-wrap"><div class="chart-bar active" style="height: 100%"></div><span class="chart-day">T</span></div>
-                    <div class="chart-bar-wrap"><div class="chart-bar" style="height: 60%"></div><span class="chart-day">W</span></div>
-                    <div class="chart-bar-wrap"><div class="chart-bar" style="height: 40%"></div><span class="chart-day">T</span></div>
-                    <div class="chart-bar-wrap"><div class="chart-bar" style="height: 80%"></div><span class="chart-day">F</span></div>
-                    <div class="chart-bar-wrap"><div class="chart-bar" style="height: 20%"></div><span class="chart-day">S</span></div>
-                    <div class="chart-bar-wrap"><div class="chart-bar" style="height: 10%"></div><span class="chart-day">S</span></div>
+                <div class="mock-chart" id="activityChart">
+                    <!-- Populated dynamically -->
                 </div>
             </div>
 
@@ -304,47 +334,20 @@
                     <span class="chart-title">Waste Distribution</span>
                 </div>
                 <div class="pie-container">
-                    <div class="pie-chart"></div>
-                    <div class="pie-legend">
-                        <div class="legend-item"><div class="legend-color" style="background: var(--primary-green);"></div> Plastics (45%)</div>
-                        <div class="legend-item"><div class="legend-color" style="background: #10b981;"></div> Paper/Karton (30%)</div>
-                        <div class="legend-item"><div class="legend-color" style="background: #34b27b;"></div> Electronics (15%)</div>
-                        <div class="legend-item"><div class="legend-color" style="background: #6ee7b7;"></div> Glass (10%)</div>
+                    <div class="pie-chart" id="wasteChart" style="background: conic-gradient(var(--primary-green) 0% 45%, #10b981 45% 75%, #34b27b 75% 90%, #6ee7b7 90% 100%);"></div>
+                    <div class="pie-legend" id="wasteLegend">
+                        <div class="legend-item"><div class="legend-color" style="background: var(--primary-green);"></div> <span id="waste1">Loading...</span></div>
+                        <div class="legend-item"><div class="legend-color" style="background: #10b981;"></div> <span id="waste2">Loading...</span></div>
+                        <div class="legend-item"><div class="legend-color" style="background: #34b27b;"></div> <span id="waste3">Loading...</span></div>
+                        <div class="legend-item"><div class="legend-color" style="background: #6ee7b7;"></div> <span id="waste4">Loading...</span></div>
                     </div>
                 </div>
             </div>
 
             <div class="section-header">Recent Activity</div>
 
-            <div class="activity-list">
-                
-                <div class="activity-item">
-                    <div class="act-icon mission"><i data-lucide="target"></i></div>
-                    <div class="act-details">
-                        <div class="act-title">Beach Cleanup Mission</div>
-                        <div class="act-time">Completed Today, 10:30 AM</div>
-                    </div>
-                    <div class="act-points">+150</div>
-                </div>
-
-                <div class="activity-item">
-                    <div class="act-icon manual"><i data-lucide="hand"></i></div>
-                    <div class="act-details">
-                        <div class="act-title">Recycled 5 PET Bottles</div>
-                        <div class="act-time">Yesterday, 2:15 PM</div>
-                    </div>
-                    <div class="act-points">+25</div>
-                </div>
-
-                <div class="activity-item">
-                    <div class="act-icon quiz"><i data-lucide="brain"></i></div>
-                    <div class="act-details">
-                        <div class="act-title">Carbon Footprint Quiz</div>
-                        <div class="act-time">2 days ago, 9:00 AM</div>
-                    </div>
-                    <div class="act-points">+10</div>
-                </div>
-
+            <div class="activity-list" id="recentActivityList">
+                <!-- Populated dynamically -->
             </div>
 
         </main>
@@ -388,7 +391,8 @@
 
     </div>
 
-    <script>
+  <script>
+        // Initialize Lucide Icons immediately for static navigation elements
         lucide.createIcons();
 
         const gameMenu = document.getElementById('gameMenu');
@@ -402,6 +406,469 @@
                 gameMenu.classList.remove('active');
             }
         }
+
+        // Helper function to get YYYY-MM-DD in local time instead of UTC
+        function getLocalYYYYMMDD(dateObj) {
+            const d = new Date(dateObj);
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        // ==================== MAIN DATA LOADING ====================
+        async function initializeStats() {
+            // Check if the script from supabase_config.js has successfully attached to the window object
+            if (!window.supabaseClient) {
+                console.error("EcoTrack Error: 'window.supabaseClient' not found. Ensure supabase_config.js is loaded above this script.");
+                return;
+            }
+
+            const db = window.supabaseClient;
+
+            try {
+                const { data: { session }, error: sessionError } = await db.auth.getSession();
+                
+                if (sessionError || !session) {
+                    console.warn("No active session found. Redirecting to login...");
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                const userId = session.user.id;
+
+                // Execute all loaders independently with individual catch safety nets
+                await Promise.all([
+                    loadTotalPoints(db, userId).catch(e => console.error("Points Error:", e)),
+                    loadTasksDone(db, userId).catch(e => console.error("Tasks Done Error:", e)),
+                    loadDayStreakAndFlow(db, userId).catch(e => console.error("Streak/Flow Error:", e)),
+                    loadWasteDistribution(db, userId).catch(e => console.error("Waste Error:", e)),
+                    loadTopCollector(db, userId).catch(e => console.error("Ranking Error:", e)),
+                    loadRecentActivity(db, userId).catch(e => console.error("Recent Activity Error:", e))
+                ]);
+
+            } catch (error) {
+                console.error("Error initializing stats dashboard:", error);
+            } finally {
+                // Always render icons even if some database calls returned empty rows
+                lucide.createIcons();
+            }
+        }
+
+        // ==================== 1. TOTAL POINTS ====================
+        async function loadTotalPoints(db, userId) {
+            const { data, error } = await db
+                .from('profiles')
+                .select('points')
+                .eq('id', userId)
+                .single();
+
+            if (error) throw error;
+            const points = data?.points || 0;
+            const element = document.getElementById('totalPoints');
+            if (element) element.textContent = points.toLocaleString();
+        }
+
+        // ==================== 2. TASKS DONE COUNT ====================
+        async function loadTasksDone(db, userId) {
+            const { data, error } = await db
+                .from('user_projects')
+                .select('id')
+                .eq('user_id', userId)
+                .in('status', ['approved', 'completed']);
+
+            if (error) throw error;
+            const element = document.getElementById('tasksDone');
+            if (element) element.textContent = data?.length || 0;
+        }
+
+        // ==================== 3 & 4. STREAK AND ACTIVITY FLOW ====================
+        async function loadDayStreakAndFlow(db, userId) {
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+            sevenDaysAgo.setHours(0, 0, 0, 0);
+            const startDate = sevenDaysAgo.toISOString().split('T')[0];
+
+            const { data: activityRows, error } = await db
+                .from('user_activity')
+                .select('activity_date, task_count')
+                .eq('user_id', userId)
+                .gte('activity_date', startDate)
+                .order('activity_date', { ascending: true });
+
+            if (error) throw error;
+
+            const activeDates = new Set();
+            const taskCountByDay = {};
+
+            activityRows?.forEach(entry => {
+                if (!entry.activity_date) return;
+                const dateString = typeof entry.activity_date === 'string'
+                    ? entry.activity_date.split('T')[0]
+                    : getLocalYYYYMMDD(new Date(entry.activity_date));
+                activeDates.add(dateString);
+                taskCountByDay[dateString] = Number(entry.task_count) || 0;
+            });
+
+            // --- STREAK CALCULATION ---
+            let streak = 0;
+            let checkDate = new Date();
+            checkDate.setHours(0,0,0,0);
+
+            const todayStr = getLocalYYYYMMDD(checkDate);
+            const yesterday = new Date(checkDate);
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = getLocalYYYYMMDD(yesterday);
+
+            if (!activeDates.has(todayStr) && !activeDates.has(yesterdayStr)) {
+                streak = 0;
+            } else {
+                if (!activeDates.has(todayStr) && activeDates.has(yesterdayStr)) {
+                    checkDate.setDate(checkDate.getDate() - 1);
+                }
+                while (activeDates.has(getLocalYYYYMMDD(checkDate))) {
+                    streak++;
+                    checkDate.setDate(checkDate.getDate() - 1);
+                }
+            }
+            const streakElement = document.getElementById('dayStreak');
+            if (streakElement) streakElement.textContent = streak;
+
+            // --- ACTIVITY FLOW CHART ---
+            const chartContainer = document.getElementById('activityChart');
+            if (!chartContainer) return;
+
+            const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+            const trailingDays = [];
+            const flowMap = {};
+            const now = new Date();
+
+            for (let i = 6; i >= 0; i--) {
+                const targetDate = new Date(now);
+                targetDate.setDate(targetDate.getDate() - i);
+                const dayStr = getLocalYYYYMMDD(targetDate);
+                trailingDays.push(dayStr);
+                flowMap[dayStr] = taskCountByDay[dayStr] || 0;
+            }
+
+            const maxCount = Math.max(...Object.values(flowMap), 1);
+            const localTodayStr = getLocalYYYYMMDD(now);
+
+            chartContainer.innerHTML = `
+                <div class="chart-y-labels">
+                    ${generateYAxisLabels(maxCount).map(value => `<span>${value}</span>`).join('')}
+                </div>
+                ${trailingDays.map((dateStr, idx) => {
+                    const dayCount = flowMap[dateStr] || 0;
+                    const heightPercentage = (dayCount / maxCount) * 100;
+                    const isToday = dateStr === localTodayStr;
+                    const visualDayLabel = dayLabels[new Date(dateStr).getDay() === 0 ? 6 : new Date(dateStr).getDay() - 1];
+
+                    return `
+                        <div class="chart-bar-wrap">
+                            <span class="chart-count">${dayCount}</span>
+                            <div class="chart-bar ${isToday ? 'active' : ''}" style="height: ${Math.max(heightPercentage, dayCount > 0 ? 8 : 2)}%"></div>
+                            <span class="chart-day">${visualDayLabel}</span>
+                        </div>
+                    `;
+                }).join('')}
+            `;
+
+        }
+
+        function generateYAxisLabels(maxCount) {
+            const labels = [];
+            const steps = 4;
+            for (let i = steps; i >= 0; i--) {
+                labels.push(Math.round((maxCount / steps) * i));
+            }
+            return labels;
+        }
+
+        // ==================== 5. WASTE DISTRIBUTION ====================
+        async function loadWasteDistribution(db, userId) {
+            const { data: userProjects, error: projError } = await db
+                .from('user_projects')
+                .select('project_id, description, submission_data, status')
+                .eq('user_id', userId)
+                .in('status', ['approved', 'completed']);
+
+            if (projError) throw projError;
+
+            let wasteSummary = {};
+            // For mission-type aggregation only consider user_projects that are completed
+            const missionIds = userProjects?.filter(up => up.project_id && String(up.status).toLowerCase() === 'completed').map(up => up.project_id) || [];
+
+            // Count how many times each completed project_id appears for this user
+            const missionCounts = {};
+            userProjects?.forEach(up => {
+                if (up.project_id && String(up.status).toLowerCase() === 'completed') {
+                    missionCounts[up.project_id] = (missionCounts[up.project_id] || 0) + 1;
+                }
+            });
+
+            if (missionIds.length > 0) {
+                const { data: projectSpecs, error: projSpecErr } = await db
+                    .from('projects')
+                    .select('id, waste_type, target_weight')
+                    .in('id', Array.from(new Set(missionIds)));
+
+                if (!projSpecErr) {
+                    projectSpecs?.forEach(spec => {
+                        if (spec.waste_type && spec.target_weight) {
+                            const type = spec.waste_type.trim();
+                            const count = missionCounts[spec.id] || 1;
+                            wasteSummary[type] = (wasteSummary[type] || 0) + parseFloat(spec.target_weight) * count;
+                        }
+                    });
+                } else {
+                    console.warn('Failed to fetch project specs for waste distribution:', projSpecErr);
+                }
+            }
+
+            userProjects?.forEach(up => {
+                // Only consider manual submissions (no project_id) that are approved
+                if (!up.project_id && String(up.status).toLowerCase() === 'approved') {
+                    // Prefer structured submission_data (trigger) when available
+                    if (up.submission_data) {
+                        try {
+                            const parsed = (typeof up.submission_data === 'string') ? JSON.parse(up.submission_data) : up.submission_data;
+                            if (parsed && parsed.type && parsed.kg) {
+                                const type = String(parsed.type).trim();
+                                const mass = parseFloat(parsed.kg);
+                                if (!isNaN(mass)) wasteSummary[type] = (wasteSummary[type] || 0) + mass;
+                                return;
+                            }
+                        } catch (e) {
+                            // fall through to parse description
+                        }
+                    }
+
+                    if (up.description) {
+                        // Try JSON first
+                        try {
+                            const parsed = JSON.parse(up.description);
+                            if (parsed.type && parsed.kg) {
+                                const type = parsed.type.trim();
+                                wasteSummary[type] = (wasteSummary[type] || 0) + parseFloat(parsed.kg);
+                                return;
+                            }
+                        } catch (e) {
+                            // Not JSON, continue to other parsers
+                        }
+
+                        // Hyphen or colon separated like: "Cardboard - 1kg" or "Cardboard: 1 kg"
+                        const hyphenMatch = String(up.description || '').match(/^\s*([^\-:]+?)\s*[-:]\s*([0-9]+(?:\.[0-9]+)?)\s*(kg)?\s*$/i);
+                        if (hyphenMatch) {
+                            const type = hyphenMatch[1].trim();
+                            const mass = parseFloat(hyphenMatch[2]);
+                            if (!isNaN(mass)) {
+                                wasteSummary[type] = (wasteSummary[type] || 0) + mass;
+                                return;
+                            }
+                        }
+
+                        // Fallback comma-separated like: "Cardboard,1"
+                        const inlineParts = up.description.split(',');
+                        if (inlineParts.length >= 2) {
+                            const type = inlineParts[0].trim();
+                            // accept kilograms suffix
+                            const massText = inlineParts[1].trim().replace(/kg/i, '').trim();
+                            const mass = parseFloat(massText);
+                            if (!isNaN(mass)) {
+                                wasteSummary[type] = (wasteSummary[type] || 0) + mass;
+                                return;
+                            }
+                        }
+                    }
+                }
+            });
+
+            const types = Object.keys(wasteSummary);
+            const totalWeight = Object.values(wasteSummary).reduce((sum, val) => sum + val, 0) || 0;
+            const chartDiv = document.getElementById('wasteChart');
+            
+            const colorPalette = ['#02451A', '#10b981', '#34b27b', '#6ee7b7'];
+            const legendElements = [
+                document.getElementById('waste1'),
+                document.getElementById('waste2'),
+                document.getElementById('waste3'),
+                document.getElementById('waste4')
+            ];
+
+            if (!chartDiv) return;
+
+            if (totalWeight === 0) {
+                chartDiv.style.background = 'rgba(2, 69, 26, 0.1)';
+                legendElements.forEach(el => { if(el) el.textContent = 'No records'; });
+                return;
+            }
+
+            let gradientSegments = [];
+            let cumulativePercent = 0;
+
+            types.slice(0, 4).forEach((type, idx) => {
+                const currentWeight = wasteSummary[type];
+                const segmentPercent = (currentWeight / totalWeight) * 100;
+                const nextPercent = cumulativePercent + segmentPercent;
+
+                gradientSegments.push(`${colorPalette[idx]} ${cumulativePercent.toFixed(1)}% ${nextPercent.toFixed(1)}%`);
+                if(legendElements[idx]) {
+                    legendElements[idx].textContent = `${type} (${segmentPercent.toFixed(0)}%)`;
+                }
+                cumulativePercent = nextPercent;
+            });
+
+            for (let i = types.length; i < 4; i++) {
+                if(legendElements[i]) legendElements[i].textContent = 'N/A';
+            }
+
+            chartDiv.style.background = `conic-gradient(${gradientSegments.join(', ')})`;
+        }
+
+        // ==================== 6. TOP COLLECTOR RANKING ====================
+        async function loadTopCollector(db, userId) {
+            const { data: globalHistory, error } = await db
+                .from('user_projects')
+                .select('user_id')
+                .in('status', ['approved', 'completed']);
+
+            if (error) throw error;
+
+            const collectorLeaderboard = {};
+            globalHistory?.forEach(entry => {
+                collectorLeaderboard[entry.user_id] = (collectorLeaderboard[entry.user_id] || 0) + 1;
+            });
+
+            const targetUserVolume = collectorLeaderboard[userId] || 0;
+            let placeRank = 1;
+
+            Object.values(collectorLeaderboard).forEach(vol => {
+                if (vol > targetUserVolume) placeRank++;
+            });
+
+            const { data: userProfiles, error: profileErr } = await db
+                .from('profiles')
+                .select('id')
+                .eq('role', 'collector');
+
+            const rankBadge = document.getElementById('topCollectorRank');
+            if(!rankBadge) return;
+
+            if (placeRank <= 5) {
+                rankBadge.textContent = `#${placeRank}`;
+            } else {
+                rankBadge.textContent = 'Top 5';
+            }
+        }
+
+        // ==================== 7. RECENT ACTIVITY LIST ====================
+        async function loadRecentActivity(db, userId) {
+            let { data: logs, error } = await db
+                .from('user_projects')
+                .select('id, project_id, description, submission_date, points')
+                .eq('user_id', userId)
+                .order('submission_date', { ascending: false })
+                .limit(10);
+
+            if (error) {
+                console.warn('submission_date unavailable, falling back to inserted_at:', error);
+                const fallback = await db
+                    .from('user_projects')
+                    .select('id, project_id, description, inserted_at, points')
+                    .eq('user_id', userId)
+                    .order('inserted_at', { ascending: false })
+                    .limit(10);
+
+                if (fallback.error) throw fallback.error;
+                logs = fallback.data || [];
+            }
+
+            const listContainer = document.getElementById('recentActivityList');
+            if (!listContainer) return;
+
+            if (!logs || logs.length === 0) {
+                listContainer.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:10px;">No recent submissions</p>';
+                return;
+            }
+
+            const targetProfileIds = logs.filter(l => l.project_id).map(l => l.project_id);
+            let projectDictionary = {};
+
+            if (targetProfileIds.length > 0) {
+                const { data: projectDetails } = await db
+                    .from('projects')
+                    .select('id, type, title, points')
+                    .in('id', targetProfileIds);
+
+                projectDetails?.forEach(p => {
+                    projectDictionary[p.id] = p;
+                });
+            }
+
+            listContainer.innerHTML = logs.map(item => {
+                const linkedProject = item.project_id ? projectDictionary[item.project_id] : null;
+                const activityType = linkedProject?.type?.toLowerCase() || 'manual';
+                
+                let resolvedClass = 'manual';
+                let resolvedIcon = 'hand';
+                let itemTitle = 'Manual Contribution';
+
+                if (activityType.includes('quiz')) {
+                    resolvedClass = 'quiz';
+                    resolvedIcon = 'brain';
+                    itemTitle = linkedProject?.title || 'Eco Quiz Completed';
+                } else if (activityType.includes('mission') || item.project_id) {
+                    resolvedClass = 'mission';
+                    resolvedIcon = 'target';
+                    itemTitle = linkedProject?.title || 'Community Mission';
+                } else if (item.description) {
+                    try {
+                        const parsedDesc = JSON.parse(item.description);
+                        if(parsedDesc.type) itemTitle = `Recycled ${parsedDesc.type}`;
+                    } catch(e) {
+                        itemTitle = item.description.split(',')[0] || 'Manual Contribution';
+                    }
+                }
+
+                const displayedPoints = item.points || linkedProject?.points || 0;
+                const activityTime = formatActivityTime(new Date(item.submission_date || item.inserted_at || item.created_at));
+
+                return `
+                    <div class="activity-item">
+                        <div class="act-icon ${resolvedClass}"><i data-lucide="${resolvedIcon}"></i></div>
+                        <div class="act-details">
+                            <div class="act-title">${itemTitle}</div>
+                            <div class="act-time">${activityTime}</div>
+                        </div>
+                        <div class="act-points">+${displayedPoints}</div>
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        function formatActivityTime(date) {
+            const now = new Date();
+            const diffTime = Math.abs(now - date);
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays === 0) {
+                const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+                if (diffHours === 0) {
+                    const diffMins = Math.floor(diffTime / (1000 * 60));
+                    return `${diffMins || 1} minute${diffMins !== 1 ? 's' : ''} ago`;
+                }
+                return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+            } else if (diffDays === 1) {
+                return `Yesterday, ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+            } else if (diffDays < 7) {
+                return `${diffDays} days ago`;
+            } else {
+                return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+            }
+        }
+
+        // Run when HTML elements are completely parsed
+        window.addEventListener('DOMContentLoaded', initializeStats);
     </script>
 </body>
 

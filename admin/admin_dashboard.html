@@ -387,6 +387,7 @@
         <li class="nav-item"><a href="admin_users_hub.html" class="nav-link"><i class="fa-solid fa-users-gear"></i> <span>User Hub</span></a></li>
         <li class="nav-item"><a href="admin_projects_hub.html" class="nav-link"><i class="fa-solid fa-diagram-project"></i> <span>Project Hub</span></a></li>
         <li class="nav-item"><a href="admin_financial_hub.html" class="nav-link"><i class="fa-solid fa-wallet"></i> <span>Financial Hub</span></a></li>
+
     </ul>
 
     <div class="sidebar-footer">
@@ -415,7 +416,7 @@
                 <div class="profile-user-card">
                     <div class="user-item">
                         <div class="user-avatar-circle"><i class="fa-solid fa-user"></i></div>
-                        <div class="user-name-text">Hershey Cristobal</div>
+                        <div class="user-name-text" id="adminNameDisplay">Loading...</div>
                     </div>
                 </div>
 
@@ -477,13 +478,9 @@
                 <h3 style="font-weight: 600; font-size: 1.1rem;">Participation Trend</h3>
 
                 <div class="chart-legend">
-
-                    <div><span class="legend-dot" style="background:#02451A"></span>Activities</div>
-
-                    <div><span class="legend-dot" style="background:#FFC107"></span>Likes</div>
-
-                    <div><span class="legend-dot" style="background:#007DFE"></span>Messages</div>
-
+                    <div><span class="legend-dot" style="background:#02451A"></span>Missions</div>
+                    <div><span class="legend-dot" style="background:#FFC107"></span>Quizzes</div>
+                    <div><span class="legend-dot" style="background:#007DFE"></span>Manual</div>
                 </div>
 
             </div>
@@ -567,60 +564,200 @@
     }
 
     // --- MAIN LOGIC FUNCTIONS ---
-    function init() {
-        // Mock data initialization
-        fetchStats();
-        fetchCharts();
-        fetchFeed();
+    let profiles = [];
+    let userProjects = [];
+    let projects = [];
+    let communityPosts = [];
+
+    // Load logged-in admin's full name
+    async function loadAdminName() {
+        try {
+            const { data: { user }, error: authError } = await window.supabaseClient.auth.getUser();
+            if (authError || !user) {
+                console.error('Unable to get logged-in user:', authError);
+                return;
+            }
+
+            const { data: profile, error: profileError } = await window.supabaseClient
+                .from('profiles')
+                .select('full_name')
+                .eq('id', user.id)
+                .single();
+
+            if (profileError) {
+                console.error('Failed to fetch profile:', profileError);
+                return;
+            }
+
+            const nameDisplay = document.getElementById('adminNameDisplay');
+            if (nameDisplay) {
+                nameDisplay.textContent = profile?.full_name || user.email || 'Admin';
+            }
+        } catch (err) {
+            console.error('Error loading admin name:', err);
+        }
+    }
+
+    async function init() {
+        try {
+            loadAdminName();
+            // Fetch all required data from Supabase
+            const [profRes, upRes, projRes, postsRes] = await Promise.all([
+                window.supabaseClient.from('profiles').select('id, role, status, address, full_name'),
+                window.supabaseClient.from('user_projects').select('id, user_id, project_id, status, points, type, submission_date, description'),
+                window.supabaseClient.from('projects').select('id, target_weight'),
+                window.supabaseClient.from('community_posts').select('id, full_name, created_at')
+            ]);
+            
+            profiles = profRes.data || [];
+            userProjects = upRes.data || [];
+            projects = projRes.data || [];
+            communityPosts = postsRes.data || [];
+
+            fetchStats();
+            fetchCharts();
+            fetchFeed();
+        } catch (error) {
+            console.error('Error fetching data:', error);
+        }
     }
 
     function fetchStats() {
-        document.getElementById('stat-verified').innerText = "150";
-        document.getElementById('stat-points').innerText = "12,500";
-        document.getElementById('stat-waste').innerText = "432.5"; 
-        document.getElementById('stat-posts').innerText = "45";
-        document.getElementById('stat-moderators').innerText = "5";
+        // Verified Residents
+        const verifiedResidents = profiles.filter(p => p.role === 'resident' && p.status === 'verified').length;
+        document.getElementById('stat-verified').innerText = verifiedResidents;
+
+        // Waste Verified (kg)
+        let totalWaste = 0;
+        userProjects.forEach(up => {
+            const upType = (up.type || '').toLowerCase();
+            
+            if (upType === 'mission' && up.status === 'completed') {
+                const proj = projects.find(p => p.id === up.project_id);
+                if (proj && proj.target_weight) {
+                    totalWaste += Number(proj.target_weight);
+                }
+            } else if (upType === 'manual' && up.status === 'approved') {
+                if (up.description) {
+                    const match = up.description.match(/(\d+(\.\d+)?)\s*kg/i);
+                    if (match && match[1]) {
+                        totalWaste += Number(match[1]);
+                    }
+                }
+            }
+        });
+        document.getElementById('stat-waste').innerText = totalWaste.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1});
+
+        // Points Earned
+        const validProjects = userProjects.filter(up => up.status === 'approved' || up.status === 'completed');
+        const totalPoints = validProjects.reduce((sum, up) => sum + (Number(up.points) || 0), 0);
+        document.getElementById('stat-points').innerText = totalPoints.toLocaleString();
+
+        // Community Posts
+        document.getElementById('stat-posts').innerText = communityPosts.length;
+
+        // Moderators
+        const moderators = profiles.filter(p => p.role === 'collector').length;
+        document.getElementById('stat-moderators').innerText = moderators;
     }
 
     function fetchCharts() {
         // Line Chart Logic (Sun-Sat)
-        const activityCounts = [12, 19, 15, 25, 22, 30, 28];
-        const likeCounts = [5, 10, 8, 15, 12, 20, 18];
-        const msgCounts = [2, 4, 3, 7, 5, 8, 6];
+        const missionCounts = [0, 0, 0, 0, 0, 0, 0];
+        const quizCounts = [0, 0, 0, 0, 0, 0, 0];
+        const manualCounts = [0, 0, 0, 0, 0, 0, 0];
+        
+        userProjects.forEach(up => {
+            const date = new Date(up.submission_date);
+            if (!isNaN(date)) {
+                const upType = (up.type || '').toLowerCase();
+                const day = date.getDay();
+                if (upType === 'mission') missionCounts[day]++;
+                else if (upType === 'quiz' || upType === 'quizzes') quizCounts[day]++;
+                else if (upType === 'manual') manualCounts[day]++;
+            }
+        });
 
         new Chart(document.getElementById('participationChart'), {
             type: 'line',
             data: {
                 labels: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
                 datasets: [
-                    { label: 'Activities', data: activityCounts, borderColor: '#02451A', tension: 0.4, fill: true, backgroundColor: 'rgba(2,69,26,0.1)' },
-                    { label: 'Likes', data: likeCounts, borderColor: '#FFC107', tension: 0.4, borderDash: [5,5] },
-                    { label: 'Messages', data: msgCounts, borderColor: '#007DFE', tension: 0.4 }
+                    { label: 'Missions', data: missionCounts, borderColor: '#02451A', tension: 0.4, fill: true, backgroundColor: 'rgba(2,69,26,0.1)' },
+                    { label: 'Quizzes', data: quizCounts, borderColor: '#FFC107', tension: 0.4, borderDash: [5,5] },
+                    { label: 'Manual', data: manualCounts, borderColor: '#007DFE', tension: 0.4 }
                 ]
             },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
         });
 
         // Zone Chart Logic
-        const purokCounts = { "Purok 1": 40, "Purok 2": 35, "Purok 3": 25, "Purok 4": 30, "Purok 5": 20 };
+        const purokTasks = {
+            "Purok 1": 0, "Purok 2": 0, "Purok 3": 0, 
+            "Purok 4": 0, "Purok 5": 0, "Purok 6": 0, "Purok 7": 0
+        };
+        const validProjects = userProjects.filter(up => up.status === 'approved' || up.status === 'completed');
+        
+        validProjects.forEach(up => {
+            const user = profiles.find(p => p.id === up.user_id);
+            if (user && user.address) {
+                const match = user.address.match(/purok\s*([1-7])\b/i);
+                if (match) {
+                    const purokName = `Purok ${match[1]}`;
+                    purokTasks[purokName] = (purokTasks[purokName] || 0) + 1;
+                }
+            }
+        });
+
+        const sortedPuroks = Object.entries(purokTasks)
+            .filter(p => p[1] > 0)
+            .sort((a,b) => b[1] - a[1]);
+            
+        const labels = sortedPuroks.length > 0 ? sortedPuroks.map(p => p[0]) : ['No Data'];
+        const data = sortedPuroks.length > 0 ? sortedPuroks.map(p => p[1]) : [1];
+        const bgColors = sortedPuroks.length > 0 ? ['#02451A', '#00E676', '#2E7D32', '#66BB6A', '#A5D6A7', '#1B5E20', '#81C784'] : ['#e0e0e0'];
 
         new Chart(document.getElementById('zoneChart'), {
             type: 'doughnut',
             data: {
-                labels: Object.keys(purokCounts),
-                datasets: [{ data: Object.values(purokCounts), backgroundColor: ['#02451A', '#00E676', '#2E7D32', '#66BB6A', '#A5D6A7'] }]
+                labels: labels,
+                datasets: [{ data: data, backgroundColor: bgColors }]
             },
             options: { responsive: true, maintainAspectRatio: false, cutout: '70%' }
         });
     }
 
     function fetchFeed() {
-        const combined = [
-            { user: 'Juan Dela Cruz', text: 'performed recycling activity', time: new Date(Date.now() - 1000 * 60 * 5), tag: 'log' },
-            { user: 'Maria Santos', text: 'shared a new post', time: new Date(Date.now() - 1000 * 60 * 15), tag: 'post' },
-            { user: 'Pedro Penduko', text: 'sent: "Hello admin..."', time: new Date(Date.now() - 1000 * 60 * 30), tag: 'msg' },
-            { user: 'Anna Reyes', text: 'performed mission activity', time: new Date(Date.now() - 1000 * 60 * 45), tag: 'log' }
-        ];
+        let combined = [];
+
+        userProjects.forEach(up => {
+            if (['mission', 'quiz', 'manual', 'game'].includes((up.type || '').toLowerCase())) {
+                const user = profiles.find(p => p.id === up.user_id);
+                combined.push({
+                    user: user ? user.full_name : 'Unknown User',
+                    text: `performed ${up.type} activity`,
+                    time: new Date(up.submission_date),
+                    tag: 'log'
+                });
+            }
+        });
+
+        communityPosts.forEach(cp => {
+            combined.push({
+                user: cp.full_name || 'Unknown User',
+                text: 'shared a new post',
+                time: new Date(cp.created_at),
+                tag: 'post'
+            });
+        });
+
+        // Filter valid dates and sort desc
+        combined = combined.filter(item => !isNaN(item.time)).sort((a, b) => b.time - a.time);
+
+        if (combined.length === 0) {
+            document.getElementById('liveCombinedFeed').innerHTML = '<p style="text-align:center; color:#999;">No activities yet.</p>';
+            return;
+        }
 
         document.getElementById('liveCombinedFeed').innerHTML = combined.slice(0,8).map(item => `
             <div class="activity-item">

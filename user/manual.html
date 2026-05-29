@@ -12,6 +12,11 @@
     
     <!-- Using Lucide Icons for a modern, chill vibe -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase_config.js"></script>
+    <script src="submit_project.js"></script>
+    <script src="../auth_guard.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
         :root {
@@ -408,6 +413,70 @@
             font-weight: 600;
             outline: none;
             transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            max-width: 100%;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .no-padding {
+            padding: 0 !important;
+        }
+
+        /* Custom Dropdown Styles */
+        .custom-select-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .custom-select-trigger {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .custom-options {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            width: 100%;
+            background: white;
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            z-index: 100;
+            display: none;
+            max-height: 300px;
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+
+        .custom-options.active {
+            display: block;
+        }
+
+        .custom-option {
+            padding: 12px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-main);
+            cursor: pointer;
+            border-bottom: 1px solid rgba(2, 69, 26, 0.05);
+            transition: background 0.2s;
+        }
+
+        .custom-option:last-child {
+            border-bottom: none;
+        }
+
+        .custom-option:hover {
+            background: rgba(2, 69, 26, 0.05);
+        }
+
+        .custom-option.selected {
+            background: rgba(2, 69, 26, 0.1);
+            color: var(--primary-green);
         }
 
         .form-control:focus {
@@ -480,17 +549,9 @@
             transform: none;
         }
 
-        /* Camera / Finalization View */
-        #reviewSection {
-            display: none; /* Hidden by default */
-            flex-direction: column;
-            gap: 20px;
-            height: 100%;
-        }
-
+        /* Immersive Camera Styles (same as mission.html) */
         .camera-view {
             width: 100%;
-            height: 250px;
             background: #111827;
             border-radius: 24px;
             display: flex;
@@ -501,37 +562,101 @@
             position: relative;
             overflow: hidden;
             box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .camera-overlay {
+        /* Immersive Camera Interface (Mission Style) */
+        .camera-view.immersive {
+            height: 100% !important;
+            border-radius: 0;
             position: absolute;
-            inset: 20px;
-            border: 2px dashed rgba(255,255,255,0.4);
-            border-radius: 12px;
+            top: 0; left: 0;
+            z-index: 50;
+            background: #000; /* Prevent background bleeding */
+            width: 100%;
+            max-width: 480px; /* Stay within container */
+            margin: 0 auto;
+            overflow: hidden;
         }
 
-        .camera-icon {
-            width: 48px;
-            height: 48px;
-            opacity: 0.8;
-            margin-bottom: 10px;
+        .back-immersive {
+            position: absolute;
+            top: 20px; left: 20px;
+            width: 42px; height: 42px;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            display: flex; justify-content: center; align-items: center;
+            z-index: 60; cursor: pointer;
+            transition: all 0.2s ease;
         }
 
-        .camera-text {
-            font-size: 14px;
-            font-weight: 600;
-            opacity: 0.8;
+        .camera-overlay-top {
+            position: absolute; top: 20px; left: 0;
+            width: 100%; display: flex;
+            justify-content: center; padding: 0 24px;
+            z-index: 55; pointer-events: none;
+        }
+
+        .camera-label {
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            padding: 10px 24px; border-radius: 30px;
+            color: white; font-size: 14px; font-weight: 700;
+            border: 1px solid rgba(255,255,255,0.3);
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        .face-overlay {
+            position: absolute;
+            width: 280px; height: 280px;
+            z-index: 52; display: flex;
+            justify-content: center; align-items: center;
+            pointer-events: none;
+        }
+
+        .face-corner {
+            position: absolute;
+            width: 40px; height: 40px;
+            border-color: rgba(255,255,255,0.8);
+            border-style: solid;
+        }
+
+        .corner-tl { top:0; left:0; border-width: 4px 0 0 4px; border-top-left-radius: 12px; }
+        .corner-tr { top:0; right:0; border-width: 4px 4px 0 0; border-top-right-radius: 12px; }
+        .corner-bl { bottom:0; left:0; border-width: 0 0 4px 4px; border-bottom-left-radius: 12px; }
+        .corner-br { bottom:0; right:0; border-width: 0 4px 4px 0; border-bottom-right-radius: 12px; }
+
+        .camera-overlay-bottom {
+            position: absolute; bottom: 40px;
+            width: 100%; display: flex;
+            justify-content: center; z-index: 60;
+        }
+
+        .shutter-btn {
+            width: 85px; height: 85px;
+            border-radius: 50%; border: 4px solid white;
+            background: transparent;
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer; transition: all 0.2s ease;
+            position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.2);
+        }
+
+        .shutter-btn:active { transform: scale(0.9); }
+        .shutter-btn::after {
+            content: ''; width: 65px; height: 65px;
+            background: white; border-radius: 50%; position: absolute;
         }
 
         .live-dot {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 10px;
-            height: 10px;
-            background: #ef4444;
-            border-radius: 50%;
-            animation: pulse 1.5s infinite;
+            position: absolute; top: 20px; right: 20px;
+            width: 10px; height: 10px;
+            background: #ef4444; border-radius: 50%;
+            animation: pulse 1.5s infinite; z-index: 60;
         }
 
         @keyframes pulse {
@@ -539,6 +664,8 @@
             70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
             100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         .summary-card {
             background: var(--glass-bg);
@@ -608,42 +735,9 @@
             </div>
 
             <div class="missions-list">
-                
-                <div class="mission-card" data-status="pending">
-                    <div class="mission-title">5.0 kg White (Used) Paper</div>
-                    <div class="mission-detail">
-                        <i data-lucide="award" style="width: 14px; height: 14px; margin-top: 2px; color: var(--primary-green);"></i>
-                        POINTS: <span class="points-highlight">400</span>
-                    </div>
-                    <div class="mission-detail">
-                        <i data-lucide="calendar" style="width: 14px; height: 14px; margin-top: 2px;"></i>
-                        DATE: <span>Oct 20, 2026</span>
-                    </div>
-                    <div class="mission-actions" style="gap: 10px;">
-                        <button class="do-it-btn" style="background: rgba(2, 69, 26, 0.1); color: var(--primary-green); padding: 10px 15px;" onclick="showQRModal()">
-                            <i data-lucide="qr-code" style="width: 18px; height: 18px;"></i>
-                        </button>
-                        <button class="do-it-btn" style="background: #eab308; flex-grow: 1;" disabled>
-                            PENDING <i data-lucide="clock" style="width: 16px; height: 16px;"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="mission-card" data-status="completed" style="opacity: 0.8;">
-                    <div class="mission-title">2.5 kg PET Bottles (clean)</div>
-                    <div class="mission-detail">
-                        <i data-lucide="award" style="width: 14px; height: 14px; margin-top: 2px; color: var(--primary-green);"></i>
-                        POINTS: <span class="points-highlight">400</span>
-                    </div>
-                    <div class="mission-detail">
-                        <i data-lucide="calendar" style="width: 14px; height: 14px; margin-top: 2px;"></i>
-                        DATE: <span>Oct 18, 2026</span>
-                    </div>
-                    <div class="mission-actions">
-                        <button class="do-it-btn" style="background: var(--text-muted);" disabled>
-                            COMPLETED <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i>
-                        </button>
-                    </div>
+                <div style="text-align:center;padding:40px;color:var(--text-muted);" id="listLoadingHint">
+                    <i data-lucide="loader" style="width:32px;height:32px;animation:spin 2s linear infinite;"></i>
+                    <p style="margin-top:10px;font-weight:700;">LOADING ACTIVITIES...</p>
                 </div>
             </div>
 
@@ -657,49 +751,19 @@
         <div class="content-area" id="inputSection" style="display: none;">
             <div class="form-card">
                 
-                <div class="form-group">
-                    <label class="form-label">Description (Uri ng Kalakal)</label>
-                    <select id="itemDesc" class="form-control" onchange="calculatePoints()">
-                        <option value="" disabled selected>Pumili ng Item...</option>
-                        
-                        <optgroup label="PAPER (Papel)">
-                            <option value="White (Used) Paper">Puting Papel (Used)</option>
-                            <option value="Corrugated Cardboard">Karton (Corrugated)</option>
-                            <option value="Newspaper">Dyaryo</option>
-                            <option value="Mixed Paper">Mixed Paper</option>
-                            <option value="Cardboard (informal)">Karton (Informal)</option>
-                        </optgroup>
-    
-                        <optgroup label="PLASTIC (Plastik)">
-                            <option value="PET Bottles (clean)">PET Bottles (Malinis)</option>
-                            <option value="PET Bottles (unclean)">PET Bottles (Marumi)</option>
-                            <option value="HDPE (Sibakin) Plastic">HDPE (Sibakin) Plastic</option>
-                            <option value="LDPE Plastic (lids)">LDPE Plastic (Lids/Takip)</option>
-                            <option value="Engineering Plastics">Engineering Plastics</option>
-                            <option value="Hard Plastic (sibak, informal)">Hard Plastic (Sibak)</option>
-                            <option value="Plastic Bottles (informal)">Plastic Bottles (Informal)</option>
-                            <option value="Plastic Sachet">Plastic Sachet</option>
-                        </optgroup>
-    
-                        <optgroup label="METAL (Bakal/Tanso)">
-                            <option value="Aluminum Cans">Aluminum Cans (Lata)</option>
-                            <option value="Copper Wire">Copper Wire (Tanso)</option>
-                            <option value="Steel (Iron alloys)">Steel (Bakal)</option>
-                            <option value="Stainless Steel">Stainless Steel</option>
-                            <option value="Tin Cans">Tin Cans</option>
-                            <option value="Scrap Metal (general)">Scrap Metal (General)</option>
-                        </optgroup>
-    
-                        <optgroup label="GLASS (Bote)">
-                            <option value="Glass Cullets (bubog)">Glass Cullets (Bubog)</option>
-                        </optgroup>
-    
-                        <optgroup label="OTHERS">
-                            <option value="Car Batteries">Car Batteries</option>
-                            <option value="E-Waste">Electronic Waste (E-Waste)</option>
-                        </optgroup>
-                    </select>
+        <div class="form-group">
+            <label class="form-label">Description (Uri ng Kalakal)</label>
+            <div class="custom-select-container" id="wasteDropdownContainer">
+                <div class="form-control custom-select-trigger" id="wasteTrigger">
+                    <span id="selectedWasteLabel">Loading materials...</span>
+                    <i data-lucide="chevron-down" style="width: 18px; height: 18px;"></i>
                 </div>
+                <div class="custom-options" id="wasteOptions">
+                    <!-- Options injected here -->
+                </div>
+            </div>
+            <input type="hidden" id="itemDesc" value="">
+        </div>
 
                 <div class="form-group">
                     <label class="form-label">Estimated Weight / Quantity (kg)</label>
@@ -709,7 +773,7 @@
                 <div class="points-display">
                     <span class="points-label">Estimated Points:</span>
                     <span class="points-value">
-                        <i data-lucide="circle-dollar-sign"></i>
+                        <i data-lucide="coins"></i>
                         <span id="calculatedPoints">0</span>
                     </span>
                 </div>
@@ -721,20 +785,35 @@
             </button>
         </div>
 
-        <!-- CAMERA SECTION -->
-        <div class="content-area" id="cameraSection" style="display: none; flex-direction: column; gap: 20px; height: 100%;">
-            
-            <div class="camera-view" style="flex-grow: 1; height: auto;">
-                <div class="camera-overlay"></div>
-                <div class="live-dot"></div>
-                <i data-lucide="camera" class="camera-icon"></i>
-                <div class="camera-text">Live Camera Active</div>
-                <div style="font-size: 11px; opacity: 0.6; margin-top: 5px;">Position your item in the frame for verification.</div>
-            </div>
+        <!-- CAMERA SECTION (Immersive) -->
+        <div class="content-area no-padding" id="cameraSection" style="display: none; height: 100%; position: absolute; top: 0; left: 0; width: 100%; z-index: 50; background: #000; max-width: 480px;">
+            <div class="camera-view immersive" id="cameraBox">
+                <video id="manualVideo" autoplay playsinline style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:1;"></video>
+                <canvas id="manualCanvas" style="display:none;"></canvas>
 
-            <button class="btn-primary" onclick="showReview()">
-                Capture & Continue <i data-lucide="camera"></i>
-            </button>
+                <button class="back-immersive" onclick="goBack()">
+                    <i data-lucide="chevron-left"></i>
+                </button>
+
+                <div class="camera-overlay-top">
+                    <div class="camera-label">
+                        <i data-lucide="eye" style="width:16px;"></i> Position waste item in frame
+                    </div>
+                </div>
+
+                <div class="face-overlay">
+                    <div class="face-corner corner-tl"></div>
+                    <div class="face-corner corner-tr"></div>
+                    <div class="face-corner corner-bl"></div>
+                    <div class="face-corner corner-br"></div>
+                </div>
+
+                <div class="live-dot"></div>
+
+                <div class="camera-overlay-bottom">
+                    <button class="shutter-btn" onclick="takeManualSnapshot()"></button>
+                </div>
+            </div>
         </div>
 
         <!-- REVIEW SECTION -->
@@ -756,7 +835,7 @@
                 <div class="summary-item">
                     <span class="summary-label">Total Points</span>
                     <span class="summary-val" style="color: var(--primary-green); font-size: 18px;">
-                        <i data-lucide="circle-dollar-sign" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle;"></i> 
+                        <i data-lucide="coins" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle;"></i> 
                         <span id="summaryPoints">0</span>
                     </span>
                 </div>
@@ -779,74 +858,227 @@
             <div class="qr-placeholder">
                 <i data-lucide="qr-code" style="width: 120px; height: 120px; color: var(--primary-green); opacity: 0.8;"></i>
             </div>
-            <div style="font-size: 24px; font-weight: 800; letter-spacing: 4px; color: var(--text-main); font-family: monospace; background: rgba(2, 69, 26, 0.05); padding: 8px 20px; border-radius: 8px; border: 1px dashed rgba(2, 69, 26, 0.2); margin-top: 5px; margin-bottom: 5px;">ECO-7X29</div>
+            <div id="qrCodeText" style="font-size: 24px; font-weight: 800; letter-spacing: 4px; color: var(--text-main); font-family: monospace; background: rgba(2, 69, 26, 0.05); padding: 8px 20px; border-radius: 8px; border: 1px dashed rgba(2, 69, 26, 0.2); margin-top: 5px; margin-bottom: 5px;">MAN-0000</div>
             <div style="font-size: 13px; font-weight: 600; color: var(--text-muted); text-align: center; line-height: 1.4;">Show this QR code to the admin to verify your activity.</div>
         </div>
     </div>
 
     <script>
-        // Initialize Lucide Icons
         lucide.createIcons();
 
-        // Points Mapping Database
-        const pointsMapping = {
-            // PAPER
-            "White (Used) Paper": 80,
-            "Corrugated Cardboard": 20,
-            "Newspaper": 40,
-            "Mixed Paper": 10,
-            "Cardboard (informal)": 40,
-
-            // PLASTIC
-            "PET Bottles (clean)": 160,
-            "PET Bottles (unclean)": 120,
-            "HDPE (Sibakin) Plastic": 10,
-            "LDPE Plastic (lids)": 50,
-            "Engineering Plastics": 100,
-            "Hard Plastic (sibak, informal)": 150,
-            "Plastic Bottles (informal)": 100,
-            "Plastic Sachet": 20,
-
-            // METAL & OTHERS
-            "Aluminum Cans": 50,
-            "Copper Wire": 1500,
-            "Steel (Iron alloys)": 90,
-            "Stainless Steel": 600,
-            "Tin Cans": 30,
-            "Scrap Metal (general)": 140,
-            "Glass Cullets (bubog)": 10,
-            "Car Batteries": 140,
-            "E-Waste": 100
-        };
-
-        const itemDesc = document.getElementById('itemDesc');
-        const itemWeight = document.getElementById('itemWeight');
-        const calculatedPointsDisplay = document.getElementById('calculatedPoints');
-        const nextBtn = document.getElementById('nextBtn');
-        
+        // --- State ---
         const manualListSection = document.getElementById('manualListSection');
-        const inputSection = document.getElementById('inputSection');
-        const cameraSection = document.getElementById('cameraSection');
-        const reviewSection = document.getElementById('reviewSection');
-        const pageTitle = document.getElementById('pageTitle');
+        const inputSection      = document.getElementById('inputSection');
+        const cameraSection     = document.getElementById('cameraSection');
+        const reviewSection     = document.getElementById('reviewSection');
+        const pageTitle         = document.getElementById('pageTitle');
+        const itemDescEl        = document.getElementById('itemDesc');
+        const itemWeightEl      = document.getElementById('itemWeight');
+        const calculatedPointsDisplay = document.getElementById('calculatedPoints');
+        const nextBtn           = document.getElementById('nextBtn');
 
-        let currentPoints = 0;
-        let currentStep = 'list'; // 'list', 'input', 'camera', 'review'
+        let currentStep    = 'list';
+        let currentPoints  = 0;
+        let videoStream    = null;
+        let capturedPhoto  = null;
+        let wasteMaterials = []; // fetched from DB
+        let userSubmissions = [];
+        let selectedWasteId = null;
+
+        // --- Init on load ---
+        document.addEventListener('DOMContentLoaded', initManual);
+
+        async function initManual() {
+            try {
+                const { data: { user } } = await window.supabaseClient.auth.getUser();
+                if (!user) return;
+
+                // 1. Fetch waste materials from DB
+                const { data: materials, error: mErr } = await window.supabaseClient
+                    .from('waste_materials')
+                    .select('name, label, price_type, price_php, price_usd')
+                    .order('label', { ascending: true });
+                if (mErr) throw mErr;
+                wasteMaterials = materials || [];
+                populateWasteDropdown(wasteMaterials);
+
+                // 2. Fetch user's manual submissions
+                const { data: subs, error: sErr } = await window.supabaseClient
+                    .from('user_projects')
+                    .select('*')
+                    .eq('user_id', user.id)
+                    .eq('type', 'manual')
+                    .order('submission_date', { ascending: false }); // Use submission_date from schema
+                
+                if (sErr) {
+                    // Fallback to created_at if submission_date fails
+                    console.warn('submission_date failed, trying created_at');
+                    const { data: subs2, error: sErr2 } = await window.supabaseClient
+                        .from('user_projects')
+                        .select('*')
+                        .eq('user_id', user.id)
+                        .eq('type', 'manual')
+                        .order('created_at', { ascending: false });
+                    if (sErr2) throw sErr2;
+                    userSubmissions = subs2 || [];
+                } else {
+                    userSubmissions = subs || [];
+                }
+                
+                renderManualList();
+            } catch (err) {
+                console.error('Init error:', err);
+                const listContainer = document.querySelector('.missions-list');
+                if (listContainer) {
+                    listContainer.innerHTML = `
+                        <div style="text-align:center;padding:40px;color:var(--text-muted);">
+                            <i data-lucide="alert-circle" style="width:32px;height:32px;margin-bottom:10px;color:#ef4444;"></i>
+                            <p style="font-weight:700;">FAILED TO LOAD ACTIVITIES</p>
+                            <p style="font-size:12px;margin-top:5px;">${err.message || 'Database connection error'}</p>
+                            <button onclick="location.reload()" style="margin-top:15px;padding:8px 20px;border-radius:10px;border:none;background:var(--primary-green);color:white;font-weight:800;cursor:pointer;">RETRY</button>
+                        </div>
+                    `;
+                    lucide.createIcons();
+                }
+            }
+        }
+
+        function populateWasteDropdown(materials) {
+            const optionsContainer = document.getElementById('wasteOptions');
+            const triggerLabel = document.getElementById('selectedWasteLabel');
+            const hiddenInput = document.getElementById('itemDesc');
+            
+            if (!materials || materials.length === 0) {
+                triggerLabel.textContent = '⚠ No materials found';
+                return;
+            }
+
+            triggerLabel.textContent = 'Pumili ng Item...';
+            optionsContainer.innerHTML = '';
+
+            materials.forEach(m => {
+                const pricePhp = m.price_type === 'usd'
+                    ? parseFloat(m.price_usd || 0) * 58
+                    : parseFloat(m.price_php || 0);
+
+                const opt = document.createElement('div');
+                opt.className = 'custom-option';
+                opt.textContent = m.label || m.name;
+                opt.dataset.value = m.name;
+                opt.dataset.price = pricePhp.toFixed(4);
+                opt.dataset.name = m.label || m.name;
+
+                opt.onclick = () => {
+                    // Update trigger and input
+                    triggerLabel.textContent = opt.textContent;
+                    hiddenInput.value = opt.dataset.value;
+                    
+                    // Selected state
+                    document.querySelectorAll('.custom-option').forEach(el => el.classList.remove('selected'));
+                    opt.classList.add('selected');
+                    
+                    // Close dropdown and calc
+                    optionsContainer.classList.remove('active');
+                    
+                    // Trigger calc
+                    calculatePoints(opt);
+                };
+
+                optionsContainer.appendChild(opt);
+            });
+
+            // Toggle logic
+            document.getElementById('wasteTrigger').onclick = (e) => {
+                e.stopPropagation();
+                optionsContainer.classList.toggle('active');
+            };
+
+            // Global close
+            document.addEventListener('click', () => {
+                optionsContainer.classList.remove('active');
+            });
+        }
+
+        function calculatePoints(selectedOpt = null) {
+            const weight = parseFloat(itemWeightEl.value);
+            const hiddenInput = document.getElementById('itemDesc');
+            selectedWasteId = hiddenInput.value || null;
+
+            // Use passed opt or find selected
+            const opt = selectedOpt || document.querySelector('.custom-option.selected');
+            const price = parseFloat(opt?.dataset?.price || 0);
+
+            if (price > 0 && weight > 0) {
+                currentPoints = Math.round(price * weight * 10);
+                calculatedPointsDisplay.textContent = currentPoints.toLocaleString();
+                nextBtn.disabled = false;
+            } else {
+                calculatedPointsDisplay.textContent = '0';
+                nextBtn.disabled = true;
+                currentPoints = 0;
+            }
+        }
+
+        function renderManualList(filter = 'all') {
+            const container = document.querySelector('.missions-list');
+            container.innerHTML = '';
+
+            const filtered = userSubmissions.filter(s => {
+                if (filter === 'all') return true;
+                return s.status === filter;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div style="text-align:center;padding:50px;color:var(--text-muted);font-weight:700;">NO ACTIVITIES FOUND</div>`;
+                return;
+            }
+
+            filtered.forEach(s => {
+                const data = s.submission_data || {};
+                const dateStr = new Date(s.submission_date || s.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+                const card = document.createElement('div');
+                card.className = 'mission-card';
+                card.dataset.status = s.status;
+                if (s.status === 'completed' || s.status === 'approved') card.style.opacity = '0.8';
+
+                let actionBtn = '';
+                if (s.status === 'completed' || s.status === 'approved') {
+                    actionBtn = `<button class="do-it-btn" style="background:var(--text-muted);" disabled>COMPLETED <i data-lucide="check-circle" style="width:16px;height:16px;"></i></button>`;
+                } else {
+                    // Use stored code if available, otherwise generate from id
+                    const shortId = (s.id || '0000').split('-')[0].toUpperCase();
+                    const code = s.code || `MAN-${shortId}`;
+                    
+                    actionBtn = `
+                        <div style="display:flex; gap:10px; flex-grow:1;">
+                            <button class="do-it-btn" style="background: rgba(2, 69, 26, 0.1); color: var(--primary-green); padding: 10px 15px;" onclick="showQRModal('${code}')">
+                                <i data-lucide="qr-code" style="width: 18px; height: 18px;"></i>
+                            </button>
+                            <button class="do-it-btn" style="background: #eab308; flex-grow: 1;" disabled>
+                                PENDING <i data-lucide="clock" style="width: 16px; height: 16px;"></i>
+                            </button>
+                        </div>`;
+                }
+
+                card.innerHTML = `
+                    <div class="mission-title">${data.weight || '?'} kg ${data.waste_name || 'Waste'}</div>
+                    <div class="mission-detail"><i data-lucide="award" style="width:14px;height:14px;margin-top:2px;color:var(--primary-green);"></i> POINTS: <span class="points-highlight">${data.points || 0}</span></div>
+                    <div class="mission-detail"><i data-lucide="calendar" style="width:14px;height:14px;margin-top:2px;"></i> DATE: <span>${dateStr}</span></div>
+                    <div class="mission-actions">${actionBtn}</div>
+                `;
+                container.appendChild(card);
+            });
+            lucide.createIcons();
+        }
 
         function filterList(status) {
             document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
-
-            document.querySelectorAll('.mission-card').forEach(card => {
-                if (status === 'all' || card.getAttribute('data-status') === status) {
-                    card.style.display = 'flex';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
+            renderManualList(status);
         }
 
-        function showQRModal() {
+        function showQRModal(code) {
+            document.getElementById('qrCodeText').textContent = code;
             document.getElementById('qrModal').classList.add('active');
         }
 
@@ -859,21 +1091,25 @@
         function showInputForm() {
             manualListSection.style.display = 'none';
             inputSection.style.display = 'flex';
-            pageTitle.textContent = "New Activity";
+            pageTitle.textContent = 'New Activity';
             currentStep = 'input';
         }
 
-        function calculatePoints() {
-            const selectedItem = itemDesc.value;
-            const weight = parseFloat(itemWeight.value);
+        function calculatePoints(selectedOpt = null) {
+            const weight = parseFloat(itemWeightEl.value);
+            const hiddenInput = document.getElementById('itemDesc');
+            selectedWasteId = hiddenInput.value || null;
 
-            if (selectedItem && weight > 0) {
-                const multiplier = pointsMapping[selectedItem] || 0;
-                currentPoints = Math.round(multiplier * weight);
+            // Use passed opt or find selected
+            const opt = selectedOpt || document.querySelector('.custom-option.selected');
+            const price = parseFloat(opt?.dataset?.price || 0);
+
+            if (price > 0 && weight > 0) {
+                currentPoints = Math.round(price * weight * 10);
                 calculatedPointsDisplay.textContent = currentPoints.toLocaleString();
                 nextBtn.disabled = false;
             } else {
-                calculatedPointsDisplay.textContent = "0";
+                calculatedPointsDisplay.textContent = '0';
                 nextBtn.disabled = true;
                 currentPoints = 0;
             }
@@ -883,25 +1119,54 @@
             if (nextBtn.disabled) return;
             inputSection.style.display = 'none';
             cameraSection.style.display = 'flex';
-            reviewSection.style.display = 'none';
-            pageTitle.textContent = "Take Photo";
+            pageTitle.textContent = 'Take Photo';
             currentStep = 'camera';
+            startCamera();
+        }
+
+        async function startCamera() {
+            const video = document.getElementById('manualVideo');
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } });
+                videoStream = stream;
+                video.srcObject = stream;
+                lucide.createIcons();
+            } catch (err) {
+                console.error('Camera denied', err);
+                Swal.fire({ icon: 'error', title: 'Camera Required', text: 'Please allow camera access to capture your waste item.', confirmButtonColor: '#02451A' });
+                goBack();
+            }
+        }
+
+        function stopCamera() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(t => t.stop());
+                videoStream = null;
+            }
+        }
+
+        function takeManualSnapshot() {
+            const video  = document.getElementById('manualVideo');
+            const canvas = document.getElementById('manualCanvas');
+            if (!videoStream || !video) return;
+            canvas.width  = video.videoWidth  || 640;
+            canvas.height = video.videoHeight || 480;
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            capturedPhoto = canvas.toDataURL('image/jpeg', 0.8);
+            stopCamera();
+            showReview();
         }
 
         function showReview() {
-            // Populate summary
-            const selectedText = itemDesc.options[itemDesc.selectedIndex].text;
-            document.getElementById('summaryItem').textContent = selectedText;
-            document.getElementById('summaryWeight').textContent = itemWeight.value + " kg";
+            const wasteName = document.getElementById('selectedWasteLabel').textContent;
+            document.getElementById('summaryItem').textContent   = wasteName;
+            document.getElementById('summaryWeight').textContent = itemWeightEl.value + ' kg';
             document.getElementById('summaryPoints').textContent = currentPoints.toLocaleString();
 
-            // Switch views
-            inputSection.style.display = 'none';
             cameraSection.style.display = 'none';
             reviewSection.style.display = 'flex';
-            pageTitle.textContent = "Finalize Submission";
+            pageTitle.textContent = 'Finalize Submission';
             currentStep = 'review';
-            
             lucide.createIcons();
         }
 
@@ -909,28 +1174,65 @@
             if (currentStep === 'review') {
                 cameraSection.style.display = 'flex';
                 reviewSection.style.display = 'none';
-                pageTitle.textContent = "Take Photo";
+                pageTitle.textContent = 'Take Photo';
                 currentStep = 'camera';
+                startCamera();
             } else if (currentStep === 'camera') {
+                stopCamera();
                 inputSection.style.display = 'flex';
                 cameraSection.style.display = 'none';
-                pageTitle.textContent = "New Activity";
+                pageTitle.textContent = 'New Activity';
                 currentStep = 'input';
             } else if (currentStep === 'input') {
                 manualListSection.style.display = 'flex';
                 inputSection.style.display = 'none';
-                pageTitle.textContent = "Manual Activity";
+                pageTitle.textContent = 'Manual Activity';
                 currentStep = 'list';
             } else {
                 window.location.href = 'menu.html';
             }
         }
 
-        function submitWaste() {
-            alert("Submission complete! Awaiting admin verification.");
-            window.location.href = 'manual.html';
+        async function submitWaste() {
+            try {
+                const wasteName = document.getElementById('selectedWasteLabel').textContent;
+                const weight = parseFloat(itemWeightEl.value) || 0;
+                const submissionData = {
+                    waste_material_id: selectedWasteId,
+                    waste_name: wasteName,
+                    weight: weight,
+                    points: Number(currentPoints || 0),
+                    photo: capturedPhoto
+                };
+
+                const { id, error } = await window.submitUserProject({
+                    type: 'manual',
+                    submission_data: submissionData,
+                    points: Number(currentPoints || 0),
+                    setCode: true
+                });
+
+                if (error) {
+                    console.error('Submit error:', error);
+                    Swal.fire('Error', 'Submission failed: ' + (error.message || error), 'error');
+                    return;
+                }
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Submitted!',
+                    text: 'Your activity is now pending admin verification.',
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => window.location.href = 'manual.html');
+            } catch (e) {
+                console.error('Submit error:', e);
+                Swal.fire('Error', 'Submission failed: ' + e.message, 'error');
+            }
         }
     </script>
+
+
 </body>
 
 </html>

@@ -12,6 +12,10 @@
     
     <!-- Using Lucide Icons for a modern, chill vibe -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="../supabase_config.js"></script>
+    <script src="../auth_guard.js"></script>
 
     <style>
         :root {
@@ -245,10 +249,229 @@
 
         .notif-time {
             font-size: 11px;
-            color: rgba(2, 69, 26, 0.4);
             font-weight: 700;
+            color: var(--primary-green);
+            opacity: 0.8;
         }
 
+        .notif-delete-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            width: 32px;
+            height: 32px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+            margin-left: -5px;
+        }
+
+        .notif-delete-btn:hover {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+        
+        /* Edit Mode Components */
+        .checkbox-col {
+            width: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .app-container.edit-mode .checkbox-col {
+            width: 24px;
+            opacity: 1;
+            margin-right: 5px;
+        }
+
+        .custom-checkbox {
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            border: 2px solid rgba(2, 69, 26, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            transition: all 0.2s;
+            pointer-events: none;
+        }
+        
+        .notification-card.selected .custom-checkbox {
+            background: var(--primary-green);
+            border-color: var(--primary-green);
+        }
+        
+        .custom-checkbox i {
+            width: 14px;
+            height: 14px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            stroke-width: 3px;
+        }
+        
+        .notification-card.selected .custom-checkbox i {
+            opacity: 1;
+        }
+
+        .notification-card.selected {
+            border-color: var(--primary-green);
+            background: rgba(2, 69, 26, 0.05);
+        }
+
+        /* Edit Action Bar */
+        .edit-action-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px 24px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(15px);
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            z-index: 20;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
+        }
+        
+        .app-container.edit-mode .edit-action-bar {
+            transform: translateY(0);
+        }
+        
+        .btn-text {
+            background: none;
+            border: none;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        
+        .btn-text.active { color: var(--primary-green); }
+        .btn-text-danger { color: #ef4444; }
+        .btn-text-danger:hover { color: #dc2626; }
+        
+        .app-container.edit-mode .notif-delete-btn {
+            display: none;
+        }
+        
+        .edit-msg-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--primary-green);
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(2, 69, 26, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .edit-msg-btn:hover {
+            background: white;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(2, 69, 26, 0.1);
+        }
+
+        /* Delete Confirm Modal */
+        .confirm-modal-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            backdrop-filter: blur(5px);
+            z-index: 50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .confirm-modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .confirm-modal-card {
+            background: var(--bg-color);
+            border-radius: 24px;
+            padding: 28px 24px 24px;
+            width: 85%;
+            max-width: 340px;
+            text-align: center;
+            box-shadow: 0 24px 48px rgba(0,0,0,0.15);
+            transform: scale(0.88);
+            transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        .confirm-modal-overlay.active .confirm-modal-card {
+            transform: scale(1);
+        }
+        .confirm-del-icon {
+            width: 56px;
+            height: 56px;
+            background: rgba(239,68,68,0.1);
+            color: #ef4444;
+            border-radius: 18px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 16px;
+        }
+        .confirm-del-icon i { width: 26px; height: 26px; stroke-width: 2px; }
+        .confirm-modal-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+        .confirm-modal-text {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+        .confirm-modal-actions {
+            display: flex;
+            gap: 12px;
+        }
+        .confirm-modal-btn {
+            flex: 1;
+            padding: 13px;
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+            border: none;
+            font-family: inherit;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .confirm-modal-btn:active { transform: scale(0.96); }
+        .confirm-modal-btn.cancel {
+            background: rgba(2,69,26,0.06);
+            color: var(--text-muted);
+        }
+        .confirm-modal-btn.danger {
+            background: #ef4444;
+            color: white;
+            box-shadow: 0 4px 14px rgba(239,68,68,0.35);
+        }
+        .confirm-modal-btn.danger:hover { background: #dc2626; }
     </style>
 </head>
 
@@ -266,78 +489,424 @@
                 </button>
                 <div class="header-title">Notifications</div>
             </div>
-            <button class="mark-read-btn">Mark all read</button>
+            <div style="display: flex; gap: 8px;">
+                <button class="mark-read-btn">Mark all read</button>
+                <button class="edit-msg-btn" id="editToggleBtn" onclick="toggleEditMode()">
+                    <i data-lucide="edit" style="width: 20px; height: 20px;"></i>
+                </button>
+            </div>
         </header>
 
         <!-- Main Content -->
-        <main class="notification-content">
-            
-            <h3 class="section-title">Today</h3>
-
-            <div class="notification-card unread">
-                <div class="notif-icon-box highlight">
-                    <i data-lucide="award"></i>
-                </div>
-                <div class="notif-details">
-                    <div class="notif-title">New Badge Earned!</div>
-                    <div class="notif-desc">Congratulations! You've successfully completed 10 manual activities and earned the "Starter Recycler" badge.</div>
-                    <div class="notif-time">10m ago</div>
-                </div>
+        <main class="notification-content" id="notificationList">
+            <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+                <i data-lucide="loader-2" class="lucide-spin"></i> Loading...
             </div>
-
-            <div class="notification-card unread">
-                <div class="notif-icon-box highlight">
-                    <i data-lucide="circle-dollar-sign"></i>
-                </div>
-                <div class="notif-details">
-                    <div class="notif-title">+50 Coins Received</div>
-                    <div class="notif-desc">Your daily login reward has been credited to your wallet. Keep the streak alive!</div>
-                    <div class="notif-time">2h ago</div>
-                </div>
-            </div>
-
-            <div class="notification-card">
-                <div class="notif-icon-box">
-                    <i data-lucide="heart"></i>
-                </div>
-                <div class="notif-details">
-                    <div class="notif-title">Admin liked your activity</div>
-                    <div class="notif-desc">Admin liked your recent post about the local beach cleanup event.</div>
-                    <div class="notif-time">5h ago</div>
-                </div>
-            </div>
-
-            <h3 class="section-title" style="margin-top: 25px;">Earlier</h3>
-
-            <div class="notification-card">
-                <div class="notif-icon-box">
-                    <i data-lucide="bell"></i>
-                </div>
-                <div class="notif-details">
-                    <div class="notif-title">System Update</div>
-                    <div class="notif-desc">We've added new quiz questions! Check out the Quiz Activity menu to test your knowledge and earn coins.</div>
-                    <div class="notif-time">1 day ago</div>
-                </div>
-            </div>
-
-            <div class="notification-card">
-                <div class="notif-icon-box">
-                    <i data-lucide="message-square"></i>
-                </div>
-                <div class="notif-details">
-                    <div class="notif-title">New Comment</div>
-                    <div class="notif-desc">EcoTracker replied to your post: "Great initiative! We should organize this more often."</div>
-                    <div class="notif-time">2 days ago</div>
-                </div>
-            </div>
-
         </main>
+        
+        <!-- Bottom Action Bar (Edit Mode) -->
+        <div class="edit-action-bar">
+            <button class="btn-text active" id="selectAllBtn" onclick="toggleSelectAll()">Select All</button>
+            <button class="btn-text btn-text-danger" id="deleteBtn" onclick="deleteSelected()" style="opacity: 0.5; pointer-events: none;">Delete <span id="delCount"></span></button>
+            <button class="btn-text" onclick="toggleEditMode()">Cancel</button>
+        </div>
+
+        <!-- Custom Confirm Delete Modal -->
+        <div class="confirm-modal-overlay" id="deleteConfirmModal">
+            <div class="confirm-modal-card">
+                <div class="confirm-del-icon">
+                    <i data-lucide="trash-2"></i>
+                </div>
+                <h3 class="confirm-modal-title" id="confirmModalTitle">Delete Notification?</h3>
+                <p class="confirm-modal-text" id="confirmModalText">This will permanently remove it from your list.</p>
+                <div class="confirm-modal-actions">
+                    <button class="confirm-modal-btn cancel" onclick="closeDeleteModal()">Cancel</button>
+                    <button class="confirm-modal-btn danger" id="confirmDeleteBtn">Delete</button>
+                </div>
+            </div>
+        </div>
 
     </div>
 
     <script>
-        // Initialize Lucide Icons
-        lucide.createIcons();
+        let fetchedNotifications = [];
+        let isEditMode = false;
+        let allSelected = false;
+
+        // DOM references (populated after DOMContentLoaded)
+        let appContainer, editToggleBtn, selectAllBtn, deleteBtn, delCountSpan;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            appContainer    = document.querySelector('.app-container');
+            editToggleBtn   = document.getElementById('editToggleBtn');
+            selectAllBtn    = document.getElementById('selectAllBtn');
+            deleteBtn       = document.getElementById('deleteBtn');
+            delCountSpan    = document.getElementById('delCount');
+
+            document.querySelector('.mark-read-btn').addEventListener('click', markAllAsRead);
+            loadNotifications();
+        });
+
+        async function loadNotifications() {
+            const container = document.getElementById('notificationList');
+            try {
+
+                const { data: { session } } = await window.supabaseClient.auth.getSession();
+                if (!session) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                // Fetch notifications
+                const { data: notifs, error } = await window.supabaseClient
+                    .from('notifications')
+                    .select('*')
+                    .or(`user_id.is.null,user_id.eq.${session.user.id}`)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+                fetchedNotifications = notifs;
+
+                renderNotifications();
+            } catch (err) {
+                console.error("Error loading notifications:", err);
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: var(--danger);">
+                        Failed to load notifications. Please try again.
+                    </div>
+                `;
+            }
+        }
+
+        function renderNotifications() {
+            const container = document.getElementById('notificationList');
+            if (fetchedNotifications.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
+                        <i data-lucide="bell-off" style="width: 48px; height: 48px; stroke-width: 1.5; margin: 0 auto 15px; opacity: 0.5;"></i>
+                        <p style="font-weight: 700; font-size: 1.1rem; margin-bottom: 5px;">All quiet here!</p>
+                        <p style="font-size: 0.9rem; opacity: 0.8;">No notifications at the moment.</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            const readNotifIds = JSON.parse(localStorage.getItem('ecotrack_read_notifs') || '[]');
+
+            // Group notifications
+            const todayNotifs = [];
+            const earlierNotifs = [];
+
+            const now = new Date();
+            fetchedNotifications.forEach(notif => {
+                const createdDate = new Date(notif.created_at);
+                const diffTime = Math.abs(now - createdDate);
+                const diffHours = diffTime / (1000 * 60 * 60);
+
+                if (diffHours <= 24) {
+                    todayNotifs.push(notif);
+                } else {
+                    earlierNotifs.push(notif);
+                }
+            });
+
+            let html = '';
+
+            if (todayNotifs.length > 0) {
+                html += `<h3 class="section-title">Today</h3>`;
+                html += todayNotifs.map(n => renderNotifCard(n, readNotifIds)).join('');
+            }
+
+            if (earlierNotifs.length > 0) {
+                html += `<h3 class="section-title" style="margin-top: 25px;">Earlier</h3>`;
+                html += earlierNotifs.map(n => renderNotifCard(n, readNotifIds)).join('');
+            }
+
+            container.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function renderNotifCard(notif, readIds) {
+            const isUnread = !readIds.includes(notif.id);
+            const timeAgo = formatTimeAgo(notif.created_at);
+            const icon = getIconForType(notif.type);
+            const cardClass = `notification-card ${isUnread ? 'unread' : ''}`;
+            const iconClass = `notif-icon-box ${isUnread ? 'highlight' : ''}`;
+
+            return `
+                <div class="${cardClass}" onclick="handleNotificationClick('${notif.id}', '${notif.type}')" id="notif-${notif.id}">
+                    <div class="checkbox-col">
+                        <div class="custom-checkbox"><i data-lucide="check"></i></div>
+                    </div>
+                    <div class="${iconClass}">
+                        <i data-lucide="${icon}"></i>
+                    </div>
+                    <div class="notif-details">
+                        <div class="notif-title">${escapeHTML(notif.title)}</div>
+                        <div class="notif-desc">${escapeHTML(notif.description)}</div>
+                        <div class="notif-time">${timeAgo}</div>
+                    </div>
+                    <button class="notif-delete-btn" onclick="deleteNotification(event, '${notif.id}')">
+                        <i data-lucide="trash-2" style="width: 18px; height: 18px;"></i>
+                    </button>
+                </div>
+            `;
+        }
+
+        // --- Delete Modal Logic ---
+        let _pendingDeleteAction = null;
+
+        function showDeleteModal(title, text, onConfirm) {
+            document.getElementById('confirmModalTitle').textContent = title;
+            document.getElementById('confirmModalText').textContent = text;
+            _pendingDeleteAction = onConfirm;
+            document.getElementById('deleteConfirmModal').classList.add('active');
+            lucide.createIcons();
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteConfirmModal').classList.remove('active');
+            _pendingDeleteAction = null;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+                if (_pendingDeleteAction) {
+                    const btn = document.getElementById('confirmDeleteBtn');
+                    btn.textContent = 'Deleting...';
+                    btn.disabled = true;
+                    await _pendingDeleteAction();
+                    btn.textContent = 'Delete';
+                    btn.disabled = false;
+                    closeDeleteModal();
+                }
+            });
+        });
+
+        async function deleteNotification(event, id) {
+            if (event) event.stopPropagation();
+
+            showDeleteModal(
+                'Delete Notification?',
+                'This will permanently remove it from your list.',
+                async () => {
+                    const card = document.getElementById(`notif-${id}`);
+                    if (card) card.style.display = 'none';
+                    try {
+                        const { error } = await window.supabaseClient
+                            .from('notifications')
+                            .delete()
+                            .eq('id', id);
+                        if (error) {
+                            console.error('Failed to delete notification:', error);
+                            if (card) card.style.display = 'flex';
+                        }
+                    } catch (err) {
+                        console.error('Error:', err);
+                        if (card) card.style.display = 'flex';
+                    }
+                }
+            );
+        }
+
+        function getIconForType(type) {
+            switch (type) {
+                case 'Mission': return 'target';
+                case 'Quiz': return 'brain';
+                case 'Reward': return 'coins';
+                case 'Announcement': return 'megaphone';
+                default: return 'bell';
+            }
+        }
+
+        function formatTimeAgo(dateStr) {
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMins / 60);
+            const diffDays = Math.floor(diffHours / 24);
+
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays === 1) return 'Yesterday';
+            return `${diffDays} days ago`;
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag] || tag)
+            );
+        }
+
+        function handleNotificationClick(id, type) {
+            if (isEditMode) {
+                const card = document.getElementById(`notif-${id}`);
+                if (card) {
+                    card.classList.toggle('selected');
+                    checkSelectAllState();
+                    updateDeleteBtn();
+                }
+                return;
+            }
+
+            // 1. Mark as read
+            const readNotifIds = JSON.parse(localStorage.getItem('ecotrack_read_notifs') || '[]');
+            if (!readNotifIds.includes(id)) {
+                readNotifIds.push(id);
+                localStorage.setItem('ecotrack_read_notifs', JSON.stringify(readNotifIds));
+            }
+            
+            // 2. Redirect based on type
+            let destination = 'menu.html';
+            if (type === 'Mission') {
+                destination = 'mission.html';
+            } else if (type === 'Quiz') {
+                destination = 'quizzes.html';
+            } else if (type === 'Reward') {
+                destination = 'redeem.html';
+            } else if (type === 'Announcement') {
+                destination = 'menu.html';
+            } else {
+                destination = 'notification.html';
+            }
+
+            window.location.href = destination;
+        }
+
+        // --- Edit Mode Functions ---
+        function toggleEditMode() {
+            isEditMode = !isEditMode;
+            if (isEditMode) {
+                appContainer.classList.add('edit-mode');
+                editToggleBtn.style.background = 'white';
+                editToggleBtn.style.transform = 'translateY(-2px)';
+                editToggleBtn.style.boxShadow = '0 6px 15px rgba(2, 69, 26, 0.1)';
+            } else {
+                appContainer.classList.remove('edit-mode');
+                editToggleBtn.style.background = '';
+                editToggleBtn.style.transform = '';
+                editToggleBtn.style.boxShadow = '';
+                clearSelection();
+            }
+        }
+
+        function clearSelection() {
+            document.querySelectorAll('.notification-card.selected').forEach(card => {
+                card.classList.remove('selected');
+            });
+            allSelected = false;
+            selectAllBtn.textContent = 'Select All';
+            selectAllBtn.classList.remove('active');
+            updateDeleteBtn();
+        }
+
+        function toggleSelectAll() {
+            const cards = document.querySelectorAll('.notification-card');
+            if (cards.length === 0) return;
+            
+            allSelected = !allSelected;
+            cards.forEach(card => {
+                if (allSelected) {
+                    card.classList.add('selected');
+                } else {
+                    card.classList.remove('selected');
+                }
+            });
+            
+            selectAllBtn.textContent = allSelected ? 'Deselect All' : 'Select All';
+            if (allSelected) {
+                selectAllBtn.classList.add('active');
+            } else {
+                selectAllBtn.classList.remove('active');
+            }
+            
+            updateDeleteBtn();
+        }
+
+        function checkSelectAllState() {
+            const cards = document.querySelectorAll('.notification-card');
+            const selectedCards = document.querySelectorAll('.notification-card.selected');
+            
+            if (cards.length > 0 && cards.length === selectedCards.length) {
+                allSelected = true;
+                selectAllBtn.textContent = 'Deselect All';
+                selectAllBtn.classList.add('active');
+            } else {
+                allSelected = false;
+                selectAllBtn.textContent = 'Select All';
+                selectAllBtn.classList.remove('active');
+            }
+        }
+
+        function updateDeleteBtn() {
+            const selectedCount = document.querySelectorAll('.notification-card.selected').length;
+            delCountSpan.textContent = selectedCount > 0 ? `(${selectedCount})` : '';
+            
+            if (selectedCount > 0) {
+                deleteBtn.style.opacity = '1';
+                deleteBtn.style.pointerEvents = 'all';
+            } else {
+                deleteBtn.style.opacity = '0.5';
+                deleteBtn.style.pointerEvents = 'none';
+            }
+        }
+
+        async function deleteSelected() {
+            const selected = document.querySelectorAll('.notification-card.selected');
+            if (selected.length === 0) return;
+
+            const count = selected.length;
+            showDeleteModal(
+                count === 1 ? 'Delete Notification?' : `Delete ${count} Notifications?`,
+                count === 1
+                    ? 'This will permanently remove it from your list.'
+                    : `This will permanently remove all ${count} selected notifications.`,
+                async () => {
+                    const idsToDelete = Array.from(selected).map(card => card.id.replace('notif-', ''));
+
+                    // Hide from UI immediately
+                    selected.forEach(card => card.style.display = 'none');
+                    toggleEditMode();
+
+                    try {
+                        const { error } = await window.supabaseClient
+                            .from('notifications')
+                            .delete()
+                            .in('id', idsToDelete);
+
+                        if (error) {
+                            console.error('Failed to batch delete notifications:', error);
+                            loadNotifications();
+                        }
+                    } catch (err) {
+                        console.error('Error in batch delete:', err);
+                        loadNotifications();
+                    }
+                }
+            );
+        }
+
+        function markAllAsRead() {
+            const readNotifIds = JSON.parse(localStorage.getItem('ecotrack_read_notifs') || '[]');
+            fetchedNotifications.forEach(n => {
+                if (!readNotifIds.includes(n.id)) {
+                    readNotifIds.push(n.id);
+                }
+            });
+            localStorage.setItem('ecotrack_read_notifs', JSON.stringify(readNotifIds));
+            renderNotifications();
+        }
+
     </script>
 </body>
 

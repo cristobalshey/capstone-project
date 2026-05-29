@@ -7,6 +7,9 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase_config.js"></script>
+    <script src="../auth_guard.js"></script>
 
     <style>
         :root {
@@ -45,12 +48,17 @@
 
         /* --- HEADER --- */
         .header { padding: 24px 24px 15px 24px; z-index: 10; display: flex; justify-content: space-between; align-items: center; }
-        .page-title { font-family: 'Baloo Da 2', cursive; color: var(--primary-green); font-size: 1.4rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; display:flex; align-items:center; gap: 10px; }
+        .header-left { display: flex; align-items: center; gap: 15px; }
+        .page-title { font-family: 'Baloo Da 2', cursive; color: var(--primary-green); font-size: 1.4rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
         
-        .btn-back { background: var(--glass-bg); border: 1px solid var(--glass-border); width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; color: var(--primary-green); box-shadow: 0 4px 12px rgba(2, 69, 26, 0.05); transition: all 0.3s ease; text-decoration: none; }
-        .btn-back:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(2, 69, 26, 0.1); background: white; }
+        .btn-back { background: var(--glass-bg); border: 1px solid var(--glass-border); width: 42px; height: 42px; border-radius: 14px; display: flex; justify-content: center; align-items: center; cursor: pointer; color: var(--primary-green); box-shadow: 0 4px 12px rgba(2, 69, 26, 0.05); transition: all 0.3s ease; text-decoration: none; }
+        .btn-back:hover { transform: translateX(-3px); box-shadow: 0 6px 15px rgba(2, 69, 26, 0.1); background: white; }
 
-        .btn-mark-read { background: transparent; border: none; font-size: 0.8rem; font-weight: 700; color: var(--emerald); cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        .btn-mark-read { background: none; border: none; color: var(--primary-green); font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; transition: opacity 0.2s ease; }
+        .btn-mark-read:hover { opacity: 0.7; }
+
+        .icon-action-btn { background: var(--glass-bg); border: 1px solid var(--glass-border); width: 42px; height: 42px; border-radius: 14px; display: flex; justify-content: center; align-items: center; color: var(--primary-green); cursor: pointer; box-shadow: 0 4px 12px rgba(2, 69, 26, 0.05); transition: all 0.3s ease; }
+        .icon-action-btn:hover { background: white; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(2, 69, 26, 0.1); }
 
         /* --- CONTENT --- */
         .content-area { flex-grow: 1; overflow-y: auto; padding: 10px 24px 120px 24px; scrollbar-width: none; }
@@ -79,6 +87,9 @@
         .notif-time { font-size: 0.7rem; color: rgba(2, 69, 26, 0.4); font-weight: 700; margin-top: 6px; display: block; }
         
         .unread-dot { width: 8px; height: 8px; background: var(--emerald); border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+        .btn-action { background: transparent; border: 1px solid rgba(2,69,26,0.08); width:30px; height:30px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-muted); }
+        .btn-action:hover { background: rgba(2,69,26,0.04); color:var(--primary-green); }
+        .btn-action.btn-delete { border-color: rgba(229,57,53,0.08); }
 
         /* --- BOTTOM NAV --- */
         .bottom-nav {
@@ -104,46 +115,30 @@
     <div class="app-container">
         
         <header class="header">
-            <a href="collector_dashboard.html" class="btn-back">
-                <i data-lucide="chevron-left"></i>
-            </a>
-            <div class="page-title">Notifications</div>
-            <button class="btn-mark-read" onclick="markAllRead()">
-                <i data-lucide="check-check" style="width:16px;height:16px;"></i> Read All
-            </button>
+            <div class="header-left">
+                <a href="collector_dashboard.html" class="btn-back">
+                    <i data-lucide="chevron-left"></i>
+                </a>
+                <div class="page-title">Notifications</div>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+                <button class="btn-mark-read" onclick="markAllRead()">
+                    Mark all read
+                </button>
+                <button class="icon-action-btn" onclick="markAllRead()" title="Read all">
+                    <i data-lucide="edit" style="width:18px;height:18px;"></i>
+                </button>
+            </div>
         </header>
 
         <main class="content-area" id="notifications-list">
-            
-            <div class="notification-card unread">
-                <div class="icon-circle icon-mission"><i data-lucide="target"></i></div>
+            <div class="notification-card" id="loadingNotification">
+                <div class="icon-circle icon-system"><i data-lucide="loader"></i></div>
                 <div class="notif-content">
-                    <div class="notif-title">New Mission Request</div>
-                    <div class="notif-desc">Juan Dela Cruz posted a new mission request for Recyclable Plastics (5.0kg) near you.</div>
-                    <span class="notif-time">Just now</span>
-                </div>
-                <div class="unread-dot"></div>
-            </div>
-
-            <div class="notification-card unread">
-                <div class="icon-circle icon-manual"><i data-lucide="hand"></i></div>
-                <div class="notif-content">
-                    <div class="notif-title">New Manual Activity</div>
-                    <div class="notif-desc">Maria Clara posted a manual collection request for Newspapers (2.3kg).</div>
-                    <span class="notif-time">2 hours ago</span>
-                </div>
-                <div class="unread-dot"></div>
-            </div>
-
-            <div class="notification-card">
-                <div class="icon-circle icon-system"><i data-lucide="award"></i></div>
-                <div class="notif-content">
-                    <div class="notif-title">Collection Verified</div>
-                    <div class="notif-desc">Your collection #10040 was successfully verified. +120 points have been awarded to the user.</div>
-                    <span class="notif-time">Yesterday</span>
+                    <div class="notif-title">Loading notifications…</div>
+                    <div class="notif-desc">Please wait while we fetch your latest messages.</div>
                 </div>
             </div>
-
         </main>
 
         <nav class="bottom-nav">
@@ -160,26 +155,288 @@
 
     </div>
 
+</script>
 <script>
     lucide.createIcons();
 
-    function markAllRead() {
-        const unreadCards = document.querySelectorAll('.notification-card.unread');
-        unreadCards.forEach(card => {
-            card.style.transition = "background 0.5s ease, border-color 0.5s ease";
-            card.classList.remove('unread');
-            const dot = card.querySelector('.unread-dot');
-            if (dot) dot.style.display = 'none';
-        });
-        
-        const btn = document.querySelector('.btn-mark-read');
-        btn.innerHTML = `<i data-lucide="check"></i> Done`;
-        lucide.createIcons();
-        setTimeout(() => {
-            btn.innerHTML = `<i data-lucide="check-check" style="width:16px;height:16px;"></i> Read All`;
-            lucide.createIcons();
-        }, 2000);
+    function getTargetLabel(value) {
+        if (!value) return 'Personal';
+        if (value === 'all') return 'All Residents';
+        if (value === 'staff') return 'Staff';
+        return value.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     }
+
+    function formatRelativeTime(timestamp) {
+        const date = new Date(timestamp);
+        if (isNaN(date)) return 'Unknown time';
+        const diff = Date.now() - date.getTime();
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+
+        if (minutes < 1) return 'Just now';
+        if (minutes < 60) return `${minutes}m ago`;
+        if (hours < 24) return `${hours}h ago`;
+        return `${days}d ago`;
+    }
+
+    function renderNotifications(notifications) {
+        const list = document.getElementById('notifications-list');
+        list.innerHTML = '';
+        // filter out locally-deleted notifications
+        const deletedIds = JSON.parse(localStorage.getItem('ecotrack_deleted_notifs') || '[]');
+        notifications = (notifications || []).filter(n => !deletedIds.includes(n.id));
+        if (!notifications || notifications.length === 0) {
+            list.innerHTML = '<div class="notification-card"><div class="notif-content"><div class="notif-title">No notifications yet</div><div class="notif-desc">You don\'t have any notifications right now.</div></div></div>';
+            lucide.createIcons();
+            // Hide any global badge if there are no notifications
+            const globalBadge = document.getElementById('notifBadge') || document.querySelector('.notif-badge');
+            if (globalBadge) globalBadge.style.display = 'none';
+            return;
+        }
+
+        // Read tracking: prefer server-side `notification_reads`, fallback to localStorage
+        const readNotifIds = (window._ecotrack_read_ids && window._ecotrack_read_ids.length) ? window._ecotrack_read_ids : JSON.parse(localStorage.getItem('ecotrack_read_notifs') || '[]');
+        let unreadCount = 0;
+
+        notifications.forEach(notif => {
+            const isBroadcast = !notif.user_id;
+            const targetLabel = isBroadcast ? getTargetLabel(notif.broadcast_target) : 'Direct';
+            const icon = notif.type === 'broadcast' ? 'send' : notif.type === 'mission' ? 'target' : notif.type === 'manual' ? 'hand' : 'bell';
+            const card = document.createElement('div');
+            const isRead = readNotifIds.includes(notif.id);
+            if (!isRead) {
+                card.className = 'notification-card unread';
+                unreadCount += 1;
+            } else {
+                card.className = 'notification-card';
+            }
+
+            const unreadDotHtml = isRead ? '' : '<span class="unread-dot" aria-hidden="true"></span>';
+
+            card.innerHTML = `
+                <div style="display:flex; align-items:flex-start; gap:12px; width:100%;">
+                    <div style="display:flex; align-items:center; gap:12px; flex:1;">
+                        <div class="icon-circle ${notif.type === 'mission' ? 'icon-mission' : notif.type === 'manual' ? 'icon-manual' : 'icon-system'}">
+                            <i data-lucide="${icon}"></i>
+                        </div>
+                        ${unreadDotHtml}
+                        <div class="notif-content" style="flex:1;">
+                            <div class="notif-title">${notif.title || 'Notification'}</div>
+                            <div class="notif-desc">${notif.description || ''}</div>
+                            <span class="notif-time">${formatRelativeTime(notif.created_at)} • ${targetLabel}</span>
+                        </div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:8px; margin-left:8px;">
+                        <button class="btn-action" onclick="markNotificationRead('${notif.id}')" title="Mark read/unread">
+                            <i data-lucide="check" style="width:14px;height:14px"></i>
+                        </button>
+                        <button class="btn-action btn-delete" onclick="deleteNotification('${notif.id}')" title="Delete notification">
+                            <i data-lucide="trash" style="width:14px;height:14px"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            list.appendChild(card);
+        });
+
+        // Update global badge visibility
+        const globalBadge = document.getElementById('notifBadge') || document.querySelector('.notif-badge');
+        if (globalBadge) globalBadge.style.display = unreadCount > 0 ? 'block' : 'none';
+
+        lucide.createIcons();
+    }
+
+    function notificationReadsAvailable() {
+        return localStorage.getItem('ecotrack_notification_reads_available') !== 'false';
+    }
+
+    function disableNotificationReads() {
+        localStorage.setItem('ecotrack_notification_reads_available', 'false');
+    }
+
+    async function loadCollectorNotifications() {
+        try {
+            if (!window.supabaseClient) {
+                console.error('Supabase client not available');
+                return;
+            }
+
+            const { data: { user }, error: authError } = await window.supabaseClient.auth.getUser();
+            if (authError || !user) {
+                console.error('Unable to determine current user:', authError);
+                renderNotifications([]);
+                return;
+            }
+
+            const collectorId = user.id;
+            const { data, error } = await window.supabaseClient
+                .from('notifications')
+                .select('*')
+                .or(`user_id.eq.${collectorId},broadcast_target.in.(all,staff)`)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Failed to load notifications:', error);
+                document.getElementById('notifications-list').innerHTML = `<div class="notification-card"><div class="notif-content"><div class="notif-title">Unable to load notifications</div><div class="notif-desc">${error.message}</div></div></div>`;
+                return;
+            }
+
+            // Fetch server-side read receipts if table exists
+            let readIds = [];
+            if (notificationReadsAvailable()) {
+                try {
+                    const { data: rr, error: rrErr } = await window.supabaseClient
+                        .from('notification_reads')
+                        .select('notification_id')
+                        .eq('user_id', collectorId);
+
+                    if (rrErr) {
+                        if (rrErr.status === 404) {
+                            disableNotificationReads();
+                        }
+                    } else if (rr) {
+                        readIds = rr.map(r => r.notification_id);
+                    }
+                } catch (e) {
+                    disableNotificationReads();
+                }
+            }
+
+            // Save last loaded notifications for mark-all behaviour
+            window._ecotrack_last_notifications = data || [];
+            window._ecotrack_read_ids = readIds;
+
+            renderNotifications(data || []);
+        } catch (err) {
+            console.error('Notification load error:', err);
+            document.getElementById('notifications-list').innerHTML = '<div class="notification-card"><div class="notif-content"><div class="notif-title">Unable to load notifications</div><div class="notif-desc">Please refresh the page.</div></div></div>';
+        }
+    }
+
+    async function markAllRead() {
+        try {
+            const notifications = window._ecotrack_last_notifications || [];
+            const ids = notifications.map(n => n.id).filter(Boolean);
+            if (ids.length === 0) return;
+
+            // Persist read ids in localStorage
+            const readNotifIds = JSON.parse(localStorage.getItem('ecotrack_read_notifs') || '[]');
+            const merged = Array.from(new Set([...readNotifIds, ...ids]));
+            localStorage.setItem('ecotrack_read_notifs', JSON.stringify(merged));
+
+            // Update UI: remove unread markers
+            const cards = document.querySelectorAll('.notification-card.unread');
+            cards.forEach(card => {
+                card.classList.remove('unread');
+                const dot = card.querySelector('.unread-dot');
+                if (dot) dot.remove();
+            });
+
+            // Hide global badge if present
+            const globalBadge = document.getElementById('notifBadge') || document.querySelector('.notif-badge');
+            if (globalBadge) globalBadge.style.display = 'none';
+
+            // Notify other pages to update their badges if they define the function
+            if (typeof updateNotifBadge === 'function') {
+                try { updateNotifBadge(); } catch (e) { /* ignore */ }
+            }
+
+            // Attempt to persist reads server-side using `notification_reads` if available
+            if (window.supabaseClient && ids.length && notificationReadsAvailable()) {
+                try {
+                    const { data: { user } } = await window.supabaseClient.auth.getUser();
+                    if (user && user.id) {
+                        const rows = ids.map(i => ({ notification_id: i, user_id: user.id }));
+                        // upsert to avoid duplicates (primary key on notification_id,user_id)
+                        const { error: rrErr } = await window.supabaseClient.from('notification_reads').upsert(rows);
+                        if (rrErr && rrErr.status === 404) {
+                            disableNotificationReads();
+                        }
+                    }
+                } catch (e) {
+                    disableNotificationReads();
+                }
+            }
+        } catch (err) {
+            console.error('markAllRead error:', err);
+        }
+    }
+
+    // Mark a single notification read/unread
+    async function markNotificationRead(id) {
+        try {
+            // toggle locally first
+            const readNotifIds = JSON.parse(localStorage.getItem('ecotrack_read_notifs') || '[]');
+            const idx = readNotifIds.indexOf(id);
+            let becomingRead = idx === -1;
+            if (becomingRead) readNotifIds.push(id); else readNotifIds.splice(idx, 1);
+            localStorage.setItem('ecotrack_read_notifs', JSON.stringify(readNotifIds));
+
+            // Update UI: refresh
+            if (typeof loadCollectorNotifications === 'function') loadCollectorNotifications();
+
+            // Server-side: insert/delete in notification_reads
+            if (window.supabaseClient && notificationReadsAvailable()) {
+                try {
+                    const { data: { user } } = await window.supabaseClient.auth.getUser();
+                    if (user && user.id) {
+                        if (becomingRead) {
+                            const { error: rrErr } = await window.supabaseClient.from('notification_reads').upsert({ notification_id: id, user_id: user.id });
+                            if (rrErr && rrErr.status === 404) {
+                                disableNotificationReads();
+                            }
+                        } else {
+                            const { error: rrErr } = await window.supabaseClient.from('notification_reads').delete().match({ notification_id: id, user_id: user.id });
+                            if (rrErr && rrErr.status === 404) {
+                                disableNotificationReads();
+                            }
+                        }
+                    }
+                } catch (e) {
+                    disableNotificationReads();
+                }
+            }
+            if (typeof updateNotifBadge === 'function') try { updateNotifBadge(); } catch (e) {}
+        } catch (err) {
+            console.error('markNotificationRead error:', err);
+        }
+    }
+
+    // Delete a notification (best-effort server delete, fallback to local hide)
+    async function deleteNotification(id) {
+        try {
+            if (!confirm('Delete this notification?')) return;
+
+            // try server delete
+            let deletedOnServer = false;
+            if (window.supabaseClient) {
+                try {
+                    const { error } = await window.supabaseClient.from('notifications').delete().eq('id', id);
+                    if (!error) deletedOnServer = true;
+                } catch (e) {
+                    // ignore
+                }
+            }
+
+            if (!deletedOnServer) {
+                // Persist deleted id locally so it won't reappear
+                const del = JSON.parse(localStorage.getItem('ecotrack_deleted_notifs') || '[]');
+                if (!del.includes(id)) del.push(id);
+                localStorage.setItem('ecotrack_deleted_notifs', JSON.stringify(del));
+            }
+
+            // Refresh UI
+            if (typeof loadCollectorNotifications === 'function') loadCollectorNotifications();
+            if (typeof updateNotifBadge === 'function') try { updateNotifBadge(); } catch (e) {}
+        } catch (err) {
+            console.error('deleteNotification error:', err);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadCollectorNotifications();
+    });
 </script>
 </body>
 </html>

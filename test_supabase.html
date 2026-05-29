@@ -1,0 +1,57 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Supabase Debug</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Supabase Connection Test</h1>
+    <div id="status">Testing...</div>
+    <pre id="output"></pre>
+
+    <script>
+        const url = 'https://bstltlhrpxhrlvzzbpff.supabase.co';
+        const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzdGx0bGhycHhocmx2enpicGZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4NzI4MDEsImV4cCI6MjA5MzQ0ODgwMX0.1YSPPaA__h6H8rK6FZqlUf6brxskMAEY2NYoERqKYgw';
+        const serviceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzdGx0bGhycHhocmx2enpicGZmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Nzg3MjgwMSwiZXhwIjoyMDkzNDQ4ODAxfQ.Bht8giQ2a8T5cUo3_ypOXMR_KJ8WSYLIwikwJKToGno';
+
+        async function test() {
+            const output = document.getElementById('output');
+            const status = document.getElementById('status');
+
+            try {
+                // Test with Anon Key
+                const anonClient = supabase.createClient(url, anonKey);
+                const { data: anonProjects, error: anonError } = await anonClient.from('projects').select('*').limit(5);
+                
+                output.textContent += "--- Anon Key Test ---\n";
+                if (anonError) {
+                    output.textContent += "Error: " + anonError.message + "\n";
+                } else {
+                    output.textContent += "Projects found: " + anonProjects.length + "\n";
+                    output.textContent += JSON.stringify(anonProjects, null, 2) + "\n";
+                }
+
+                // Test with Service Key
+                const serviceClient = supabase.createClient(url, serviceKey);
+                const { data: serviceProjects, error: serviceError } = await serviceClient.from('projects').select('*').limit(5);
+                
+                output.textContent += "\n--- Service Key Test ---\n";
+                if (serviceError) {
+                    output.textContent += "Error: " + serviceError.message + "\n";
+                } else {
+                    output.textContent += "Projects found: " + serviceProjects.length + "\n";
+                    output.textContent += JSON.stringify(serviceProjects, null, 2) + "\n";
+                }
+
+                status.textContent = "Test complete.";
+            } catch (err) {
+                output.textContent += "Critical Error: " + err.message;
+                status.textContent = "Test failed.";
+            }
+        }
+
+        test();
+    </script>
+</body>
+</html>

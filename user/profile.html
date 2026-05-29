@@ -13,8 +13,8 @@
     <!-- Using Lucide Icons for a modern, chill vibe -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase_config.js"></script>
-    <script src="auth_guard.js"></script>
+    <script src="../supabase_config.js"></script>
+    <script src="../auth_guard.js"></script>
 
     <style>
         :root {
@@ -150,7 +150,7 @@
         .profile-avatar {
             width: 90px;
             height: 90px;
-            border-radius: 24px; /* Squircle */
+            border-radius: 50%; /* Circle */
             background: var(--primary-green);
             color: white;
             display: flex;
@@ -428,6 +428,8 @@
                     </div>
                     <i data-lucide="chevron-right" class="setting-arrow"></i>
                 </button>
+
+
 
                 <button class="setting-btn danger" onclick="openLogoutModal()">
                     <div class="setting-left">

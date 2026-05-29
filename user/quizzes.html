@@ -10,6 +10,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
     
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase_config.js"></script>
+    <script src="../auth_guard.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
         :root {
@@ -145,6 +149,7 @@
 
     <div class="app-container">
         <!-- Main Quizzes View -->
+        <!-- Main Quizzes View -->
         <div id="mainView" style="display: flex; flex-direction: column; width: 100%; height: 100%;">
             <header class="header">
                 <div style="display: flex; align-items: center; gap: 15px;">
@@ -167,117 +172,341 @@
                 </div>
 
                 <div id="quizList">
-                    <!-- Available Quiz -->
-                    <div class="quiz-card" data-status="available">
-                        <div class="quiz-title">Plastic Waste Awareness</div>
-                        <div class="quiz-detail">
-                            <i data-lucide="help-circle" style="width: 14px; height: 14px;"></i> QUESTIONS: <span>10 Items</span>
-                        </div>
-                        <div class="quiz-actions">
-                            <button class="start-btn">START <i data-lucide="play" style="width:16px;"></i></button>
-                        </div>
-                    </div>
-
-                    <!-- Completed Quiz -->
-                    <div class="quiz-card" data-status="completed" style="opacity: 0.85;">
-                        <div class="quiz-title">Energy Conservation Basics</div>
-                        <div class="quiz-detail">
-                            <i data-lucide="help-circle" style="width: 14px; height: 14px;"></i> QUESTIONS: <span>5 Items</span>
-                        </div>
-                        <div class="quiz-detail">
-                            <i data-lucide="check-circle" style="width: 14px; height: 14px; color: var(--primary-green);"></i> SCORE: <span style="color: var(--primary-green);">4/5</span>
-                        </div>
-                        <div class="quiz-actions">
-                            <button class="start-btn review" onclick="openReview()">REVIEW <i data-lucide="eye" style="width:16px;"></i></button>
-                        </div>
+                    <div style="text-align: center; padding: 40px; color: var(--text-muted);" id="loadingHint">
+                        <i data-lucide="loader" style="width: 32px; height: 32px; animation: spin 2s linear infinite;"></i>
+                        <p style="margin-top: 10px; font-weight: 700;">FETCHING QUIZZES...</p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Hidden Review View Embedded Seamlessly -->
+        <!-- QUIZ PLAYER SECTION -->
+        <div id="playerSection" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 60; flex-direction: column;">
+            <div class="review-header">
+                <button class="back-btn" onclick="abortQuiz()">
+                    <i data-lucide="x"></i>
+                </button>
+                <div class="header-title" id="playerQuizTitle" style="font-size: 14px;">---</div>
+            </div>
+            <div class="content-area" style="padding-top: 30px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: 800; font-size: 12px; color: var(--text-muted);">
+                    <span id="progressText">Question 1/10</span>
+                </div>
+                <div style="height: 6px; background: rgba(2, 69, 26, 0.05); border-radius: 10px; margin-bottom: 30px; overflow: hidden;">
+                    <div id="progressBar" style="height: 100%; background: var(--primary-green); width: 0%; transition: 0.3s;"></div>
+                </div>
+                
+                <div id="questionContainer">
+                    <div class="q-text" id="activeQText" style="font-size: 18px; margin-bottom: 25px;">Loading Question...</div>
+                    <div id="optionsList" style="display: flex; flex-direction: column; gap: 12px;">
+                        <!-- Options injected here -->
+                    </div>
+                </div>
+            </div>
+            <div style="padding: 24px;">
+                <button class="btn-primary" id="nextBtn" onclick="handleNext()" disabled style="background: var(--primary-green); color: white; border: none; padding: 16px; border-radius: 16px; width: 100%; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                    Next <i data-lucide="chevron-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- REVIEW SECTION -->
         <div id="reviewSection">
             <div class="review-header">
                 <button class="back-btn" onclick="closeReview()">
                     <i data-lucide="chevron-left"></i>
                 </button>
-                <div class="header-title" style="font-size: 16px;">Energy Basics</div>
+                <div class="header-title" id="reviewQuizTitle" style="font-size: 14px;">Review</div>
             </div>
 
-            <div class="review-content">
-                <div class="review-score">Score: 4/5</div>
-
-                <div class="qa-card">
-                    <div class="q-text">1. Which of the following appliances uses the most energy when turned off but plugged in?</div>
-                    
-                    <div class="answer-row correct">
-                        <i data-lucide="check-circle" style="width:18px; flex-shrink: 0;"></i>
-                        <span style="flex-grow: 1;">Desktop Computer</span>
-                        <div class="badge-container">
-                            <span class="badge your-answer">Your Answer</span>
-                        </div>
-                    </div>
-
-                    <div class="answer-row">
-                        <i data-lucide="circle" style="width:18px; flex-shrink: 0;"></i>
-                        <span style="flex-grow: 1;">Microwave</span>
-                    </div>
-                </div>
-
-                <div class="qa-card">
-                    <div class="q-text">2. What is the most energy-efficient type of light bulb for a home?</div>
-                    
-                    <div class="answer-row wrong">
-                        <i data-lucide="x-circle" style="width:18px; flex-shrink: 0;"></i>
-                        <span style="flex-grow: 1;">Incandescent Bulb</span>
-                        <div class="badge-container">
-                            <span class="badge your-answer">Your Answer</span>
-                        </div>
-                    </div>
-
-                    <div class="answer-row correct">
-                        <i data-lucide="check-circle" style="width:18px; flex-shrink: 0;"></i>
-                        <span style="flex-grow: 1;">LED Bulb</span>
-                        <div class="badge-container">
-                            <span class="badge correct-answer">Correct Answer</span>
-                        </div>
-                    </div>
-                </div>
-
-                 <div class="qa-card">
-                    <div class="q-text">3. True or False: Heating water is the second largest energy expense in your home.</div>
-                    
-                    <div class="answer-row correct">
-                        <i data-lucide="check-circle" style="width:18px; flex-shrink: 0;"></i>
-                        <span style="flex-grow: 1;">True</span>
-                        <div class="badge-container">
-                            <span class="badge your-answer">Your Answer</span>
-                        </div>
-                    </div>
-                </div>
+            <div class="review-content" id="reviewContent">
+                <!-- Review results here -->
             </div>
         </div>
     </div>
 
+    <style>
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .option-card {
+            background: white; border: 1.5px solid var(--glass-border); border-radius: 16px; padding: 18px;
+            display: flex; align-items: center; gap: 15px; cursor: pointer; transition: 0.2s;
+        }
+        .option-card:hover { border-color: var(--primary-green); background: rgba(2, 69, 26, 0.02); }
+        .option-card.selected { background: var(--primary-green); color: white; border-color: var(--primary-green); transform: scale(1.02); }
+        .option-letter { font-weight: 800; width: 25px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(2, 69, 26, 0.05); color: var(--primary-green); font-size: 12px; }
+        .option-card.selected .option-letter { background: white; color: var(--primary-green); }
+        .btn-primary { box-shadow: 0 8px 20px rgba(2, 69, 26, 0.2); cursor: pointer; transition: 0.3s; }
+        .btn-primary:disabled { background: #ccc !important; cursor: not-allowed; }
+    </style>
+
     <script>
         lucide.createIcons();
+
+        let quizzes = [];
+        let userActivities = [];
+        let activeQuiz = null;
+        let currentQIndex = 0;
+        let userAnswers = [];
+
+        document.addEventListener('DOMContentLoaded', initQuizzes);
+
+        async function initQuizzes() {
+            const { data: { user } } = await window.supabaseClient.auth.getUser();
+            if (!user) return;
+
+            try {
+                // 1. Fetch user's quiz history
+                const { data: aData, error: aError } = await window.supabaseClient
+                    .from('user_projects')
+                    .select('project_id, status, score, submission_data')
+                    .eq('user_id', user.id);
+
+                if (aError) throw aError;
+                userActivities = aData || [];
+
+                const participantProjectIds = userActivities
+                    .map(a => a.project_id)
+                    .filter(id => id !== null);
+
+                // 2. Fetch quizzes: active OR already participated in
+                const now = new Date().toISOString().split('T')[0];
+                
+                let query = window.supabaseClient
+                    .from('projects')
+                    .select('*')
+                    .eq('type', 'Quiz');
+
+                if (participantProjectIds.length > 0) {
+                    const idList = `(${participantProjectIds.join(',')})`;
+                    query = query.or(`end_date.gte.${now},id.in.${idList}`);
+                } else {
+                    query = query.gte('end_date', now);
+                }
+
+                const { data: pData, error: pError } = await query
+                    .order('created_at', { ascending: false });
+
+                if (pError) throw pError;
+                quizzes = pData || [];
+
+                renderQuizzes();
+            } catch (err) {
+                console.error(err);
+                document.getElementById('loadingHint').innerHTML = `<p style="color:red">Failed to load quizzes.</p>`;
+            }
+        }
+
+        function renderQuizzes(filter = 'all') {
+            const container = document.getElementById('quizList');
+            container.innerHTML = '';
+
+            const filtered = quizzes.filter(q => {
+                const activity = userActivities.find(a => a.project_id === q.id);
+                const dbStatus = activity ? activity.status : 'available';
+                
+                if (filter === 'all') return true;
+                if (filter === 'completed') return (dbStatus === 'completed' || dbStatus === 'approved');
+                return dbStatus === filter;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding:50px; color:var(--text-muted); font-weight:700;">NO QUIZZES FOUND</div>`;
+                return;
+            }
+
+            filtered.forEach(q => {
+                const activity = userActivities.find(a => a.project_id === q.id);
+                const dbStatus = activity ? activity.status : 'available';
+
+                const card = document.createElement('div');
+                card.className = 'quiz-card';
+                card.dataset.status = (dbStatus === 'approved' || dbStatus === 'completed') ? 'completed' : dbStatus;
+
+                let actionHtml = '';
+                if (dbStatus === 'completed' || dbStatus === 'approved') {
+                    actionHtml = `
+                        <div class="quiz-detail">
+                            <i data-lucide="check-circle" style="width: 14px; height: 14px; color: var(--primary-green);"></i> SCORE: <span style="color: var(--primary-green);">${activity.score}/${q.questions?.length || 0}</span>
+                        </div>
+                        <div class="quiz-actions">
+                            <button class="start-btn review" onclick="openReview('${q.id}')">REVIEW <i data-lucide="eye" style="width:16px;"></i></button>
+                        </div>
+                    `;
+                    card.style.opacity = '0.85';
+                } else if (dbStatus === 'pending') {
+                    actionHtml = `
+                        <div class="quiz-actions">
+                            <button class="start-btn" style="background: #eab308; color: white; border: none;" disabled>PENDING <i data-lucide="clock" style="width:16px;"></i></button>
+                        </div>
+                    `;
+                } else {
+                    actionHtml = `
+                        <div class="quiz-actions">
+                            <button class="start-btn" onclick="startQuiz('${q.id}')">START <i data-lucide="play" style="width:16px;"></i></button>
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <div class="quiz-title">${q.title}</div>
+                    <div class="quiz-detail">
+                        <i data-lucide="help-circle" style="width: 14px; height: 14px;"></i> QUESTIONS: <span>${q.questions?.length || 0} Items</span>
+                    </div>
+                    ${actionHtml}
+                `;
+                container.appendChild(card);
+            });
+            lucide.createIcons();
+        }
 
         function filterQuizzes(status) {
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
             event.target.classList.add('active');
+            renderQuizzes(status);
+        }
 
-            const cards = document.querySelectorAll('.quiz-card');
-            cards.forEach(card => {
-                if (status === 'all' || card.getAttribute('data-status') === status) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
-                }
+        function startQuiz(id) {
+            activeQuiz = quizzes.find(q => q.id === id);
+            if (!activeQuiz || !activeQuiz.questions) return;
+
+            currentQIndex = 0;
+            userAnswers = [];
+            document.getElementById('mainView').style.display = 'none';
+            document.getElementById('playerSection').style.display = 'flex';
+            document.getElementById('playerQuizTitle').textContent = activeQuiz.title;
+            
+            showQuestion();
+        }
+
+        function showQuestion() {
+            const q = activeQuiz.questions[currentQIndex];
+            document.getElementById('progressText').textContent = `Question ${currentQIndex + 1}/${activeQuiz.questions.length}`;
+            document.getElementById('progressBar').style.width = `${((currentQIndex + 1) / activeQuiz.questions.length) * 100}%`;
+            document.getElementById('activeQText').textContent = q.q;
+            
+            const list = document.getElementById('optionsList');
+            list.innerHTML = '';
+            
+            ['a', 'b', 'c', 'd'].forEach(letter => {
+                const opt = document.createElement('div');
+                opt.className = 'option-card';
+                opt.onclick = () => selectOption(letter, opt);
+                opt.innerHTML = `<div class="option-letter">${letter.toUpperCase()}</div><span>${q[letter]}</span>`;
+                list.appendChild(opt);
+            });
+
+            document.getElementById('nextBtn').disabled = true;
+            document.getElementById('nextBtn').innerHTML = (currentQIndex === activeQuiz.questions.length - 1) ? 'Submit Quiz <i data-lucide="check"></i>' : 'Next Question <i data-lucide="chevron-right"></i>';
+            lucide.createIcons();
+        }
+
+        function selectOption(letter, el) {
+            document.querySelectorAll('.option-card').forEach(o => o.classList.remove('selected'));
+            el.classList.add('selected');
+            userAnswers[currentQIndex] = letter.toUpperCase();
+            document.getElementById('nextBtn').disabled = false;
+        }
+
+        async function handleNext() {
+            if (currentQIndex < activeQuiz.questions.length - 1) {
+                currentQIndex++;
+                showQuestion();
+            } else {
+                await submitQuiz();
+            }
+        }
+
+        async function submitQuiz() {
+            const score = userAnswers.reduce((acc, ans, idx) => {
+                return acc + (ans === activeQuiz.questions[idx].correct ? 1 : 0);
+            }, 0);
+
+            const totalQuizPoints = activeQuiz.points || 0;
+            const totalQuestionsCount = activeQuiz.questions.length || 1;
+            const pointsEarned = Math.round(score * (totalQuizPoints / totalQuestionsCount));
+
+            const { data: { user } } = await window.supabaseClient.auth.getUser();
+            const { error } = await window.supabaseClient
+                .from('user_projects')
+                .insert([{
+                    user_id: user.id,
+                    project_id: activeQuiz.id,
+                    status: 'approved', // Auto-approved for quizzes
+                    score: score,
+                    points: pointsEarned,
+                    submission_data: { answers: userAnswers }
+                }]);
+
+            if (error) {
+                console.error('Quiz Submission Error:', error);
+                Swal.fire('Error', 'Submission failed: ' + error.message, 'error');
+            } else {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Quiz Finished!',
+                    text: `You scored ${score}/${activeQuiz.questions.length} and earned ${pointsEarned} points!`,
+                    confirmButtonColor: 'var(--primary-green)'
+                }).then(() => {
+                    location.reload();
+                });
+            }
+        }
+
+        function abortQuiz() {
+            Swal.fire({
+                title: 'Abort Quiz?',
+                text: 'Your progress will be lost.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: 'var(--primary-green)'
+            }).then(res => {
+                if (res.isConfirmed) location.reload();
             });
         }
 
-        function openReview() {
+        function openReview(id) {
+            const q = quizzes.find(item => item.id === id);
+            const activity = userActivities.find(a => a.project_id === id);
+            if (!q || !activity) return;
+
+            document.getElementById('reviewQuizTitle').textContent = q.title;
+            const content = document.getElementById('reviewContent');
+            const total = q.questions.length;
+            const score = activity.score;
+            
+            content.innerHTML = `<div class="review-score">Score: ${score}/${total}</div>`;
+            
+            q.questions.forEach((item, idx) => {
+                const userAns = activity.submission_data?.answers?.[idx] || 'N/A';
+                const isCorrect = userAns === item.correct;
+                
+                const card = document.createElement('div');
+                card.className = 'qa-card';
+                card.innerHTML = `
+                    <div class="q-text">${idx + 1}. ${item.q}</div>
+                    ${['A', 'B', 'C', 'D'].map(l => {
+                        let cls = '';
+                        let badge = '';
+                        if (l === item.correct) cls = 'correct';
+                        if (l === userAns && !isCorrect) cls = 'wrong';
+                        
+                        if (l === userAns) badge += '<span class="badge your-answer">Your Answer</span>';
+                        if (l === item.correct) badge += '<span class="badge correct-answer">Correct</span>';
+
+                        return `
+                            <div class="answer-row ${cls}">
+                                <i data-lucide="${cls === 'correct' ? 'check-circle' : (cls === 'wrong' ? 'x-circle' : 'circle')}" style="width:16px;"></i>
+                                <span style="flex:1">${item[l.toLowerCase()]}</span>
+                                <div class="badge-container">${badge}</div>
+                            </div>
+                        `;
+                    }).join('')}
+                `;
+                content.appendChild(card);
+            });
+
             document.getElementById('reviewSection').style.display = 'flex';
+            lucide.createIcons();
         }
 
         function closeReview() {

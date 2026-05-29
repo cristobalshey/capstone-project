@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase_config.js"></script>
+    <script src="../supabase_config.js"></script>
 
     <style>
         :root {
@@ -373,7 +373,7 @@
 
             <div class="input-group">
                 <label for="name">Full Name</label>
-                <input type="text" id="name" class="input-field" placeholder="John Doe" required>
+                <input type="text" id="name" class="input-field" placeholder="Alex Cruz" required>
             </div>
 
             <div class="input-group">
@@ -436,7 +436,7 @@
             const { data, error } = await window.supabaseClient.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: window.location.href.split('?')[0].replace(/signup\.html|login\.html/, 'menu.html'),
+                    redirectTo: window.location.origin + '/user/menu.html',
                     queryParams: {
                         prompt: 'select_account'
                     },

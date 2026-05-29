@@ -12,6 +12,8 @@
     
     <!-- Using Lucide Icons for a modern, chill vibe -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase_config.js"></script>
 
     <style>
         :root {
@@ -565,57 +567,16 @@
 
         <!-- Main Content -->
         <main class="message-content" id="messageList">
-            
-            <div class="message-card" data-id="1" onclick="handleCardClick(this)">
-                <div class="checkbox-col">
-                    <div class="custom-checkbox"><i data-lucide="check"></i></div>
-                </div>
-                <div class="msg-avatar online">J</div>
+            <div class="message-card" id="emptyState">
                 <div class="msg-details">
                     <div class="msg-header">
-                        <span class="msg-name">Juan Dela Cruz</span>
-                        <span class="msg-time">10:42 AM</span>
+                        <span class="msg-name">Loading conversations...</span>
                     </div>
                     <div class="msg-preview-row">
-                        <span class="msg-preview unread">I have 5kg of plastic bottles ready.</span>
-                        <span class="unread-badge">2</span>
+                        <span class="msg-preview">Open a user submission from Tasks to start a chat.</span>
                     </div>
                 </div>
             </div>
-
-            <div class="message-card" data-id="2" onclick="handleCardClick(this)">
-                <div class="checkbox-col">
-                    <div class="custom-checkbox"><i data-lucide="check"></i></div>
-                </div>
-                <div class="msg-avatar" style="background: var(--primary-green); color: white;">M</div>
-                <div class="msg-details">
-                    <div class="msg-header">
-                        <span class="msg-name">Maria Clara</span>
-                        <span class="msg-time">Yesterday</span>
-                    </div>
-                    <div class="msg-preview-row">
-                        <span class="msg-preview unread">Are you near Mabini Ave?</span>
-                        <span class="unread-badge">1</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="message-card" data-id="3" onclick="handleCardClick(this)">
-                <div class="checkbox-col">
-                    <div class="custom-checkbox"><i data-lucide="check"></i></div>
-                </div>
-                <div class="msg-avatar online" style="background: rgba(2, 69, 26, 0.15);">P</div>
-                <div class="msg-details">
-                    <div class="msg-header">
-                        <span class="msg-name">Pedro Penduko</span>
-                        <span class="msg-time">Mon</span>
-                    </div>
-                    <div class="msg-preview-row">
-                        <span class="msg-preview">Thank you for collecting my e-waste!</span>
-                    </div>
-                </div>
-            </div>
-
         </main>
         
         <!-- Bottom Action Bar (Edit Mode) -->
@@ -638,8 +599,7 @@
             </div>
             
             <div class="chat-history" id="chatHistoryBox">
-                <div class="chat-bubble sent" style="animation-delay: 0s;">Hi Juan! I will be there in 15 minutes.</div>
-                <div class="chat-bubble received" style="animation-delay: 0.1s;">Okay, I have 5kg of plastic bottles ready.</div>
+                <div class="chat-bubble received">Select a conversation to view messages.</div>
             </div>
             
             <div class="chat-input-area">
@@ -669,24 +629,165 @@
         const chatTitle = document.getElementById('chatTitle');
         const chatInputMessage = document.getElementById('chatInputMessage');
         const chatHistoryBox = document.getElementById('chatHistoryBox');
+        const messageList = document.getElementById('messageList');
 
         let isEditMode = false;
         let allSelected = false;
+        let currentCollector = null;
+        let currentTargetUserId = null;
+        let currentTargetUserName = null;
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const params = new URLSearchParams(window.location.search);
-            const chatId = params.get('openChat');
-            if (chatId) {
-                const targetCard = document.querySelector(`.message-card[data-id="${chatId}"]`);
-                if (targetCard) {
-                    setTimeout(() => handleCardClick(targetCard), 100);
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const { data: { user }, error: authError } = await window.supabaseClient.auth.getUser();
+                if (authError || !user) {
+                    console.error('Auth error:', authError);
+                    return;
                 }
+
+                const { data: profile, error: profileError } = await window.supabaseClient
+                    .from('profiles')
+                    .select('id, full_name')
+                    .eq('id', user.id)
+                    .single();
+
+                currentCollector = {
+                    userId: user.id,
+                    fullName: profile?.full_name || 'Collector'
+                };
+
+                await loadCollectorThreads();
+
+                const params = new URLSearchParams(window.location.search);
+                const targetId = params.get('openChat');
+                if (targetId) {
+                    openThread(targetId);
+                }
+            } catch (err) {
+                console.error('Message page initialization failed:', err);
             }
         });
 
+        async function loadCollectorThreads() {
+            if (!messageList) return;
+            const { data: messages, error } = await window.supabaseClient
+                .from('direct_messages')
+                .select('sender_id, receiver_id, sender_name, receiver_name, content, created_at')
+                .or(`sender_id.eq.${currentCollector.userId},receiver_id.eq.${currentCollector.userId}`)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Failed to load collector conversations:', error);
+                const errorMessage = error.code === 'PGRST205'
+                    ? 'Direct messages table missing. Run the migration or check your Supabase schema.'
+                    : 'Unable to load conversations.';
+                messageList.innerHTML = `<div class="message-card"><div class="msg-details"><div class="msg-header"><span class="msg-name">${errorMessage}</span></div></div></div>`;
+                return;
+            }
+
+            const threads = {};
+            messages.forEach(msg => {
+                const counterpartId = msg.sender_id === currentCollector.userId ? msg.receiver_id : msg.sender_id;
+                const counterpartName = msg.sender_id === currentCollector.userId ? msg.receiver_name : msg.sender_name;
+                if (!threads[counterpartId]) {
+                    threads[counterpartId] = { id: counterpartId, name: counterpartName, lastMessage: msg.content, lastAt: msg.created_at };
+                }
+            });
+
+            const threadArray = Object.values(threads);
+            threadArray.sort((a, b) => new Date(b.lastAt) - new Date(a.lastAt));
+
+            if (threadArray.length === 0) {
+                messageList.innerHTML = '<div class="message-card"><div class="msg-details"><div class="msg-header"><span class="msg-name">No conversations yet</span></div><div class="msg-preview-row"><span class="msg-preview">Open a user submission from Tasks to start a chat.</span></div></div></div>';
+                return;
+            }
+
+            messageList.innerHTML = threadArray.map(thread => `
+                <div class="message-card" data-user-id="${thread.id}" onclick="handleCardClick(this)">
+                    <div class="checkbox-col">
+                        <div class="custom-checkbox"><i data-lucide="check"></i></div>
+                    </div>
+                    <div class="msg-avatar">${thread.name.charAt(0) || 'U'}</div>
+                    <div class="msg-details">
+                        <div class="msg-header">
+                            <span class="msg-name">${thread.name}</span>
+                            <span class="msg-time">${new Date(thread.lastAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+                        </div>
+                        <div class="msg-preview-row">
+                            <span class="msg-preview">${thread.lastMessage}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+        async function openThread(userId) {
+            if (!userId) return;
+            currentTargetUserId = userId;
+            try {
+                const { data: profile, error: profileError } = await window.supabaseClient
+                    .from('profiles')
+                    .select('id, full_name')
+                    .eq('id', userId)
+                    .single();
+
+                currentTargetUserName = profile?.full_name || 'User';
+                chatTitle.textContent = currentTargetUserName;
+                chatSection.classList.add('active');
+                await loadChatMessages();
+            } catch (err) {
+                console.error('Unable to open chat thread:', err);
+            }
+        }
+
+        async function loadChatMessages() {
+            if (!currentTargetUserId) return;
+            const { data: messages, error } = await window.supabaseClient
+                .from('direct_messages')
+                .select('sender_id, receiver_id, sender_name, content, created_at')
+                .or(`and(sender_id.eq.${currentCollector.userId},receiver_id.eq.${currentTargetUserId}),and(sender_id.eq.${currentTargetUserId},receiver_id.eq.${currentCollector.userId})`)
+                .order('created_at', { ascending: true });
+
+            if (error) {
+                console.error('Failed to load chat messages:', error);
+                if (error.code === 'PGRST205') {
+                    chatHistoryBox.innerHTML = '<div class="chat-bubble received">Direct messages table is missing. Please check the Supabase schema.</div>';
+                }
+                return;
+            }
+
+            chatHistoryBox.innerHTML = messages.map(msg => {
+                const isSent = msg.sender_id === currentCollector.userId;
+                return `<div class="chat-bubble ${isSent ? 'sent' : 'received'}">${escapeHtml(msg.content)}</div>`;
+            }).join('');
+            chatHistoryBox.scrollTop = chatHistoryBox.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function handleCardClick(card) {
+            if (isEditMode) {
+                card.classList.toggle('selected');
+                checkSelectAllState();
+                updateDeleteBtn();
+            } else {
+                const userId = card.dataset.userId;
+                openThread(userId);
+            }
+        }
+
         function toggleEditMode() {
             isEditMode = !isEditMode;
-            if(isEditMode) {
+            if (isEditMode) {
                 appContainer.classList.add('edit-mode');
                 editToggleBtn.innerHTML = '<i data-lucide="x" style="width: 24px; height: 24px;"></i>';
             } else {
@@ -698,46 +799,19 @@
             updateDeleteBtn();
         }
 
-        function handleCardClick(card) {
-            if (isEditMode) {
-                card.classList.toggle('selected');
-                checkSelectAllState();
-                updateDeleteBtn();
-            } else {
-                // Open Chat
-                const name = card.querySelector('.msg-name').textContent;
-                chatTitle.textContent = name;
-                chatSection.classList.add('active');
-            }
-        }
-
         function toggleSelectAll() {
             const cards = document.querySelectorAll('.message-card');
             allSelected = !allSelected;
-            
-            cards.forEach(card => {
-                if(allSelected) {
-                    card.classList.add('selected');
-                } else {
-                    card.classList.remove('selected');
-                }
-            });
-            
-            selectAllBtn.textContent = allSelected ? "Deselect All" : "Select All";
+            cards.forEach(card => card.classList.toggle('selected', allSelected));
+            selectAllBtn.textContent = allSelected ? 'Deselect All' : 'Select All';
             updateDeleteBtn();
         }
-        
+
         function checkSelectAllState() {
             const total = document.querySelectorAll('.message-card').length;
             const selected = document.querySelectorAll('.message-card.selected').length;
-            
-            if (selected === total && total > 0) {
-                allSelected = true;
-                selectAllBtn.textContent = "Deselect All";
-            } else {
-                allSelected = false;
-                selectAllBtn.textContent = "Select All";
-            }
+            allSelected = selected === total && total > 0;
+            selectAllBtn.textContent = allSelected ? 'Deselect All' : 'Select All';
         }
 
         function updateDeleteBtn() {
@@ -756,22 +830,15 @@
         function clearSelection() {
             document.querySelectorAll('.message-card').forEach(card => card.classList.remove('selected'));
             allSelected = false;
-            selectAllBtn.textContent = "Select All";
+            selectAllBtn.textContent = 'Select All';
             updateDeleteBtn();
         }
 
         function deleteSelected() {
             const selected = document.querySelectorAll('.message-card.selected');
-            if(confirm(`Are you sure you want to delete ${selected.length} message(s)?`)) {
-                selected.forEach(card => {
-                    card.style.transform = 'scale(0.9)';
-                    card.style.opacity = '0';
-                    setTimeout(() => card.remove(), 200);
-                });
-                
-                setTimeout(() => {
-                    toggleEditMode();
-                }, 250);
+            if (confirm(`Are you sure you want to delete ${selected.length} message(s)?`)) {
+                selected.forEach(card => card.remove());
+                clearSelection();
             }
         }
 
@@ -785,18 +852,28 @@
             }
         }
 
-        function sendMessage() {
+        async function sendMessage() {
             const text = chatInputMessage.value.trim();
-            if (text === '') return;
-            
-            const bubble = document.createElement('div');
-            bubble.className = 'chat-bubble sent';
-            bubble.textContent = text;
-            bubble.style.animationDelay = '0s';
-            
-            chatHistoryBox.appendChild(bubble);
+            if (!text || !currentTargetUserId) return;
+
+            const { data, error } = await window.supabaseClient
+                .from('direct_messages')
+                .insert([{ 
+                    sender_id: currentCollector.userId,
+                    receiver_id: currentTargetUserId,
+                    sender_name: currentCollector.fullName,
+                    receiver_name: currentTargetUserName || 'User',
+                    content: text
+                }]);
+
+            if (error) {
+                console.error('Failed to send message:', error);
+                return;
+            }
+
             chatInputMessage.value = '';
-            chatHistoryBox.scrollTop = chatHistoryBox.scrollHeight;
+            await loadChatMessages();
+            await loadCollectorThreads();
         }
 
         function handleImageSelect(event) {
@@ -804,36 +881,14 @@
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = function(e) {
-                const bubble = document.createElement('div');
-                bubble.className = 'chat-bubble sent';
-                bubble.style.padding = '4px';
-                bubble.style.background = 'transparent';
-                bubble.style.boxShadow = 'none';
-                
-                const img = document.createElement('img');
-                img.src = e.target.result;
-                img.style.maxWidth = '200px';
-                img.style.maxHeight = '250px';
-                img.style.borderRadius = '14px';
-                img.style.objectFit = 'cover';
-                img.style.display = 'block';
-                img.style.boxShadow = '0 4px 12px rgba(2, 69, 26, 0.2)';
-
-                bubble.appendChild(img);
-                chatHistoryBox.appendChild(bubble);
-                
-                // Reset input
+            reader.onload = async function(e) {
+                const text = '[Image attachment]';
+                chatInputMessage.value = text;
+                await sendMessage();
                 document.getElementById('chatImageInput').value = '';
-                
-                // Allow time for image layout computation before scrolling
-                setTimeout(() => {
-                    chatHistoryBox.scrollTop = chatHistoryBox.scrollHeight;
-                }, 50);
             };
             reader.readAsDataURL(file);
         }
-
     </script>
 </body>
 

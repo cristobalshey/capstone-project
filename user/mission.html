@@ -12,6 +12,11 @@
     
     <!-- Using Lucide Icons for a modern, chill vibe -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase_config.js"></script>
+    <script src="submit_project.js"></script>
+    <script src="../auth_guard.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
         :root {
@@ -409,6 +414,155 @@
         }
 
         /* Modal Styles */
+        /* Immersive Camera Styles from Verification */
+        .camera-view {
+            width: 100%;
+            height: 400px;
+            background: #111827;
+            border-radius: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .camera-view.immersive {
+            height: 100% !important;
+            border-radius: 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 50;
+        }
+
+        .back-immersive {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 60;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .camera-overlay-top {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            padding: 0 24px;
+            z-index: 55;
+            pointer-events: none;
+        }
+
+        .camera-label {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            padding: 10px 24px;
+            border-radius: 30px;
+            color: white;
+            font-size: 14px;
+            font-weight: 700;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .face-overlay {
+            position: absolute;
+            width: 280px;
+            height: 280px;
+            z-index: 52;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .face-corner {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-color: rgba(255, 255, 255, 0.8);
+            border-style: solid;
+        }
+
+        .corner-tl { top: 0; left: 0; border-width: 4px 0 0 4px; border-top-left-radius: 12px; }
+        .corner-tr { top: 0; right: 0; border-width: 4px 4px 0 0; border-top-right-radius: 12px; }
+        .corner-bl { bottom: 0; left: 0; border-width: 0 0 4px 4px; border-bottom-left-radius: 12px; }
+        .corner-br { bottom: 0; right: 0; border-width: 0 4px 4px 0; border-bottom-right-radius: 12px; }
+
+        .camera-overlay-bottom {
+            position: absolute;
+            bottom: 40px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            z-index: 60;
+        }
+
+        .live-dot {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 10px;
+            height: 10px;
+            background: #ef4444;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+            z-index: 60;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        .shutter-btn {
+            width: 85px;
+            height: 85px;
+            border-radius: 50%;
+            border: 4px solid white;
+            background: transparent;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+        }
+
+        .shutter-btn:active { transform: scale(0.9); }
+        .shutter-btn::after {
+            content: '';
+            width: 65px;
+            height: 65px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+        }
+
         .qr-modal-overlay {
             position: fixed;
             top: 0;
@@ -523,102 +677,46 @@
             </div>
 
             <div class="missions-list">
-                
-                <div class="mission-card" data-status="not-done">
-                    <div class="mission-title">Community Plastic Drive</div>
-                    <div class="mission-detail">
-                        <i data-lucide="info" style="width: 14px; height: 14px; margin-top: 2px;"></i>
-                        Collect and recycle clean PET bottles from your local community.
-                    </div>
-                    <div class="mission-detail">
-                        <i data-lucide="scale" style="width: 14px; height: 14px; margin-top: 2px;"></i>
-                        TARGET: <span>5.0 kg of PET Bottles (clean)</span>
-                    </div>
-                    <div class="mission-detail">
-                        <i data-lucide="award" style="width: 14px; height: 14px; margin-top: 2px; color: var(--primary-green);"></i>
-                        POINTS REWARD: <span class="points-highlight">800</span>
-                    </div>
-                    <div class="mission-detail">
-                        <i data-lucide="calendar" style="width: 14px; height: 14px; margin-top: 2px;"></i>
-                        DEADLINE: <span>Oct 24</span>
-                    </div>
-                    <div class="mission-actions">
-                        <button class="do-it-btn" onclick="startMission('Community Plastic Drive', '5.0 kg', '800')">
-                            DO IT <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
-                        </button>
-                    </div>
+                <!-- Dynamic Content Here -->
+                <div style="text-align: center; padding: 40px; color: var(--text-muted);" id="loadingHint">
+                    <i data-lucide="loader" style="width: 32px; height: 32px; animation: spin 2s linear infinite;"></i>
+                    <p style="margin-top: 10px; font-weight: 700;">FETCHING MISSIONS...</p>
                 </div>
-
-                <div class="mission-card" data-status="completed" style="opacity: 0.8;">
-                    <div class="mission-title">Paper Recycling Week</div>
-                    <div class="mission-detail">
-                        <i data-lucide="info" style="width: 14px; height: 14px; margin-top: 2px;"></i>
-                        Gather newspapers and corrugated cardboard for the weekly drive.
-                    </div>
-                    <div class="mission-detail">
-                        <i data-lucide="scale" style="width: 14px; height: 14px; margin-top: 2px;"></i>
-                        TARGET: <span>10.0 kg of Mixed Paper</span>
-                    </div>
-                    <div class="mission-detail">
-                        <i data-lucide="award" style="width: 14px; height: 14px; margin-top: 2px; color: var(--primary-green);"></i>
-                        POINTS REWARD: <span class="points-highlight">400</span>
-                    </div>
-                    <div class="mission-detail">
-                        <i data-lucide="calendar" style="width: 14px; height: 14px; margin-top: 2px;"></i>
-                        DEADLINE: <span>Oct 26</span>
-                    </div>
-                    <div class="mission-actions">
-                        <button class="do-it-btn" style="background: var(--text-muted);" disabled>
-                            COMPLETED <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="mission-card" data-status="pending" style="opacity: 0.9;">
-                    <div class="mission-title">E-Waste Collection</div>
-                    <div class="mission-detail">
-                        <i data-lucide="info" style="width: 14px; height: 14px; margin-top: 2px;"></i>
-                        Properly dispose of old batteries and electronics.
-                    </div>
-                    <div class="mission-detail">
-                        <i data-lucide="scale" style="width: 14px; height: 14px; margin-top: 2px;"></i>
-                        TARGET: <span>2.0 kg of E-Waste</span>
-                    </div>
-                    <div class="mission-detail">
-                        <i data-lucide="award" style="width: 14px; height: 14px; margin-top: 2px; color: var(--primary-green);"></i>
-                        POINTS REWARD: <span class="points-highlight">200</span>
-                    </div>
-                    <div class="mission-detail">
-                        <i data-lucide="calendar" style="width: 14px; height: 14px; margin-top: 2px;"></i>
-                        DEADLINE: <span>Oct 20</span>
-                    </div>
-                    <div class="mission-actions" style="gap: 10px;">
-                        <button class="do-it-btn" style="background: rgba(2, 69, 26, 0.1); color: var(--primary-green); padding: 10px 15px;" onclick="showQRModal()">
-                            <i data-lucide="qr-code" style="width: 18px; height: 18px;"></i>
-                        </button>
-                        <button class="do-it-btn" style="background: #eab308; flex-grow: 1;" disabled>
-                            PENDING <i data-lucide="clock" style="width: 16px; height: 16px;"></i>
-                        </button>
-                    </div>
-                </div>
-
             </div>
         </div>
 
-        <!-- CAMERA SECTION -->
-        <div class="content-area" id="cameraSection" style="display: none; flex-direction: column;">
-            
-            <div class="camera-view" style="flex-grow: 1; height: auto;">
-                <div class="camera-overlay"></div>
-                <div class="live-dot"></div>
-                <i data-lucide="camera" class="camera-icon"></i>
-                <div style="font-weight: 600; opacity: 0.9;">Live Camera Active</div>
-                <div style="font-size: 12px; opacity: 0.7; margin-top: 5px;">Position the items securely in the frame.</div>
-            </div>
+        <!-- CAMERA SECTION (Immersive) -->
+        <div class="content-area no-padding" id="cameraSection" style="display: none; height: 100%; position: absolute; top: 0; left: 0; width: 100%; z-index: 50;">
+            <div class="camera-view immersive" id="cameraBox">
+                <video id="missionVideo" autoplay playsinline style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1;"></video>
+                <canvas id="missionCanvas" style="display: none;"></canvas>
 
-            <button class="btn-primary" onclick="showReview()">
-                Capture & Continue <i data-lucide="check-square"></i>
-            </button>
+                <!-- Top Overlays -->
+                <button class="back-immersive" onclick="goBack()">
+                    <i data-lucide="chevron-left"></i>
+                </button>
+
+                <div class="camera-overlay-top">
+                    <div class="camera-label">
+                        <i data-lucide="eye" style="width: 16px;"></i> Position items in frame
+                    </div>
+                </div>
+
+                <!-- Frame Overlay -->
+                <div class="face-overlay">
+                    <div class="face-corner corner-tl"></div>
+                    <div class="face-corner corner-tr"></div>
+                    <div class="face-corner corner-bl"></div>
+                    <div class="face-corner corner-br"></div>
+                </div>
+
+                <div class="live-dot"></div>
+
+                <!-- Bottom Overlays -->
+                <div class="camera-overlay-bottom">
+                    <button class="shutter-btn" onclick="takeMissionSnapshot()"></button>
+                </div>
+            </div>
         </div>
 
         <!-- REVIEW SECTION -->
@@ -660,10 +758,10 @@
                 <i data-lucide="x" style="width: 16px; height: 16px;"></i>
             </button>
             <div style="font-size: 18px; font-weight: 800; color: var(--primary-green); text-align: center;">Verification Code</div>
-            <div class="qr-placeholder">
+            <div class="qr-placeholder" id="qrContainer">
                 <i data-lucide="qr-code" style="width: 120px; height: 120px; color: var(--primary-green); opacity: 0.8;"></i>
             </div>
-            <div style="font-size: 24px; font-weight: 800; letter-spacing: 4px; color: var(--text-main); font-family: monospace; background: rgba(2, 69, 26, 0.05); padding: 8px 20px; border-radius: 8px; border: 1px dashed rgba(2, 69, 26, 0.2); margin-top: 5px; margin-bottom: 5px;">ECO-7X29</div>
+            <div id="qrCodeTextDisplay" style="font-size: 24px; font-weight: 800; letter-spacing: 4px; color: var(--text-main); font-family: monospace; background: rgba(2, 69, 26, 0.05); padding: 8px 20px; border-radius: 8px; border: 1px dashed rgba(2, 69, 26, 0.2); margin-top: 5px; margin-bottom: 5px;">----</div>
             <div style="font-size: 13px; font-weight: 600; color: var(--text-muted); text-align: center; line-height: 1.4;">Show this QR code to the admin to verify your activity.</div>
         </div>
     </div>
@@ -677,23 +775,130 @@
         const reviewSection = document.getElementById('reviewSection');
         const pageTitle = document.getElementById('pageTitle');
 
-        let currentStep = 'list'; // 'list', 'camera', 'review'
-        let activeMissionData = { title: '', weight: '', points: '' };
+        let currentStep = 'list';
+        let missions = [];
+        let userActivities = [];
+        let activeMissionData = { id: '', title: '', weight: '', points: '' };
+        let videoStream = null;
+        let capturedPhoto = null;
+
+        // Start Sync
+        document.addEventListener('DOMContentLoaded', initMissions);
+
+        async function initMissions() {
+            const { data: { user } } = await window.supabaseClient.auth.getUser();
+            if (!user) return;
+
+            try {
+                // 1. Fetch user's mission history from user_projects table
+                const { data: actData, error: aError } = await window.supabaseClient
+                    .from('user_projects')
+                    .select('project_id, status')
+                    .eq('user_id', user.id);
+
+                if (aError) throw aError;
+                userActivities = actData || [];
+
+                const participantProjectIds = userActivities
+                    .map(a => a.project_id)
+                    .filter(id => id !== null);
+
+                // 2. Fetch missions: active OR already participated in
+                const now = new Date().toISOString().split('T')[0];
+                
+                let query = window.supabaseClient
+                    .from('projects')
+                    .select('*')
+                    .eq('type', 'Mission');
+
+                // Filter: (active) OR (already participated)
+                if (participantProjectIds.length > 0) {
+                    const idList = `(${participantProjectIds.join(',')})`;
+                    query = query.or(`end_date.gte.${now},id.in.${idList}`);
+                } else {
+                    query = query.gte('end_date', now);
+                }
+
+                const { data: projectsData, error: pError } = await query
+                    .order('created_at', { ascending: false });
+
+                if (pError) throw pError;
+                missions = projectsData || [];
+
+                renderMissions();
+            } catch (err) {
+                console.error('Fetch Error:', err);
+                document.getElementById('loadingHint').innerHTML = `<p style="color:red">Failed to load missions.</p>`;
+            }
+        }
+
+        function renderMissions(filter = 'all') {
+            const container = document.querySelector('.missions-list');
+            container.innerHTML = '';
+
+            const filtered = missions.filter(m => {
+                const activity = userActivities.find(a => String(a.project_id) === String(m.id));
+                const status = activity ? activity.status : 'not-done';
+                if (filter === 'all') return true;
+                if (filter === 'pending') return status === 'pending';
+                if (filter === 'completed') return status === 'completed' || status === 'approved';
+                return false;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding:50px; color:var(--text-muted); font-weight:700;">NO MISSIONS FOUND</div>`;
+                return;
+            }
+
+            filtered.forEach(m => {
+                // Find the activity for this specific project
+                const activity = userActivities.find(a => String(a.project_id) === String(m.id));
+                const status = activity ? activity.status : 'not-done';
+
+                const card = document.createElement('div');
+                card.className = 'mission-card';
+                card.dataset.status = status;
+
+                let actionBtn = '';
+                if (status === 'completed' || status === 'approved') {
+                    actionBtn = `<button class="do-it-btn" style="background: var(--text-muted);" disabled>COMPLETED <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i></button>`;
+                    card.style.opacity = '0.8';
+                } else if (status === 'pending') {
+                    actionBtn = `
+                        <div style="display:flex; gap:10px; flex-grow:1;">
+                            <button class="do-it-btn" style="background: rgba(2, 69, 26, 0.1); color: var(--primary-green); padding: 10px 15px;" onclick="showQRModal('${m.code}')">
+                                <i data-lucide="qr-code" style="width: 18px; height: 18px;"></i>
+                            </button>
+                            <button class="do-it-btn" style="background: #eab308; flex-grow: 1;" disabled>
+                                PENDING <i data-lucide="clock" style="width: 16px; height: 16px;"></i>
+                            </button>
+                        </div>`;
+                } else {
+                    actionBtn = `<button class="do-it-btn" onclick="startMission('${m.id}', '${m.title}', '${m.target_weight}kg ${m.waste_type || ''}', '${m.points}')">DO IT <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i></button>`;
+                }
+
+                card.innerHTML = `
+                    <div class="mission-title">${m.title}</div>
+                    <div class="mission-detail"><i data-lucide="info" style="width: 14px; height: 14px; margin-top: 2px;"></i> ${m.description}</div>
+                    <div class="mission-detail"><i data-lucide="scale" style="width: 14px; height: 14px; margin-top: 2px;"></i> TARGET: <span>${m.target_weight} kg of ${m.waste_type || 'Waste'}</span></div>
+                    <div class="mission-detail"><i data-lucide="award" style="width: 14px; height: 14px; margin-top: 2px; color: var(--primary-green);"></i> POINTS REWARD: <span class="points-highlight">${m.points}</span></div>
+                    <div class="mission-detail"><i data-lucide="calendar" style="width: 14px; height: 14px; margin-top: 2px;"></i> DEADLINE: <span>${new Date(m.end_date).toLocaleDateString('en-PH', {month:'short',day:'numeric'})}</span></div>
+                    <div class="mission-actions">${actionBtn}</div>
+                `;
+                container.appendChild(card);
+            });
+
+            lucide.createIcons();
+        }
 
         function filterList(status) {
             document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
-
-            document.querySelectorAll('.mission-card').forEach(card => {
-                if (status === 'all' || card.getAttribute('data-status') === status) {
-                    card.style.display = 'flex';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
+            renderMissions(status);
         }
 
-        function showQRModal() {
+        function showQRModal(code) {
+            document.getElementById('qrCodeTextDisplay').textContent = code;
             document.getElementById('qrModal').classList.add('active');
         }
 
@@ -703,21 +908,61 @@
             }
         }
 
-        function startMission(title, weight, points) {
-            // Save mission details to show in summary later
-            activeMissionData.title = title;
-            activeMissionData.weight = weight;
-            activeMissionData.points = points;
-
-            // Switch view
+        function startMission(id, title, weight, points) {
+            // Guard: prevent starting if already taken
+            const already = userActivities.find(a => String(a.project_id) === String(id));
+            if (already) {
+                Swal.fire({ icon: 'info', title: 'Already Submitted', text: `This mission is already ${already.status}.`, confirmButtonColor: '#02451A' });
+                return;
+            }
+            activeMissionData = { id, title, weight, points };
             listSection.style.display = 'none';
             cameraSection.style.display = 'flex';
             pageTitle.textContent = "Take Photo";
             currentStep = 'camera';
+            startCamera();
+        }
+
+        async function startCamera() {
+            const video = document.getElementById('missionVideo');
+            const constraints = { video: { facingMode: { ideal: 'environment' } } };
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                videoStream = stream;
+                video.srcObject = stream;
+            } catch (err) {
+                console.error("Camera access denied", err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Camera Access Required',
+                    text: 'Please allow camera access to take a photo of your waste items.',
+                    confirmButtonColor: '#02451A'
+                });
+                goBack();
+            }
+        }
+
+        function stopCamera() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+        }
+
+        function takeMissionSnapshot() {
+            const video = document.getElementById('missionVideo');
+            const canvas = document.getElementById('missionCanvas');
+            if (!videoStream || !video) return;
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            capturedPhoto = canvas.toDataURL('image/jpeg', 0.8);
+            stopCamera();
+            showReview();
         }
 
         function showReview() {
-            // Populate summary card
             document.getElementById('summaryTitle').textContent = activeMissionData.title;
             document.getElementById('summaryWeight').textContent = activeMissionData.weight;
             document.getElementById('summaryPoints').textContent = activeMissionData.points;
@@ -726,7 +971,6 @@
             reviewSection.style.display = 'flex';
             pageTitle.textContent = "Finalize Submission";
             currentStep = 'review';
-            
             lucide.createIcons();
         }
 
@@ -736,7 +980,9 @@
                 reviewSection.style.display = 'none';
                 pageTitle.textContent = "Take Photo";
                 currentStep = 'camera';
+                startCamera();
             } else if (currentStep === 'camera') {
+                stopCamera();
                 listSection.style.display = 'flex';
                 cameraSection.style.display = 'none';
                 pageTitle.textContent = "Missions";
@@ -746,9 +992,56 @@
             }
         }
 
-        function submitMission() {
-            alert("Mission task submitted successfully! Awaiting admin verification.");
-            window.location.href = 'menu.html';
+        async function submitMission() {
+            const { data: { user } } = await window.supabaseClient.auth.getUser();
+            if (!user) return;
+
+            // Pre-submit guard: check DB directly to prevent duplicate submissions
+            const { data: existing } = await window.supabaseClient
+                .from('user_projects')
+                .select('id, status')
+                .eq('user_id', user.id)
+                .eq('project_id', activeMissionData.id)
+                .maybeSingle();
+
+            if (existing) {
+                Swal.fire({ icon: 'warning', title: 'Already Submitted', text: `You have already submitted this mission. Status: ${existing.status}.`, confirmButtonColor: '#02451A' });
+                await initMissions();
+                listSection.style.display = 'flex';
+                reviewSection.style.display = 'none';
+                pageTitle.textContent = 'Missions';
+                currentStep = 'list';
+                return;
+            }
+
+            try {
+                const { id, error } = await window.submitUserProject({
+                    type: 'mission',
+                    project_id: activeMissionData.id,
+                    submission_data: { photo: capturedPhoto },
+                    points: activeMissionData.points,
+                    setCode: false
+                });
+
+                if (error) {
+                    console.error('Submission Error:', error);
+                    Swal.fire('Error', 'Submission failed: ' + (error.message || error), 'error');
+                    return;
+                }
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Submitted!',
+                    text: 'Mission is now pending verification.',
+                    timer: 2000,
+                    showConfirmButton: false
+                }).then(() => {
+                    window.location.href = 'menu.html';
+                });
+            } catch (e) {
+                console.error('Submission Error:', e);
+                Swal.fire('Error', 'Submission failed: ' + e.message, 'error');
+            }
         }
     </script>
 </body>

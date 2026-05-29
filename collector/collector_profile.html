@@ -7,6 +7,9 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase_config.js"></script>
+    <script src="../auth_guard.js"></script>
 
     <style>
         :root {
@@ -142,23 +145,23 @@
             <div class="profile-header">
                 <div class="profile-pic-container">
                     <img src="https://ui-avatars.com/api/?name=Mod+Admin&background=02451A&color=fff" alt="Profile" class="profile-pic" id="userAvatar">
-                    <div class="badge-verified"><i data-lucide="shield-check" style="width: 16px; height: 16px;"></i></div>
+                    <div class="badge-verified" id="verificationBadge"><i data-lucide="shield-check" style="width: 16px; height: 16px;"></i></div>
                 </div>
                 
                 <div class="profile-name" id="userName">Collector Admin</div>
-                <div class="profile-role">Verified Collector</div>
+                <div class="profile-role" id="profileRole">Verified Collector</div>
                 <div class="profile-email" id="userEmail">collector@ecotrack.ph</div>
             </div>
 
             <div class="menu-list">
                 
-                <a href="verification.html" class="menu-item">
+                <a href="verification.html" class="menu-item" id="collectorVerificationLink">
                     <div class="menu-item-left">
                         <div class="menu-icon" style="background: rgba(2, 69, 26, 0.1);"><i data-lucide="shield-check"></i></div>
                         <span>Collector Verification</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <span style="background: var(--primary-green); color: white; font-size: 10px; padding: 4px 8px; border-radius: 8px; font-weight: 800;">GET VERIFIED</span>
+                        <span id="verificationActionBadge" style="background: var(--primary-green); color: white; font-size: 10px; padding: 4px 8px; border-radius: 8px; font-weight: 800;">GET VERIFIED</span>
                         <i data-lucide="chevron-right" style="color:var(--text-muted);"></i>
                     </div>
                 </a>
@@ -237,6 +240,70 @@
             window.location.href = 'login.html';
         }, 1000);
     }
+</script>
+
+<script>
+    // Update verification status on profile view
+    window.addEventListener('DOMContentLoaded', async () => {
+        // lucide already initialized above
+        if (!window.supabaseClient) return;
+
+        try {
+            const { data: { session } } = await window.supabaseClient.auth.getSession();
+            if (!session) return;
+
+            const { data: profile, error } = await window.supabaseClient
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+
+            if (error) {
+                console.error('Supabase profiles fetch error:', error);
+                return;
+            }
+
+            if (profile) {
+                if (profile.full_name) document.getElementById('userName').innerText = profile.full_name;
+                if (profile.email) document.getElementById('userEmail').innerText = profile.email;
+
+                const status = profile.status;
+                const badge = document.getElementById('verificationBadge');
+                const role = document.getElementById('profileRole');
+                const actionBadge = document.getElementById('verificationActionBadge');
+
+                const verLink = document.getElementById('collectorVerificationLink');
+                if (status === 'pending') {
+                    role.innerText = 'Verification Pending';
+                    badge.innerHTML = '<i data-lucide="clock" style="width: 16px; height: 16px;"></i>';
+                    badge.style.background = '#f59e0b';
+                    actionBadge.innerText = 'PENDING';
+                    actionBadge.style.background = '#f59e0b';
+                    actionBadge.style.color = '#fff';
+                    if (verLink) verLink.href = 'verification.html#review';
+                } else if (status === 'verified') {
+                    role.innerText = 'Verified Collector';
+                    badge.innerHTML = '<i data-lucide="shield-check" style="width: 16px; height: 16px;"></i>';
+                    badge.style.background = 'var(--emerald)';
+                    actionBadge.innerText = 'VERIFIED';
+                    actionBadge.style.background = 'var(--primary-green)';
+                    actionBadge.style.color = '#fff';
+                    if (verLink) verLink.href = 'verification.html#review';
+                } else {
+                    role.innerText = 'Unverified Collector';
+                    badge.innerHTML = '<i data-lucide="user" style="width: 16px; height: 16px;"></i>';
+                    badge.style.background = 'rgba(2, 69, 26, 0.06)';
+                    actionBadge.innerText = 'GET VERIFIED';
+                    actionBadge.style.background = 'var(--primary-green)';
+                    actionBadge.style.color = '#fff';
+                }
+
+                lucide.createIcons();
+            }
+        } catch (err) {
+            console.error('Failed to load profile status', err);
+        }
+    });
 </script>
 </body>
 </html>

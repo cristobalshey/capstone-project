@@ -12,8 +12,8 @@
     
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase_config.js"></script>
-    <script src="auth_guard.js"></script>
+    <script src="../supabase_config.js"></script>
+    <script src="../auth_guard.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
@@ -156,6 +156,34 @@
         #passcodeText { text-align: center; font-size: 18px; font-weight: 800; color: var(--primary-green); margin-top: 10px; }
         .passcode-sub { text-align: center; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-top: 5px; }
 
+        /* Transaction History */
+        .history-title { font-size: 14px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 15px; }
+        .transaction-card {
+            background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px; padding: 16px;
+            display: flex; justify-content: space-between; align-items: center; gap: 15px; animation: slideIn 0.5s ease backwards;
+            margin-bottom: 12px;
+        }
+        .transaction-card:nth-child(2) { animation-delay: 0.05s; }
+        .transaction-card:nth-child(3) { animation-delay: 0.1s; }
+        .transaction-card:nth-child(4) { animation-delay: 0.15s; }
+        
+        .transaction-icon { width: 40px; height: 40px; border-radius: 12px; background: rgba(2, 69, 26, 0.1); display: flex; justify-content: center; align-items: center; color: var(--primary-green); flex-shrink: 0; }
+        .transaction-details { flex: 1; }
+        .transaction-desc { font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 4px; }
+        .transaction-meta { font-size: 12px; color: var(--text-muted); }
+        .transaction-amount { text-align: right; }
+        .transaction-points { font-size: 15px; font-weight: 800; color: var(--primary-green); }
+        .transaction-status {
+            font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 8px; text-transform: uppercase;
+            display: inline-block; margin-top: 4px;
+        }
+        .status-pending { background: rgba(245, 158, 11, 0.15); color: #d97706; }
+        .status-approved { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        .status-rejected { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        
+        .empty-history { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+        .empty-history i { width: 48px; height: 48px; margin: 0 auto 15px; opacity: 0.5; }
+
     </style>
 </head>
 
@@ -172,7 +200,9 @@
                 </button>
                 <div class="header-title" id="headerTitle">Withdraw to GCash</div>
             </div>
-            <div style="width: 42px;"></div> <!-- Spacer -->
+            <button class="back-btn" style="background: var(--glass-bg); border: 1px solid var(--glass-border);" onclick="switchView('viewHistory', 'Transaction History'); loadHistory()" title="View History">
+                <i data-lucide="history"></i>
+            </button>
         </header>
 
         <!-- VIEW: Form -->
@@ -224,12 +254,10 @@
 
         <!-- VIEW: PIN Verification -->
         <main class="view-content" id="viewPin">
-            <div id="passcodeText">GCash Transaction PIN</div>
-            <div class="passcode-sub">Enter your 6-digit PIN to authorize this GCash transaction</div>
+            <div id="passcodeText">Security PIN</div>
+            <div class="passcode-sub">Enter your 4-digit PIN to authorize this GCash transaction</div>
             
             <div class="passcode-display-wrap">
-                <div class="passcode-dot"></div>
-                <div class="passcode-dot"></div>
                 <div class="passcode-dot"></div>
                 <div class="passcode-dot"></div>
                 <div class="passcode-dot"></div>
@@ -252,6 +280,17 @@
             </div>
         </main>
 
+        <!-- VIEW: Transaction History -->
+        <main class="view-content" id="viewHistory">
+            <div id="historyContainer" style="display: flex; flex-direction: column; gap: 10px;">
+                <div class="empty-history">
+                    <i data-lucide="inbox"></i>
+                    <p style="font-weight: 700; margin-bottom: 5px;">No transactions yet</p>
+                    <p style="font-size: 12px;">Your redemption history will appear here</p>
+                </div>
+            </div>
+        </main>
+
     </div>
 
     <script>
@@ -263,6 +302,8 @@
         function handleBack() {
             if (currentView === 'viewForm') {
                 window.location.href = 'menu.html';
+            } else if (currentView === 'viewHistory') {
+                switchView('viewForm', 'Withdraw to GCash');
             } else {
                 // Return to form if backing out of PIN lock
                 switchView('viewForm', 'Withdraw to GCash');
@@ -283,6 +324,7 @@
             
             document.getElementById('headerTitle').textContent = title;
             currentView = viewId;
+            lucide.createIcons();
         }
 
         function processWithdraw() {
@@ -327,6 +369,100 @@
         }
 
         // Passcode Logic
+        async function submitRedemption() {
+            Swal.fire({
+                title: 'Processing...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading()
+                }
+            });
+
+            const accName = document.getElementById('accName').value.trim();
+            const accNum = document.getElementById('accNum').value.trim();
+            const pointsVal = parseInt(document.getElementById('pointsVal').value.trim());
+            const amountPhp = pointsVal / 10;
+
+            const { data: { user }, error: userError } = await window.supabaseClient.auth.getUser();
+            
+            if (userError || !user) {
+                Swal.fire('Error', 'Please log in again.', 'error');
+                return;
+            }
+
+            const { error } = await window.supabaseClient
+                .from('redemptions')
+                .insert([
+                    {
+                        user_id: user.id,
+                        acc_name: accName,
+                        acc_num: accNum,
+                        points_redeemed: pointsVal,
+                        amount_php: amountPhp,
+                        status: 'pending'
+                    }
+                ]);
+
+            if (error) {
+                console.error(error);
+                Swal.fire('Error', 'Failed to submit request. Please try again.', 'error');
+                currentPin = '';
+                updateDots();
+            } else {
+                // Deduct points from profile
+                const currentPoints = parseFloat(document.getElementById('currentPoints').innerText) || 0;
+                const newPoints = parseFloat((currentPoints - pointsVal).toFixed(2));
+                
+                await window.supabaseClient
+                    .from('profiles')
+                    .update({ points: newPoints })
+                    .eq('id', user.id);
+                    
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Request Submitted!',
+                    text: 'Your GCash withdrawal request is now under review by the admin.',
+                    confirmButtonColor: '#02451A'
+                }).then(() => {
+                    window.location.href = 'menu.html';
+                });
+            }
+        }
+
+        async function verifyPin() {
+            const { data: { user }, error: userError } = await window.supabaseClient.auth.getUser();
+            
+            if (userError || !user) {
+                Swal.fire('Error', 'Please log in again.', 'error');
+                currentPin = '';
+                updateDots();
+                return;
+            }
+
+            // Fetch user's pin_code from profiles table
+            const { data: profile, error: profileError } = await window.supabaseClient
+                .from('profiles')
+                .select('pin_code')
+                .eq('id', user.id)
+                .single();
+
+            if (profileError || !profile) {
+                Swal.fire('Error', 'Unable to verify PIN. Please try again.', 'error');
+                currentPin = '';
+                updateDots();
+                return;
+            }
+
+            // Compare PIN
+            if (currentPin === String(profile.pin_code)) {
+                submitRedemption();
+            } else {
+                Swal.fire('Error', 'Incorrect PIN code', 'error');
+                currentPin = '';
+                updateDots();
+            }
+        }
+
         function updateDots() {
             const dots = document.querySelectorAll('.passcode-dot');
             dots.forEach((dot, index) => {
@@ -334,23 +470,13 @@
                 else dot.classList.remove('filled');
             });
 
-            if (currentPin.length === 6) {
-                // Simulated validation success
-                setTimeout(() => {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Request Submitted!',
-                        text: 'Your GCash withdrawal request is now under review by the admin.',
-                        confirmButtonColor: '#02451A'
-                    }).then(() => {
-                        window.location.href = 'menu.html';
-                    });
-                }, 300);
+            if (currentPin.length === 4) {
+                verifyPin();
             }
         }
 
         function addPin(num) {
-            if (currentPin.length < 6) {
+            if (currentPin.length < 4) {
                 currentPin += num.toString();
                 updateDots();
             }
@@ -362,6 +488,88 @@
                 updateDots();
             }
         }
+        
+        async function loadHistory() {
+            const container = document.getElementById('historyContainer');
+            container.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted);">Loading transactions...</div>';
+
+            const { data: { user }, error: userError } = await window.supabaseClient.auth.getUser();
+            
+            if (userError || !user) {
+                container.innerHTML = '<div class="empty-history"><i data-lucide="alert-circle"></i><p>Unable to load history</p></div>';
+                lucide.createIcons();
+                return;
+            }
+
+            const { data: redemptions, error } = await window.supabaseClient
+                .from('redemptions')
+                .select('*')
+                .eq('user_id', user.id)
+                .in('status', ['pending', 'completed', 'rejected'])
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error(error);
+                container.innerHTML = '<div class="empty-history"><i data-lucide="alert-circle"></i><p>Error loading history</p></div>';
+                lucide.createIcons();
+                return;
+            }
+
+            if (!redemptions || redemptions.length === 0) {
+                container.innerHTML = '<div class="empty-history"><i data-lucide="inbox"></i><p style="font-weight: 700; margin-bottom: 5px;">No transactions yet</p><p style="font-size: 12px;">Your redemption history will appear here</p></div>';
+                lucide.createIcons();
+                return;
+            }
+
+            let html = '';
+            redemptions.forEach(redemption => {
+                const date = new Date(redemption.created_at);
+                const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                
+                let statusClass = 'status-pending';
+                let statusIcon = 'clock';
+                if (redemption.status === 'completed') {
+                    statusClass = 'status-approved';
+                    statusIcon = 'check-circle';
+                } else if (redemption.status === 'rejected') {
+                    statusClass = 'status-rejected';
+                    statusIcon = 'x-circle';
+                }
+
+                html += `
+                    <div class="transaction-card">
+                        <div class="transaction-icon">
+                            <i data-lucide="${statusIcon}"></i>
+                        </div>
+                        <div class="transaction-details">
+                            <div class="transaction-desc">${redemption.acc_name}</div>
+                            <div class="transaction-meta">${redemption.acc_num} • ${dateStr} ${timeStr}</div>
+                            <div class="transaction-status ${statusClass}">${redemption.status}</div>
+                        </div>
+                        <div class="transaction-amount">
+                            <div class="transaction-points">${redemption.points_redeemed} pts</div>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">₱${redemption.amount_php.toFixed(2)}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const coinsInterval = setInterval(() => {
+                if (window.currentUserProfile) {
+                    const display = document.getElementById('currentPoints');
+                    if (display) {
+                        display.innerText = window.currentUserProfile.points || 0;
+                    }
+                    clearInterval(coinsInterval);
+                }
+            }, 100);
+        });
     </script>
 </body>
 

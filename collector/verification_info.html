@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>EcoTrack | Why Verify?</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --primary-green: #02451A;
+            --bg-color: #ffffff;
+            --glass-bg: rgba(255, 255, 255, 0.9);
+            --glass-border: rgba(2, 69, 26, 0.1);
+            --text-main: #02451A;
+            --text-muted: rgba(2, 69, 26, 0.6);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+        }
+
+        .ambient-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1; pointer-events: none;
+            background: radial-gradient(circle at 15% 50%, rgba(2, 69, 26, 0.05), transparent 50%);
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 480px;
+            padding: 30px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .back-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            width: 42px; height: 42px; border-radius: 14px;
+            display: flex; justify-content: center; align-items: center;
+            color: var(--primary-green); cursor: pointer;
+            box-shadow: 0 4px 12px rgba(2, 69, 26, 0.05);
+        }
+
+        .title { font-size: 24px; font-weight: 800; }
+
+        .info-card {
+            background: white;
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(2, 69, 26, 0.05);
+            line-height: 1.6;
+        }
+
+        .intro {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 17px;
+            font-weight: 800;
+            color: var(--primary-green);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sub-point {
+            margin-bottom: 15px;
+            padding-left: 10px;
+            border-left: 3px solid rgba(2, 69, 26, 0.1);
+        }
+
+        .point-header {
+            font-size: 14px;
+            font-weight: 800;
+            color: #334155;
+            margin-bottom: 4px;
+        }
+
+        .point-desc {
+            font-size: 13.5px;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .footer-note {
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="ambient-layer"></div>
+
+    <div class="app-container">
+        <header class="header">
+            <button class="back-btn" onclick="window.history.back()">
+                <i data-lucide="chevron-left"></i>
+            </button>
+            <h1 class="title">Verification</h1>
+        </header>
+
+        <div class="info-card">
+            <p class="intro">
+                App verification serves as a digital "ID check" to ensure that the person using the service is who they say they are. It’s a layer of security designed to protect your data and the platform's integrity.
+            </p>
+
+            <div class="section">
+                <h2 class="section-title"><i data-lucide="shield-check"></i> 1. Security & Fraud Prevention</h2>
+                <p class="point-desc" style="margin-bottom: 15px;">Apps use verification to stop bots and scammers from creating fake accounts.</p>
+                
+                <div class="sub-point">
+                    <p class="point-header">Trust Anchor</p>
+                    <p class="point-desc">Ensures hackers can't access your account without secondary verification (like a 2FA code).</p>
+                </div>
+                <div class="sub-point">
+                    <p class="point-header">Identity Proofing</p>
+                    <p class="point-desc">Uses government ID or face scans to prevent identity theft and account takeovers.</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2 class="section-title"><i data-lucide="gavel"></i> 2. Regulatory Compliance</h2>
+                
+                <div class="sub-point">
+                    <p class="point-header">KYC (Know Your Customer)</p>
+                    <p class="point-desc">Legal requirement to prevent money laundering and illegal financing.</p>
+                </div>
+                <div class="sub-point">
+                    <p class="point-header">Age Gating</p>
+                    <p class="point-desc">Ensures users meet minimum age requirements, protecting minors from inappropriate content.</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2 class="section-title"><i data-lucide="banknote"></i> 3. Secure Reward Redemptions</h2>
+                <div class="sub-point">
+                    <p class="point-header">Safe Payouts</p>
+                    <p class="point-desc">Verification ensures that when you redeem your points, the rewards are sent directly to you and not to a fraudulent account.</p>
+                </div>
+                <div class="sub-point">
+                    <p class="point-header">Claim Protection</p>
+                    <p class="point-desc">Prevents bad actors from using your identity to claim redemptions or cash-outs that you have worked hard to earn.</p>
+                </div>
+            </div>
+        </div>
+
+        <p class="footer-note">EcoTrack is committed to protecting your community and data.</p>
+    </div>
+
+    <script>lucide.createIcons();</script>
+</body>
+</html>

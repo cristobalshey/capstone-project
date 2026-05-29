@@ -12,6 +12,8 @@
     
     <!-- Using Lucide Icons for a modern, chill vibe -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase_config.js"></script>
 
     <style>
         :root {
@@ -348,6 +350,23 @@
             font-weight: 700;
         }
 
+        .thread-badge {
+            margin-left: 8px;
+            background: var(--primary-green);
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            padding: 3px 8px;
+            border-radius: 999px;
+            text-transform: uppercase;
+        }
+
+        .message-card.admin-thread {
+            border-color: rgba(2, 69, 26, 0.25);
+            background: rgba(2, 69, 26, 0.06);
+        }
+
         .unread-badge {
             background: var(--primary-green);
             color: white;
@@ -533,6 +552,146 @@
             color: var(--primary-green);
         }
 
+        /* Typing Indicator */
+        .typing-indicator {
+            display: none;
+            align-items: center;
+            gap: 4px;
+            padding: 12px 16px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            border-bottom-left-radius: 4px;
+            align-self: flex-start;
+            margin-top: 5px;
+            margin-bottom: 5px;
+            width: fit-content;
+        }
+        .typing-indicator.active {
+            display: flex;
+        }
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--primary-green);
+            border-radius: 50%;
+            animation: typingBounce 1.4s infinite ease-in-out both;
+        }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typingBounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* Seen Indicator */
+        .seen-indicator {
+            font-size: 11px;
+            color: var(--text-muted);
+            align-self: flex-end;
+            margin-top: -10px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Quick Questions Menu */
+        .quick-questions-menu {
+            display: none;
+            position: absolute;
+            bottom: 75px;
+            left: 24px;
+            right: 24px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(2, 69, 26, 0.15);
+            padding: 12px;
+            z-index: 40;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        .quick-questions-menu.active {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .quick-question-btn {
+            background: rgba(2, 69, 26, 0.05);
+            border: 1px solid var(--glass-border);
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+            white-space: pre-wrap;
+        }
+        .quick-question-btn:hover {
+            background: rgba(2, 69, 26, 0.1);
+            transform: translateX(2px);
+            box-shadow: 0 2px 8px rgba(2, 69, 26, 0.1);
+        }
+        .quick-question-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Quick Action Button */
+        .quick-action-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            width: 36px;
+            height: 36px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: color 0.2s;
+            flex-shrink: 0;
+        }
+        .quick-action-btn:hover {
+            color: var(--primary-green);
+        }
+
+        /* Agent Escalation Button */
+        .agent-btn {
+            background: linear-gradient(135deg, var(--primary-green), #046e35);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: none;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(2, 69, 26, 0.2);
+            white-space: nowrap;
+            gap: 6px;
+        }
+        .agent-btn.show {
+            display: flex;
+            align-items: center;
+        }
+        .agent-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(2, 69, 26, 0.3);
+        }
+        .agent-btn i {
+            width: 14px;
+            height: 14px;
+        }
+
     </style>
 </head>
 
@@ -550,9 +709,14 @@
                 </button>
                 <div class="header-title">Messages</div>
             </div>
-            <button class="edit-msg-btn" id="editToggleBtn" onclick="toggleEditMode()">
-                <i data-lucide="edit" style="width: 20px; height: 20px;"></i>
-            </button>
+            <div style="display: flex; gap: 8px;">
+                <button class="edit-msg-btn" onclick="markAllAsRead()" title="Mark All as Read">
+                    <i data-lucide="check-check" style="width: 20px; height: 20px;"></i>
+                </button>
+                <button class="edit-msg-btn" id="editToggleBtn" onclick="toggleEditMode()">
+                    <i data-lucide="edit" style="width: 20px; height: 20px;"></i>
+                </button>
+            </div>
         </header>
 
         <!-- Search Bar -->
@@ -565,73 +729,16 @@
 
         <!-- Main Content -->
         <main class="message-content" id="messageList">
-            
-            <div class="message-card" data-id="1" onclick="handleCardClick(this)">
-                <div class="checkbox-col">
-                    <div class="custom-checkbox"><i data-lucide="check"></i></div>
-                </div>
-                <div class="msg-avatar online">E</div>
+            <div class="message-card" id="emptyState">
                 <div class="msg-details">
                     <div class="msg-header">
-                        <span class="msg-name">Eco Community</span>
-                        <span class="msg-time">10:42 AM</span>
+                        <span class="msg-name">Loading conversations...</span>
                     </div>
                     <div class="msg-preview-row">
-                        <span class="msg-preview unread">Are we still on for the cleanup tomorrow?</span>
-                        <span class="unread-badge">2</span>
+                        <span class="msg-preview">Your collector chats will appear here.</span>
                     </div>
                 </div>
             </div>
-
-            <div class="message-card" data-id="2" onclick="handleCardClick(this)">
-                <div class="checkbox-col">
-                    <div class="custom-checkbox"><i data-lucide="check"></i></div>
-                </div>
-                <div class="msg-avatar" style="background: var(--primary-green); color: white;">A</div>
-                <div class="msg-details">
-                    <div class="msg-header">
-                        <span class="msg-name">Admin Team</span>
-                        <span class="msg-time">Yesterday</span>
-                    </div>
-                    <div class="msg-preview-row">
-                        <span class="msg-preview unread">Your verification request has been approved!</span>
-                        <span class="unread-badge">1</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="message-card" data-id="3" onclick="handleCardClick(this)">
-                <div class="checkbox-col">
-                    <div class="custom-checkbox"><i data-lucide="check"></i></div>
-                </div>
-                <div class="msg-avatar online" style="background: rgba(2, 69, 26, 0.15);">S</div>
-                <div class="msg-details">
-                    <div class="msg-header">
-                        <span class="msg-name">Sarah Jenkins</span>
-                        <span class="msg-time">Mon</span>
-                    </div>
-                    <div class="msg-preview-row">
-                        <span class="msg-preview">Thanks for sharing the composting guide.</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="message-card" data-id="4" onclick="handleCardClick(this)">
-                <div class="checkbox-col">
-                    <div class="custom-checkbox"><i data-lucide="check"></i></div>
-                </div>
-                <div class="msg-avatar">M</div>
-                <div class="msg-details">
-                    <div class="msg-header">
-                        <span class="msg-name">Mission Support</span>
-                        <span class="msg-time">Last Week</span>
-                    </div>
-                    <div class="msg-preview-row">
-                        <span class="msg-preview">We've added 50 coins to your account for the delay.</span>
-                    </div>
-                </div>
-            </div>
-
         </main>
         
         <!-- Bottom Action Bar (Edit Mode) -->
@@ -647,15 +754,25 @@
                 <button class="back-btn" onclick="closeChat()">
                     <i data-lucide="chevron-left"></i>
                 </button>
-                <div class="chat-user-info">
+                <div class="chat-user-info" style="flex-grow: 1;">
                     <span class="chat-user-name" id="chatTitle">Eco Community</span>
                     <span class="chat-user-status">Online</span>
                 </div>
+                <button onclick="endConversation()" style="background: var(--primary-green); color: white; border: none; padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(2, 69, 26, 0.2);">End Chat</button>
             </div>
             
             <div class="chat-history" id="chatHistoryBox">
-                <div class="chat-bubble sent" style="animation-delay: 0s;">Hi! Checking if the cleanup is happening tomorrow?</div>
-                <div class="chat-bubble received" style="animation-delay: 0.1s;">Yes! Are we still on for the cleanup tomorrow?</div>
+                <div class="chat-bubble received">Select a conversation to start chatting with a collector.</div>
+            </div>
+            
+            <!-- Quick Questions Menu -->
+            <div class="quick-questions-menu" id="quickQuestionsMenu">
+                <button class="quick-question-btn" onclick="handleQuickQuestion('How do I redeem my points?')">How do I redeem my points?</button>
+                <button class="quick-question-btn" onclick="handleQuickQuestion('How do I submit recyclables?')">How do I submit recyclables?</button>
+                <button class="quick-question-btn" onclick="handleQuickQuestion('What is the point conversion to e-money?')">What is the point conversion to e-money?</button>
+                <button class="quick-question-btn" onclick="handleQuickQuestion('What items do you accept?')">What items do you accept?</button>
+                <button class="quick-question-btn" onclick="handleQuickQuestion('How do missions work?')">How do missions work?</button>
+                <button class="quick-question-btn" onclick="handleQuickQuestion('How do quizzes work?')">How do quizzes work?</button>
             </div>
             
             <div class="chat-input-area">
@@ -664,13 +781,117 @@
                     <i data-lucide="image" style="width: 22px; height: 22px;"></i>
                 </button>
                 <input type="text" class="chat-input" id="chatInputMessage" placeholder="Type a message..." onkeypress="handleKeyPress(event)">
+                <button class="quick-action-btn" id="quickQuestionToggle" onclick="toggleQuickQuestions()" title="Quick Questions">
+                    <i data-lucide="lightbulb" style="width: 20px; height: 20px;"></i>
+                </button>
+                <button class="agent-btn" id="agentBtn" onclick="requestAgent()">
+                    <i data-lucide="headset"></i>
+                    <span>Agent</span>
+                </button>
                 <button class="chat-send-btn" onclick="sendMessage()">
                     <i data-lucide="send" style="width: 20px; height: 20px;"></i>
                 </button>
             </div>
         </div>
 
+        <!-- Custom Confirm Modal -->
+        <div class="confirm-modal-overlay" id="confirmModal">
+            <div class="confirm-modal-card">
+                <div class="confirm-icon">
+                    <i data-lucide="alert-triangle"></i>
+                </div>
+                <h3 class="confirm-title">End Conversation?</h3>
+                <p class="confirm-text">Are you sure you want to end this conversation? This will mark your support ticket as resolved.</p>
+                <div class="confirm-actions">
+                    <button class="confirm-btn cancel" onclick="closeConfirmModal()">Cancel</button>
+                    <button class="confirm-btn confirm" id="confirmEndBtn">Yes, End It</button>
+                </div>
+            </div>
+        </div>
+
     </div>
+
+    <style>
+        .confirm-modal-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .confirm-modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .confirm-modal-card {
+            background: var(--bg-color);
+            border-radius: 24px;
+            padding: 24px;
+            width: 85%;
+            max-width: 340px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+        .confirm-modal-overlay.active .confirm-modal-card {
+            transform: scale(1);
+        }
+        .confirm-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 16px;
+        }
+        .confirm-icon i { width: 24px; height: 24px; }
+        .confirm-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+        .confirm-text {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+        .confirm-actions {
+            display: flex;
+            gap: 12px;
+        }
+        .confirm-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: transform 0.2s;
+        }
+        .confirm-btn:active { transform: scale(0.95); }
+        .confirm-btn.cancel {
+            background: rgba(2, 69, 26, 0.05);
+            color: var(--text-main);
+        }
+        .confirm-btn.confirm {
+            background: #ef4444;
+            color: white;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+    </style>
 
     <script>
         // Initialize Lucide Icons
@@ -685,9 +906,393 @@
         const chatTitle = document.getElementById('chatTitle');
         const chatInputMessage = document.getElementById('chatInputMessage');
         const chatHistoryBox = document.getElementById('chatHistoryBox');
+        const messageList = document.getElementById('messageList');
 
         let isEditMode = false;
         let allSelected = false;
+        let currentUser = null;
+        let currentTargetId = null;
+        let currentTargetName = null;
+        
+        // Agent Queue Engine Variables
+        let botId = '00000000-0000-0000-0000-000000000000';
+        let adminProfileId = null; // The ID of the profile with role='admin' fetched from the profiles table
+        let currentTicketId = null;
+        let ticketStatus = 'bot';
+        let activeTicketSub = null;
+        let typingChannel = null;
+        let typingTimeout = null;
+        let inactivityTimer = null;
+        const INACTIVITY_TIMEOUT = 3 * 60 * 1000; // 3 minutes of no reply = end conversation
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const { data: { user }, error: authError } = await window.supabaseClient.auth.getUser();
+                if (authError || !user) {
+                    console.error('Auth error:', authError);
+                    return;
+                }
+
+                const { data: profile } = await window.supabaseClient
+                    .from('profiles')
+                    .select('id, full_name')
+                    .eq('id', user.id)
+                    .single();
+
+                currentUser = {
+                    userId: user.id,
+                    fullName: profile?.full_name || 'User'
+                };
+
+                // Fetch the admin or moderator profile ID from the profiles table
+                const { data: adminProfile } = await window.supabaseClient
+                    .from('profiles')
+                    .select('id')
+                    .in('role', ['admin', 'moderator'])
+                    .limit(1)
+                    .single();
+
+                if (adminProfile) {
+                    adminProfileId = adminProfile.id;
+                } else {
+                    console.warn('No profile with role="admin" or "moderator" found in profiles table.');
+                }
+
+                // Setup global typing broadcast channel
+                typingChannel = window.supabaseClient.channel('typing_status');
+                typingChannel.on('broadcast', { event: 'typing' }, payload => {
+                    if (payload.payload.receiver === currentUser.userId && payload.payload.sender === currentTargetId) {
+                        showTyping();
+                    }
+                }).subscribe();
+
+                // Listen for typing input
+                chatInputMessage.addEventListener('input', () => {
+                    if (currentTargetId && currentTargetId !== botId && typingChannel) {
+                        typingChannel.send({
+                            type: 'broadcast',
+                            event: 'typing',
+                            payload: { sender: currentUser.userId, receiver: currentTargetId }
+                        });
+                    }
+                });
+
+                await loadUserThreads();
+
+                // Automatically open the chatbot so the user is greeted right away
+                await openChat(botId);
+            } catch (err) {
+                console.error('Message page initialization failed:', err);
+            }
+        });
+
+        async function loadUserThreads() {
+            if (!messageList) return;
+            
+            const { data: messages, error } = await window.supabaseClient
+                .from('direct_messages')
+                .select('sender_id, receiver_id, sender_name, receiver_name, content, created_at, is_read, ticket_id')
+                .or(`sender_id.eq.${currentUser.userId},receiver_id.eq.${currentUser.userId}`)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Failed to load user conversations:', error);
+                messageList.innerHTML = `<div class="message-card"><div class="msg-details"><div class="msg-header"><span class="msg-name">Error loading conversations.</span></div></div></div>`;
+                return;
+            }
+
+            const threads = {};
+            messages.forEach(msg => {
+                const isTicket = msg.ticket_id != null;
+                const isAdminSender = adminProfileId && (msg.sender_id === adminProfileId);
+                const counterpartId = isTicket ? botId : (msg.sender_id === currentUser.userId ? msg.receiver_id : msg.sender_id);
+                const counterpartName = isTicket ? 'EcoTrack Admin' : (isAdminSender ? 'EcoTrack Admin' : (msg.sender_id === currentUser.userId ? msg.receiver_name : msg.sender_name));
+                
+                if (!threads[counterpartId]) {
+                    threads[counterpartId] = {
+                        id: counterpartId,
+                        name: counterpartName,
+                        lastMessage: msg.content,
+                        lastAt: msg.created_at,
+                        unreadCount: 0,
+                        isPinned: isTicket
+                    };
+                }
+
+                if (msg.receiver_id === currentUser.userId && msg.sender_id === counterpartId && !msg.is_read) {
+                    threads[counterpartId].unreadCount += 1;
+                }
+            });
+
+            // Always ensure the EcoTrack Admin (bot) thread is present, even if empty
+            if (!threads[botId]) {
+                threads[botId] = {
+                    id: botId,
+                    name: 'EcoTrack Admin',
+                    lastMessage: 'Tap to start a pinned admin conversation.',
+                    lastAt: new Date().toISOString(),
+                    unreadCount: 0,
+                    isPinned: true
+                };
+            }
+
+            const threadArray = Object.values(threads).sort((a, b) => {
+                if (a.isPinned && !b.isPinned) return -1;
+                if (!a.isPinned && b.isPinned) return 1;
+                return new Date(b.lastAt) - new Date(a.lastAt);
+            });
+
+            messageList.innerHTML = threadArray.map(thread => `
+                <div class="message-card ${thread.isPinned ? 'admin-thread' : ''}" data-user-id="${thread.id}" onclick="handleCardClick(this)">
+                    <div class="checkbox-col">
+                        <div class="custom-checkbox"><i data-lucide="check"></i></div>
+                    </div>
+                    <div class="msg-avatar">${thread.name.charAt(0) || 'U'}</div>
+                    <div class="msg-details">
+                        <div class="msg-header">
+                            <span class="msg-name">${thread.name}</span>
+                            ${thread.isPinned ? '<span class="thread-badge">Admin</span>' : ''}
+                            <span class="msg-time">${new Date(thread.lastAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+                        </div>
+                        <div class="msg-preview-row">
+                            <span class="msg-preview ${thread.unreadCount > 0 ? 'unread' : ''}">${thread.lastMessage}</span>
+                            ${thread.unreadCount > 0 ? `<span class="unread-badge">${thread.unreadCount}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+        async function handleCardClick(card) {
+            if (isEditMode) {
+                card.classList.toggle('selected');
+                checkSelectAllState();
+                updateDeleteBtn();
+            } else {
+                const userId = card.dataset.userId;
+                await openChat(userId);
+            }
+        }
+
+        async function openChat(userId) {
+            if (!userId) return;
+            currentTargetId = userId;
+            currentTargetName = userId === botId ? 'EcoTrack Admin' : 'Collector';
+            
+            if (userId !== botId) {
+                const { data: profile } = await window.supabaseClient
+                    .from('profiles')
+                    .select('full_name')
+                    .eq('id', userId)
+                    .single();
+                if (profile) currentTargetName = profile.full_name;
+            }
+
+            chatTitle.textContent = currentTargetName;
+            chatSection.classList.add('active');
+
+            if (userId === botId) {
+                await initSupportTicket();
+                await ensureBotGreeting();
+            } else {
+                currentTicketId = null; 
+                document.querySelector('.chat-user-status').textContent = 'Online';
+                document.querySelector('.chat-user-status').style.color = '#22c55e';
+                await markThreadAsRead(userId);
+                
+                if (activeTicketSub) window.supabaseClient.removeChannel(activeTicketSub);
+                activeTicketSub = window.supabaseClient
+                    .channel(`chat-${currentTargetId}`)
+                    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'direct_messages', filter: `receiver_id=eq.${currentUser.userId}` }, payload => {
+                        if (payload.new.sender_id === currentTargetId) {
+                            loadChatMessages();
+                            markThreadAsRead(currentTargetId);
+                        }
+                    })
+                    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'direct_messages', filter: `sender_id=eq.${currentUser.userId}` }, payload => {
+                        if (payload.new.is_read) {
+                            loadChatMessages(); 
+                        }
+                    })
+                    .subscribe();
+
+                await loadChatMessages();
+            }
+            await loadUserThreads();
+        }
+
+        async function initSupportTicket() {
+            // Check for existing open ticket
+            const { data: tickets } = await window.supabaseClient
+                .from('support_tickets')
+                .select('*')
+                .eq('user_id', currentUser.userId)
+                .neq('status', 'resolved')
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+            if (tickets && tickets.length > 0) {
+                currentTicketId = tickets[0].id;
+                ticketStatus = tickets[0].status;
+            } else {
+                // Create new ticket
+                const { data: newTicket } = await window.supabaseClient
+                    .from('support_tickets')
+                    .insert({ user_id: currentUser.userId, status: 'bot' })
+                    .select()
+                    .single();
+                
+                if (newTicket) {
+                    currentTicketId = newTicket.id;
+                    ticketStatus = newTicket.status;
+                }
+            }
+
+            await window.supabaseClient
+                .from('direct_messages')
+                .update({ is_read: true })
+                .eq('ticket_id', currentTicketId)
+                .neq('sender_id', currentUser.userId);
+
+            // Hide agent button and close quick questions menu when starting fresh
+            hideAgentButton();
+            closeQuickQuestions();
+            
+            await ensureBotGreeting();
+            await loadChatMessages();
+            
+            if (activeTicketSub) {
+                window.supabaseClient.removeChannel(activeTicketSub);
+            }
+            
+            activeTicketSub = window.supabaseClient
+                .channel(`ticket-${currentTicketId}`)
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'direct_messages', filter: `ticket_id=eq.${currentTicketId}` }, payload => {
+                    const msg = payload.new;
+                    if (msg.sender_id !== currentUser.userId) {
+                        loadChatMessages();
+                        markThreadAsRead(msg.sender_id);
+                        // Start inactivity timer — if user doesn't reply, conversation auto-ends
+                        startInactivityTimer();
+                    }
+                })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'support_tickets', filter: `id=eq.${currentTicketId}` }, async payload => {
+                    ticketStatus = payload.new.status;
+                    updateChatStatusUI();
+                    
+                    if (ticketStatus === 'resolved') {
+                        // Admin or timeout ended the conversation, reset to bot mode
+                        if (activeTicketSub) {
+                            window.supabaseClient.removeChannel(activeTicketSub);
+                            activeTicketSub = null;
+                        }
+                        currentTicketId = null;
+                        ticketStatus = 'bot';
+                        await initSupportTicket();
+                        updateChatStatusUI();
+                        await loadUserThreads();
+                    }
+                })
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'direct_messages', filter: `ticket_id=eq.${currentTicketId}` }, payload => {
+                    if (payload.new.is_read && payload.new.sender_id === currentUser.userId) {
+                        loadChatMessages();
+                    }
+                })
+                .subscribe();
+                
+            updateChatStatusUI();
+        }
+
+        function updateChatStatusUI() {
+            const statusEl = document.querySelector('.chat-user-status');
+            if (ticketStatus === 'pending_human') {
+                statusEl.textContent = 'Waiting for an agent...';
+                statusEl.style.color = '#eab308'; 
+            } else if (ticketStatus === 'active') {
+                statusEl.textContent = 'Agent joined';
+                statusEl.style.color = '#3b82f6'; 
+            } else {
+                statusEl.textContent = 'Automated Support';
+                statusEl.style.color = '#22c55e'; 
+            }
+        }
+
+        async function loadChatMessages() {
+            if (!currentTargetId) return;
+            
+            let query = window.supabaseClient
+                .from('direct_messages')
+                .select('sender_id, content, created_at');
+
+            if (currentTargetId === botId && currentTicketId) {
+                query = query.eq('ticket_id', currentTicketId);
+            } else {
+                query = query.or(`and(sender_id.eq.${currentUser.userId},receiver_id.eq.${currentTargetId}),and(sender_id.eq.${currentTargetId},receiver_id.eq.${currentUser.userId})`);
+            }
+            
+            const { data: messages, error } = await query.order('created_at', { ascending: true });
+
+            if (error) {
+                console.error('Failed to load chat messages:', error);
+                return;
+            }
+
+            chatHistoryBox.innerHTML = messages.map((msg, index) => {
+                const isSent = msg.sender_id === currentUser.userId;
+                const isAdmin = adminProfileId && msg.sender_id === adminProfileId;
+                // Messages from the admin profile ID or bot ID are shown as received
+                let html = `<div class="chat-bubble ${isSent ? 'sent' : 'received'}">${escapeHtml(msg.content)}</div>`;
+                
+                if (isSent && msg.is_read && index === messages.length - 1) {
+                    html += `<div class="seen-indicator">Seen <i data-lucide="check-check" style="width:14px; height:14px;"></i></div>`;
+                }
+                return html;
+            }).join('');
+            
+            chatHistoryBox.innerHTML += `
+                <div class="typing-indicator" id="typingIndicator">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            `;
+            
+            lucide.createIcons();
+            chatHistoryBox.scrollTop = chatHistoryBox.scrollHeight;
+        }
+
+        function showTyping() {
+            const ind = document.getElementById('typingIndicator');
+            if(ind) ind.classList.add('active');
+            chatHistoryBox.scrollTop = chatHistoryBox.scrollHeight;
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                if(ind) ind.classList.remove('active');
+            }, 2500);
+        }
+
+        function hideTyping() {
+            const ind = document.getElementById('typingIndicator');
+            if(ind) ind.classList.remove('active');
+        }
+
+        function appendMessageToChat(content, isSent) {
+            // Because we re-render entirely for "seen" indicator and typing,
+            // we should just loadChatMessages() instead of appending dynamically for now.
+            // But we can keep this for instant optimistic UI if needed.
+            loadChatMessages();
+        }
+
+        function escapeHtml(text) {
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
 
         function toggleEditMode() {
             isEditMode = !isEditMode;
@@ -703,46 +1308,19 @@
             updateDeleteBtn();
         }
 
-        function handleCardClick(card) {
-            if (isEditMode) {
-                card.classList.toggle('selected');
-                checkSelectAllState();
-                updateDeleteBtn();
-            } else {
-                // Open Chat
-                const name = card.querySelector('.msg-name').textContent;
-                chatTitle.textContent = name;
-                chatSection.classList.add('active');
-            }
-        }
-
         function toggleSelectAll() {
             const cards = document.querySelectorAll('.message-card');
             allSelected = !allSelected;
-            
-            cards.forEach(card => {
-                if(allSelected) {
-                    card.classList.add('selected');
-                } else {
-                    card.classList.remove('selected');
-                }
-            });
-            
-            selectAllBtn.textContent = allSelected ? "Deselect All" : "Select All";
+            cards.forEach(card => card.classList.toggle('selected', allSelected));
+            selectAllBtn.textContent = allSelected ? 'Deselect All' : 'Select All';
             updateDeleteBtn();
         }
-        
+
         function checkSelectAllState() {
             const total = document.querySelectorAll('.message-card').length;
             const selected = document.querySelectorAll('.message-card.selected').length;
-            
-            if (selected === total && total > 0) {
-                allSelected = true;
-                selectAllBtn.textContent = "Deselect All";
-            } else {
-                allSelected = false;
-                selectAllBtn.textContent = "Select All";
-            }
+            allSelected = selected === total && total > 0;
+            selectAllBtn.textContent = allSelected ? 'Deselect All' : 'Select All';
         }
 
         function updateDeleteBtn() {
@@ -761,22 +1339,15 @@
         function clearSelection() {
             document.querySelectorAll('.message-card').forEach(card => card.classList.remove('selected'));
             allSelected = false;
-            selectAllBtn.textContent = "Select All";
+            selectAllBtn.textContent = 'Select All';
             updateDeleteBtn();
         }
 
         function deleteSelected() {
             const selected = document.querySelectorAll('.message-card.selected');
             if(confirm(`Are you sure you want to delete ${selected.length} message(s)?`)) {
-                selected.forEach(card => {
-                    card.style.transform = 'scale(0.9)';
-                    card.style.opacity = '0';
-                    setTimeout(() => card.remove(), 200);
-                });
-                
-                setTimeout(() => {
-                    toggleEditMode();
-                }, 250);
+                selected.forEach(card => card.remove());
+                clearSelection();
             }
         }
 
@@ -784,62 +1355,330 @@
             chatSection.classList.remove('active');
         }
 
+        function endConversation() {
+            document.getElementById('confirmModal').classList.add('active');
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').classList.remove('active');
+        }
+
+        document.getElementById('confirmEndBtn').addEventListener('click', async () => {
+            const btn = document.getElementById('confirmEndBtn');
+            const originalText = btn.innerText;
+            btn.innerText = 'Ending...';
+            btn.disabled = true;
+
+            try {
+                const { data: { session } } = await window.supabaseClient.auth.getSession();
+                if (!session) return;
+
+                const { error } = await window.supabaseClient
+                    .from('support_tickets')
+                    .update({ status: 'resolved' })
+                    .eq('user_id', session.user.id)
+                    .neq('status', 'resolved');
+
+                if (!error) {
+                    closeConfirmModal();
+                    closeChat();
+                } else {
+                    console.error('Error ending conversation:', error);
+                    alert('Failed to resolve conversation.');
+                }
+            } catch (err) {
+                console.error('Failed to end conversation', err);
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        });
+
         function handleKeyPress(e) {
             if (e.key === 'Enter') {
                 sendMessage();
             }
         }
 
-        function sendMessage() {
+        async function sendMessage() {
             const text = chatInputMessage.value.trim();
-            if (text === '') return;
+            if (!text || !currentTargetId) return;
             
-            const bubble = document.createElement('div');
-            bubble.className = 'chat-bubble sent';
-            bubble.textContent = text;
-            bubble.style.animationDelay = '0s';
-            
-            chatHistoryBox.appendChild(bubble);
             chatInputMessage.value = '';
-            chatHistoryBox.scrollTop = chatHistoryBox.scrollHeight;
+            appendMessageToChat(text, true);
+
+            // User replied — clear inactivity timer
+            clearInactivityTimer();
+
+            const payload = { 
+                sender_id: currentUser.userId,
+                receiver_id: currentTargetId === botId ? (adminProfileId || botId) : currentTargetId,
+                sender_name: currentUser.fullName,
+                receiver_name: currentTargetName || 'Collector',
+                content: text
+            };
+
+            if (currentTargetId === botId && currentTicketId) {
+                payload.ticket_id = currentTicketId;
+            }
+
+            const { error } = await window.supabaseClient
+                .from('direct_messages')
+                .insert([payload]);
+
+            if (error) {
+                console.error('Failed to send message:', error);
+                return;
+            }
+
+            if (currentTargetId === botId && ticketStatus === 'bot') {
+                handleBotResponse(text.toLowerCase());
+            }
+
+            await loadUserThreads();
+        }
+
+        async function ensureBotGreeting() {
+            if (!currentTicketId) return;
+
+            const { data: lastMessage } = await window.supabaseClient
+                .from('direct_messages')
+                .select('sender_id')
+                .eq('ticket_id', currentTicketId)
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+            const shouldGreet = !lastMessage || lastMessage.length === 0 || (lastMessage[0].sender_id !== adminProfileId && lastMessage[0].sender_id !== botId);
+            if (!shouldGreet) return;
+
+            await window.supabaseClient.from('direct_messages').insert({
+                sender_id: adminProfileId || botId,
+                receiver_id: currentUser.userId,
+                sender_name: 'EcoBot',
+                receiver_name: currentUser.fullName,
+                content: 'Hello! Welcome back to EcoTrack support. Ask me anything about redeeming points, missions, quizzes, manual games, mini games, acceptable waste types, or point conversion to e-money.',
+                ticket_id: currentTicketId
+            });
+        }
+
+        async function handleBotResponse(text) {
+            let response = '';
+            let requestHuman = false;
+
+            if (text.includes('redeem points') || text.includes('how to redeem') || text.includes('redeem')) {
+                response = 'To redeem points, go to the "Rewards" or "Redeem" page in your dashboard. You can exchange your Eco Points for vouchers, goods, or cash via Gcash.';
+            } else if (text.includes('gain points') || text.includes('earn points') || text.includes('submit') || text.includes('how to earn')) {
+                response = 'You can earn points by submitting recyclable projects. Go to "Projects", take a clear photo of your waste materials, and submit. You can also earn points through missions, quizzes, and mini games!';
+            } else if (text.includes('conversion') || text.includes('convert') || text.includes('emoney') || text.includes('e-money') || text.includes('point conversion')) {
+                response = 'The conversion rate depends on the type and weight of materials submitted. In EcoTrack, 100 Eco Points is typically equivalent to 1 PHP via Gcash. Check the Rewards page for the exact conversion rate used today.';
+            } else if (text.includes('acceptable') || text.includes('waste type') || text.includes('acceptable waste') || text.includes('materials') || text.includes('recycle')) {
+                response = 'We accept recycling materials like plastic bottles (PET), cardboard, paper, glass bottles, aluminum cans, and e-waste. Please make sure everything is clean and dry before submission.';
+            } else if (text.includes('collector') || text.includes('pickup') || text.includes('trash') || text.includes('get')) {
+                response = 'Collectors usually pick up recyclable submissions within 24 to 48 hours, depending on your area and the collector\'s current schedule. You will receive a notification when your request is accepted.';
+            } else if (text.includes('mission') || text.includes('how to play mission')) {
+                response = 'To play missions, open the "Missions" tab. You will see tasks like "Recycle 5 plastic bottles". Complete the mission before the deadline to earn bonus Eco Points.';
+            } else if (text.includes('quiz') || text.includes('how to play quiz') || text.includes('how to play quizzes')) {
+                response = 'To play quizzes, go to the "Quizzes" section. Answer multiple-choice questions about sustainability correctly to earn Eco Points and improve your knowledge.';
+            } else if (text.includes('manual') || text.includes('how to play manual')) {
+                response = 'The manual game is a sorting challenge where you classify waste items into the correct bins. Follow the instructions on screen and sort the items quickly to score points.';
+            } else if (text.includes('mini games') || text.includes('mini game') || text.includes('how to play mini games')) {
+                response = 'Mini games are available in the "Games" hub. Choose a game, follow the rules shown on screen, and complete the challenge to earn extra points and rewards.';
+            } else if (text.includes('leaderboard')) {
+                response = 'The leaderboard shows top contributors in your community. Earn more points through recycling, missions, and games to climb the ranks!';
+            } else if (text.includes('human') || text.includes('agent') || text.includes('support')) {
+                response = 'I will transfer you to a human agent now. Please wait while we connect you...';
+                requestHuman = true;
+            } else {
+                response = 'I am your EcoBot. I can answer questions about redeeming points, missions, quizzes, the manual game, mini games, acceptable waste types, and point conversion to e-money. If you need more help, type "human" to talk to an agent.';
+            }
+
+            showTyping();
+
+            // Reduced delay to 600ms for a fast response
+            setTimeout(async () => {
+                hideTyping();
+                await window.supabaseClient.from('direct_messages').insert({
+                    sender_id: adminProfileId || botId, // Use admin profile ID from profiles table
+                    receiver_id: currentUser.userId,
+                    sender_name: 'EcoBot',
+                    receiver_name: currentUser.fullName,
+                    content: response,
+                    ticket_id: currentTicketId
+                });
+
+                if (requestHuman) {
+                    await window.supabaseClient
+                        .from('support_tickets')
+                        .update({ status: 'pending_human' })
+                        .eq('id', currentTicketId);
+                }
+
+                // Start inactivity timer after bot replies
+                startInactivityTimer();
+            }, 600);
+        }
+
+        async function markAllAsRead() {
+            if (!currentUser?.userId) return;
+            try {
+                const { error } = await window.supabaseClient
+                    .from('direct_messages')
+                    .update({ is_read: true })
+                    .eq('receiver_id', currentUser.userId)
+                    .eq('is_read', false);
+                
+                if (!error) {
+                    await loadUserThreads();
+                } else {
+                    console.error('Failed to mark all as read:', error);
+                }
+            } catch (err) {
+                console.error('Failed to mark all as read:', err);
+            }
+        }
+
+        async function markThreadAsRead(userId) {
+            if (!userId || !currentUser?.userId) return;
+            try {
+                if (userId === botId) {
+                    // Mark bot and admin messages as read
+                    await window.supabaseClient
+                        .from('direct_messages')
+                        .update({ is_read: true })
+                        .eq('receiver_id', currentUser.userId)
+                        .in('sender_id', [botId, adminProfileId].filter(id => id != null));
+                } else {
+                    await window.supabaseClient
+                        .from('direct_messages')
+                        .update({ is_read: true })
+                        .eq('sender_id', userId)
+                        .eq('receiver_id', currentUser.userId);
+                }
+            } catch (error) {
+                console.error('Failed to mark messages read:', error);
+            }
         }
 
         function handleImageSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
-            reader.onload = function(e) {
-                const bubble = document.createElement('div');
-                bubble.className = 'chat-bubble sent';
-                bubble.style.padding = '4px';
-                bubble.style.background = 'transparent';
-                bubble.style.boxShadow = 'none';
-                
-                const img = document.createElement('img');
-                img.src = e.target.result;
-                img.style.maxWidth = '200px';
-                img.style.maxHeight = '250px';
-                img.style.borderRadius = '14px';
-                img.style.objectFit = 'cover';
-                img.style.display = 'block';
-                img.style.boxShadow = '0 4px 12px rgba(2, 69, 26, 0.2)';
-
-                bubble.appendChild(img);
-                chatHistoryBox.appendChild(bubble);
-                
-                // Reset input
+            reader.onload = async function(e) {
+                chatInputMessage.value = '[Image attachment]';
+                await sendMessage();
                 document.getElementById('chatImageInput').value = '';
-                
-                // Allow time for image layout computation before scrolling
-                setTimeout(() => {
-                    chatHistoryBox.scrollTop = chatHistoryBox.scrollHeight;
-                }, 50);
             };
             reader.readAsDataURL(file);
         }
 
+        // ── Inactivity Timer: auto-resolve if user doesn't reply ──
+        function startInactivityTimer() {
+            clearInactivityTimer();
+            inactivityTimer = setTimeout(async () => {
+                if (!currentTicketId) return;
+
+                // 1. Resolve the current ticket
+                await window.supabaseClient
+                    .from('support_tickets')
+                    .update({ status: 'resolved' })
+                    .eq('id', currentTicketId);
+
+                // 2. Send a closing message
+                await window.supabaseClient.from('direct_messages').insert({
+                    sender_id: adminProfileId || botId,
+                    receiver_id: currentUser.userId,
+                    sender_name: 'EcoBot',
+                    receiver_name: currentUser.fullName,
+                    content: 'It seems you\'re away. This conversation has been closed. Feel free to send a new message anytime!',
+                    ticket_id: currentTicketId
+                });
+
+                // 3. Unsubscribe from old ticket channel
+                if (activeTicketSub) {
+                    window.supabaseClient.removeChannel(activeTicketSub);
+                    activeTicketSub = null;
+                }
+
+                // 4. Reset and create a fresh bot ticket with greeting
+                currentTicketId = null;
+                ticketStatus = 'bot';
+                await initSupportTicket();
+                updateChatStatusUI();
+                await loadUserThreads();
+            }, INACTIVITY_TIMEOUT);
+        }
+
+        function clearInactivityTimer() {
+            if (inactivityTimer) {
+                clearTimeout(inactivityTimer);
+                inactivityTimer = null;
+            }
+        }
+
+        // ── Quick Questions Menu ──
+        function toggleQuickQuestions() {
+            const menu = document.getElementById('quickQuestionsMenu');
+            if (menu) {
+                menu.classList.toggle('active');
+            }
+        }
+
+        function closeQuickQuestions() {
+            const menu = document.getElementById('quickQuestionsMenu');
+            if (menu) {
+                menu.classList.remove('active');
+            }
+        }
+
+        async function handleQuickQuestion(question) {
+            closeQuickQuestions();
+            chatInputMessage.value = question;
+            await sendMessage();
+            
+            // Show agent button after answering a quick question
+            setTimeout(() => {
+                showAgentButton();
+            }, 1500); // Show after bot responds (600ms response delay + some buffer)
+        }
+
+        function showAgentButton() {
+            const agentBtn = document.getElementById('agentBtn');
+            if (agentBtn) {
+                agentBtn.classList.add('show');
+            }
+        }
+
+        function hideAgentButton() {
+            const agentBtn = document.getElementById('agentBtn');
+            if (agentBtn) {
+                agentBtn.classList.remove('show');
+            }
+        }
+
+        async function requestAgent() {
+            hideAgentButton();
+            
+            // Send message to escalate to agent
+            chatInputMessage.value = 'I need to talk to an agent';
+            await sendMessage();
+
+            // Update ticket status to pending_human
+            if (currentTicketId) {
+                await window.supabaseClient
+                    .from('support_tickets')
+                    .update({ status: 'pending_human' })
+                    .eq('id', currentTicketId);
+            }
+        }
+
+        // Close quick questions menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('quickQuestionsMenu');
+            const toggle = document.getElementById('quickQuestionToggle');
+            if (menu && !menu.contains(event.target) && !toggle.contains(event.target)) {
+                closeQuickQuestions();
+            }
+        });
     </script>
 </body>
-
 </html>

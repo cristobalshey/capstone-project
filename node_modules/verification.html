@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>EcoTrack | Verification</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Using Lucide Icons for a modern, chill vibe -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            /* Strict White & Green Palette */
+            --primary-green: #02451A;
+            --bg-color: #ffffff;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(2, 69, 26, 0.1);
+            --card-shadow: 0 8px 32px -8px rgba(2, 69, 26, 0.1);
+            --text-main: #02451A;
+            --text-muted: rgba(2, 69, 26, 0.6);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            min-height: 100svh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .ambient-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+            background: radial-gradient(circle at 15% 50%, rgba(2, 69, 26, 0.05), transparent 50%),
+                        radial-gradient(circle at 85% 30%, rgba(2, 69, 26, 0.08), transparent 50%);
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 480px;
+            height: 100vh;
+            height: 100svh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 0 50px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        /* Header Section */
+        .header {
+            padding: 24px 24px 15px 24px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        .back-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--primary-green);
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(2, 69, 26, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: white;
+            transform: translateX(-3px);
+            box-shadow: 0 6px 15px rgba(2, 69, 26, 0.1);
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--primary-green);
+        }
+
+        /* Stepper UI */
+        .stepper {
+            padding: 0 24px 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+        }
+        
+        .stepper::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 24px;
+            right: 24px;
+            height: 2px;
+            background: rgba(2, 69, 26, 0.1);
+            z-index: 1;
+            transform: translateY(-50%);
+        }
+
+        .stepper-progress {
+            position: absolute;
+            top: 50%;
+            left: 24px;
+            height: 2px;
+            background: var(--primary-green);
+            z-index: 2;
+            transform: translateY(-50%);
+            transition: width 0.4s ease;
+            width: 0%; /* 0%, 50%, 100% */
+        }
+
+        .step-dot {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid rgba(2, 69, 26, 0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--text-muted);
+            z-index: 3;
+            transition: all 0.4s ease;
+        }
+
+        .step-dot.active {
+            border-color: var(--primary-green);
+            background: var(--primary-green);
+            color: white;
+            box-shadow: 0 0 0 4px rgba(2, 69, 26, 0.1);
+        }
+        
+        .step-dot.completed {
+            border-color: var(--primary-green);
+            background: white;
+            color: var(--primary-green);
+        }
+
+        /* Content Area */
+        .content-area {
+            flex-grow: 1;
+            padding: 10px 24px 40px 24px;
+            overflow-y: auto;
+            scrollbar-width: none;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .content-area::-webkit-scrollbar {
+            display: none;
+        }
+
+        /* Form Card */
+        .form-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 25px;
+            box-shadow: var(--card-shadow);
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            animation: slideIn 0.5s ease backwards;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--primary-green);
+            margin-bottom: 5px;
+        }
+
+        .section-desc {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            line-height: 1.4;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-label {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 14px;
+            border: 1px solid rgba(2, 69, 26, 0.2);
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 600;
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-green);
+            box-shadow: 0 0 0 3px rgba(2, 69, 26, 0.1);
+        }
+        
+        .form-control::placeholder {
+            color: rgba(2, 69, 26, 0.4);
+        }
+
+        /* File Upload Box */
+        .upload-box {
+            width: 100%;
+            height: 160px;
+            border: 2px dashed rgba(2, 69, 26, 0.3);
+            border-radius: 16px;
+            background: rgba(2, 69, 26, 0.02);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .upload-box:hover {
+            border-color: var(--primary-green);
+            background: rgba(2, 69, 26, 0.05);
+        }
+
+        .upload-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            color: var(--primary-green);
+        }
+
+        .upload-content i {
+            width: 32px;
+            height: 32px;
+            opacity: 0.8;
+        }
+
+        .upload-text {
+            font-size: 14px;
+            font-weight: 700;
+        }
+        
+        .upload-sub {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+        
+        .upload-preview {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+
+        /* Camera / Selfie View */
+        .camera-view {
+            width: 100%;
+            height: 250px;
+            background: #111827;
+            border-radius: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+
+        .face-overlay {
+            position: absolute;
+            width: 160px;
+            height: 200px;
+            border: 2px dashed rgba(255,255,255,0.6);
+            border-radius: 50%;
+        }
+
+        .live-dot {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 10px;
+            height: 10px;
+            background: #ef4444;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        /* Action Buttons */
+        .action-row {
+            display: flex;
+            gap: 15px;
+            margin-top: auto;
+        }
+
+        .btn-primary, .btn-secondary {
+            border: none;
+            padding: 16px;
+            border-radius: 16px;
+            font-family: inherit;
+            font-size: 16px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .btn-primary {
+            background: var(--primary-green);
+            color: white;
+            box-shadow: 0 8px 20px rgba(2, 69, 26, 0.25);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 25px rgba(2, 69, 26, 0.35);
+        }
+
+        .btn-secondary {
+            background: rgba(2, 69, 26, 0.1);
+            color: var(--primary-green);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(2, 69, 26, 0.15);
+        }
+        
+        /* Success Screen */
+        .success-screen {
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            text-align: center;
+            animation: fadeIn 0.5s ease;
+            padding: 0 24px;
+        }
+        
+        .success-icon-wrap {
+            width: 80px;
+            height: 80px;
+            background: var(--primary-green);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 30px rgba(2, 69, 26, 0.3);
+            animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <div class="ambient-layer"></div>
+
+    <div class="app-container">
+        
+        <!-- Header -->
+        <header class="header" id="mainHeader">
+            <button class="back-btn" onclick="goBack()">
+                <i data-lucide="chevron-left"></i>
+            </button>
+            <div class="header-title">Collector Verification</div>
+            <div style="width: 42px;"></div> <!-- Spacer to center title -->
+        </header>
+
+        <!-- Stepper -->
+        <div class="stepper" id="stepperContainer">
+            <div class="stepper-progress" id="progressBar"></div>
+            <div class="step-dot active" id="dot1">1</div>
+            <div class="step-dot" id="dot2">2</div>
+            <div class="step-dot" id="dot3">3</div>
+        </div>
+
+        <!-- PAGE 1: Personal Information -->
+        <div class="content-area" id="page1">
+            <div class="form-card">
+                <div>
+                    <h2 class="section-title">Collector Details</h2>
+                    <p class="section-desc">Please provide your details exactly as they appear on your government ID.</p>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-control" placeholder="Juan Dela Cruz">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Date of Birth</label>
+                    <input type="date" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Current Address</label>
+                    <input type="text" class="form-control" placeholder="House No., Street, City">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Contact Number</label>
+                    <input type="tel" class="form-control" placeholder="09xxxxxxxxx">
+                </div>
+            </div>
+
+            <div class="action-row">
+                <button class="btn-primary" onclick="nextPage(2)" style="width: 100%; flex: none;">
+                    Continue <i data-lucide="arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- PAGE 2: ID Upload -->
+        <div class="content-area" id="page2" style="display: none;">
+            <div class="form-card">
+                <div>
+                    <h2 class="section-title">Government ID</h2>
+                    <p class="section-desc">Upload a clear photo of a valid Philippine government ID to verify your collector identity.</p>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">ID Type</label>
+                    <select class="form-control">
+                        <option value="" disabled selected>Select ID Type...</option>
+                        <option value="philid">PhilID / National ID</option>
+                        <option value="passport">Philippine Passport</option>
+                        <option value="driver">Driver's License</option>
+                        <option value="sss">SSS ID</option>
+                        <option value="umid">UMID</option>
+                        <option value="prc">PRC ID</option>
+                        <option value="postal">Postal ID</option>
+                        <option value="voter">Voter's ID</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Front of ID</label>
+                    <input type="file" id="idUploadInput" accept="image/*" style="display: none;" onchange="previewID(event)">
+                    <div class="upload-box" onclick="document.getElementById('idUploadInput').click()">
+                        <div class="upload-content" id="idUploadContent">
+                            <i data-lucide="upload-cloud"></i>
+                            <span class="upload-text">Tap to upload Document</span>
+                            <span class="upload-sub">JPG or PNG, max 5MB</span>
+                        </div>
+                        <img src="" class="upload-preview" id="idPreview">
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-row">
+                <button class="btn-secondary" onclick="nextPage(1)">
+                    Back
+                </button>
+                <button class="btn-primary" onclick="nextPage(3)">
+                    Continue <i data-lucide="arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- PAGE 3: Selfie Verification -->
+        <div class="content-area" id="page3" style="display: none;">
+            <div class="form-card">
+                <div>
+                    <h2 class="section-title">Facial Verification</h2>
+                    <p class="section-desc">Take a selfie to match with your provided ID. Ensure you are in a well-lit area.</p>
+                </div>
+
+                <div class="camera-view" id="cameraViewBox">
+                    <video id="selfieVideo" autoplay playsinline style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: none; z-index: 1;"></video>
+                    <canvas id="selfieCanvas" style="display: none;"></canvas>
+
+                    <div class="face-overlay" id="faceOverlay" style="z-index: 2;"></div>
+                    <div class="live-dot" id="liveDot" style="z-index: 2;"></div>
+                    <i data-lucide="camera" id="camIcon" style="width: 40px; height: 40px; opacity: 0.8; margin-bottom: 10px; position:relative; z-index: 2;"></i>
+                    <div id="camText" style="font-size: 14px; font-weight: 600; opacity: 0.9; position:relative; z-index: 2;">Position face in oval</div>
+                </div>
+
+                <button class="btn-secondary" id="captureBtn" style="margin-top: 10px;" onclick="takeSelfieSnapshot()">
+                    <i data-lucide="camera"></i> Take Selfie
+                </button>
+            </div>
+
+            <div class="action-row">
+                <button class="btn-secondary" onclick="nextPage(2)">
+                    Back
+                </button>
+                <button class="btn-primary" onclick="submitVerification()">
+                    Submit Verification <i data-lucide="check-circle"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Success Screen -->
+        <div class="success-screen" id="successScreen">
+            <div class="success-icon-wrap">
+                <i data-lucide="shield-check" style="width: 40px; height: 40px;"></i>
+            </div>
+            <h2 style="font-size: 24px; font-weight: 800; color: var(--primary-green); margin-bottom: 10px;">Verification Under Review</h2>
+            <p style="font-size: 14px; color: var(--text-muted); font-weight: 600; margin-bottom: 40px; padding: 0 20px;">
+                Your documents and selfie have been securely submitted. We will notify you once your collector account has been verified, usually within 24 hours.
+            </p>
+            <button class="btn-primary" style="width: 100%;" onclick="window.location.href='collector_profile.html'">
+                Return to Profile
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // Initialize icons
+        lucide.createIcons();
+
+        let currentPage = 1;
+
+        function nextPage(pageNumber) {
+            // Hide all
+            document.getElementById('page1').style.display = 'none';
+            document.getElementById('page2').style.display = 'none';
+            document.getElementById('page3').style.display = 'none';
+            
+            // Update dots
+            document.getElementById('dot1').className = 'step-dot';
+            document.getElementById('dot2').className = 'step-dot';
+            document.getElementById('dot3').className = 'step-dot';
+            
+            if (pageNumber === 1) {
+                document.getElementById('progressBar').style.width = '0%';
+                
+                document.getElementById('dot1').classList.add('active');
+                if(typeof stopCamera === 'function') stopCamera();
+            } 
+            else if (pageNumber === 2) {
+                document.getElementById('progressBar').style.width = '50%';
+                
+                document.getElementById('dot1').classList.add('completed');
+                document.getElementById('dot1').innerHTML = '<i data-lucide="check" style="width:14px;"></i>';
+                document.getElementById('dot2').classList.add('active');
+                if(typeof stopCamera === 'function') stopCamera();
+            }
+            else if (pageNumber === 3) {
+                document.getElementById('progressBar').style.width = '100%';
+                
+                document.getElementById('dot1').classList.add('completed');
+                document.getElementById('dot1').innerHTML = '<i data-lucide="check" style="width:14px;"></i>';
+                
+                document.getElementById('dot2').classList.add('completed');
+                document.getElementById('dot2').innerHTML = '<i data-lucide="check" style="width:14px;"></i>';
+                
+                document.getElementById('dot3').classList.add('active');
+                
+                if(typeof startCamera === 'function') startCamera();
+            }
+
+            // Re-init icons if we added checkmarks
+            lucide.createIcons();
+            
+            // Show target page
+            document.getElementById(`page${pageNumber}`).style.display = 'flex';
+            currentPage = pageNumber;
+        }
+
+        function goBack() {
+            if (currentPage > 1) {
+                nextPage(currentPage - 1);
+            } else {
+                window.location.href = 'collector_profile.html';
+            }
+        }
+
+        function previewID(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('idPreview');
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                    document.getElementById('idUploadContent').style.display = 'none';
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        let videoStream = null;
+
+        function startCamera() {
+            const video = document.getElementById('selfieVideo');
+            video.style.display = 'block';
+            
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+                .then(stream => {
+                    videoStream = stream;
+                    video.srcObject = stream;
+                })
+                .catch(err => {
+                    console.error("Camera access denied", err);
+                    alert("Could not access camera. Please check your browser permissions.");
+                });
+        }
+        
+        function stopCamera() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+        }
+
+        function takeSelfieSnapshot() {
+            const video = document.getElementById('selfieVideo');
+            const canvas = document.getElementById('selfieCanvas');
+            const cameraView = document.getElementById('cameraViewBox');
+            
+            if (!videoStream) return;
+
+            // Draw image on canvas
+            canvas.width = video.videoWidth || 300;
+            canvas.height = video.videoHeight || 400;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Stop video
+            stopCamera();
+            video.style.display = 'none';
+
+            // Show captured image as background
+            const imgData = canvas.toDataURL('image/png');
+            cameraView.style.background = `url(${imgData}) center/cover`;
+            
+            // Render success UI over it
+            cameraView.innerHTML = `
+                <div style="background: rgba(2, 69, 26, 0.8); padding: 10px 20px; border-radius: 20px; color: white; font-weight: 800; font-size: 14px; display: flex; align-items: center; gap: 8px; z-index: 10;">
+                    <i data-lucide="check-circle" style="width: 18px;"></i> Face Matched
+                </div>
+            `;
+            lucide.createIcons();
+            
+            // Update button state
+            const capBtn = document.getElementById('captureBtn');
+            capBtn.disabled = true;
+            capBtn.style.opacity = '0.5';
+            capBtn.innerHTML = `<i data-lucide="check"></i> Captured`;
+            lucide.createIcons();
+        }
+
+        function submitVerification() {
+            // Hide everything else and show success screen
+            document.getElementById('page3').style.display = 'none';
+            document.getElementById('stepperContainer').style.display = 'none';
+            document.getElementById('mainHeader').style.display = 'none';
+            
+            document.getElementById('successScreen').style.display = 'flex';
+        }
+    </script>
+</body>
+
+</html>

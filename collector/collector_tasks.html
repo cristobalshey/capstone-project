@@ -7,6 +7,9 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase_config.js"></script>
+    <script src="../auth_guard.js"></script>
 
     <style>
         :root {
@@ -163,71 +166,7 @@
             </div>
 
             <div id="tasks-list">
-                
-                <!-- Static Task 1 -->
-                <div class="active-card" id="card-1" style="border-left-color: var(--pending-orange)">
-                    <div class="card-top">
-                        <div>
-                            <div class="user-name">Juan Dela Cruz</div>
-                            <span class="user-loc">123 Rizal St. Brgy. San Jose</span> 
-                        </div>
-                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
-                            <span class="status-pill" id="pill-1" style="background:var(--pending-orange); color:white;">PENDING</span>
-                            <a href="collector_message.html?openChat=1" style="background: var(--glass-bg); border: 1px solid var(--glass-border); width: 32px; height: 32px; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: var(--primary-green); text-decoration: none; box-shadow: 0 2px 8px rgba(0,0,0,0.05);"><i data-lucide="message-circle" style="width: 16px; height: 16px;"></i></a>
-                        </div>
-                    </div>
-
-                    <div class="waste-info">
-                        <i data-lucide="package" style="width: 28px; height: 28px; color:var(--primary-green)"></i>
-                        <div class="info-text">
-                            <b>5.0kg Plastic Bottles</b> 
-                            <span>Mission - Recyclable Plastics</span>
-                        </div>
-                    </div>
-                    
-                    <div class="card-actions">
-                        <button class="btn-proof" onclick="viewProof('https://images.unsplash.com/photo-1605600659873-d808a13e4d2a?w=500&q=80')">
-                            <i data-lucide="image"></i> Proof
-                        </button>
-                        
-                        <button class="btn-dynamic state-accept" id="btn-1" onclick="cycleStatus(1)">
-                            ACCEPT TASK <i data-lucide="check" style="width:18px; height:18px;"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Static Task 2 -->
-                <div class="active-card" id="card-2" style="border-left-color: var(--blue-otw)">
-                    <div class="card-top">
-                        <div>
-                            <div class="user-name">Maria Clara</div>
-                            <span class="user-loc">45 Mabini Ave, Brgy. Poblacion</span> 
-                        </div>
-                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
-                            <span class="status-pill" id="pill-2" style="background:#E3F2FD; color:var(--blue-otw);">ON THE WAY</span>
-                            <a href="collector_message.html?openChat=2" style="background: var(--glass-bg); border: 1px solid var(--glass-border); width: 32px; height: 32px; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: var(--primary-green); text-decoration: none; box-shadow: 0 2px 8px rgba(0,0,0,0.05);"><i data-lucide="message-circle" style="width: 16px; height: 16px;"></i></a>
-                        </div>
-                    </div>
-
-                    <div class="waste-info">
-                        <i data-lucide="file-text" style="width: 28px; height: 28px; color:var(--primary-green)"></i>
-                        <div class="info-text">
-                            <b>2.3kg Paper/Cardboard</b> 
-                            <span>Manual Activity - Newspapers</span>
-                        </div>
-                    </div>
-                    
-                    <div class="card-actions">
-                        <button class="btn-proof" onclick="viewProof('https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=500&q=80')">
-                            <i data-lucide="image"></i> Proof
-                        </button>
-                        
-                        <button class="btn-dynamic state-otw" id="btn-2" onclick="cycleStatus(2)">
-                            I'M HERE <i data-lucide="map-pin" style="width:18px; height:18px;"></i>
-                        </button>
-                    </div>
-                </div>
-
+                <!-- Tasks will be loaded dynamically here -->
             </div>
 
         </main>
@@ -293,41 +232,198 @@
 <script>
     lucide.createIcons();
 
-    // Static Status State Machine
-    let taskStates = {
-        1: 0, // Pending
-        2: 2  // On The Way
-    }; 
+    // Task State Management
+    let taskStates = {};
+    let tasksData = [];
     
     const statusMap = {
+        0: { pill: 'PENDING', btn: 'ACCEPT TASK', icon: 'clock', card: 'var(--pending-orange)', class: 'state-accept', bg: 'rgba(255, 152, 0, 0.1)', color: 'var(--pending-orange)' },
         1: { pill: 'ACCEPTED', btn: "I'M OTW", icon: 'bike', card: 'var(--primary-green)', class: 'state-accept', bg: 'rgba(2, 69, 26, 0.1)', color: 'var(--primary-green)' },
         2: { pill: 'ON THE WAY', btn: "I'M HERE", icon: 'map-pin', card: 'var(--blue-otw)', class: 'state-otw', bg: '#E3F2FD', color: 'var(--blue-otw)' },
-        3: { pill: 'READY', btn: 'START COLLECTION', icon: 'camera', card: '#000', class: 'state-start', bg: '#E8F5E9', color: 'var(--primary-green)' }
+        3: { pill: 'READY', btn: 'START COLLECTION', icon: 'camera', card: '#000', class: 'state-start', bg: '#E8F5E9', color: 'var(--primary-green)' },
+        4: { pill: 'COMPLETED', btn: 'COMPLETED', icon: 'check-circle', card: 'var(--primary-green)', class: 'state-start', bg: '#E8F5E9', color: '#02451A' }
     };
 
-    function cycleStatus(id) {
+    // Initialize tasks on page load
+    async function initializeTasks() {
+        try {
+            const { data: { user }, error: authError } = await window.supabaseClient.auth.getUser();
+            if (authError || !user) {
+                console.error("Auth error:", authError);
+                return;
+            }
+
+            // Fetch user_projects where type is 'mission' or 'manual', and include project metadata
+            let query = window.supabaseClient
+                .from('user_projects')
+                .select('*, projects(title, description, waste_type, code)')
+                .in('type', ['mission', 'manual'])
+                .in('status', ['pending', 'accepted', 'otw', 'here']);
+
+            // Try ordering by submission_date first
+            let { data: projects, error: projectsError } = await query.order('submission_date', { ascending: false });
+            
+            if (projectsError) {
+                console.warn("submission_date column not found, trying without order:", projectsError);
+                // Fallback: query without ordering
+                const { data: projectsFallback, error: fallbackError } = await window.supabaseClient
+                    .from('user_projects')
+                    .select('*, projects(title, description, waste_type, code)')
+                    .in('type', ['mission', 'manual']);
+                
+                if (fallbackError) {
+                    console.error("Error fetching projects:", fallbackError);
+                    return;
+                }
+                projects = projectsFallback;
+            }
+
+            tasksData = projects || [];
+
+            // Fetch user profile names and addresses for the user_ids found in user_projects
+            const userIds = Array.from(new Set(tasksData.map(t => t.user_id).filter(Boolean)));
+            if (userIds.length > 0) {
+                const { data: profiles, error: profilesError } = await window.supabaseClient
+                    .from('profiles')
+                    .select('id, full_name, address')
+                    .in('id', userIds);
+
+                if (!profilesError) {
+                    const profileMap = {};
+                    profiles.forEach(profile => {
+                        profileMap[profile.id] = profile;
+                    });
+                    tasksData = tasksData.map(task => ({
+                        ...task,
+                        profile: profileMap[task.user_id] || null
+                    }));
+                } else {
+                    console.warn('Could not load profiles for tasks:', profilesError);
+                }
+            }
+
+            // Initialize task states
+            tasksData.forEach((task, index) => {
+                taskStates[index + 1] = mapStatusToState(task.status);
+            });
+
+            // Update task count badge
+            document.getElementById('task-count').textContent = tasksData.length;
+
+            // Render all tasks
+            renderTasks();
+
+        } catch (err) {
+            console.error("Error initializing tasks:", err);
+        }
+    }
+
+    function renderTasks() {
+        const tasksList = document.getElementById('tasks-list');
+        tasksList.innerHTML = ''; // Clear existing tasks
+
+        if (tasksData.length === 0) {
+            tasksList.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-muted);">No tasks available at the moment.</div>';
+            return;
+        }
+
+        tasksData.forEach((task, index) => {
+            const taskId = index + 1;
+            const statusState = taskStates[taskId] || 0;
+            const stateData = statusMap[statusState] || statusMap[0];
+            const buttonDisabled = statusState === 4;
+
+            // Determine icon based on project type
+            const project = task.projects || task.project || {};
+            const profile = task.profile || {};
+            const icon = task.type === 'mission' ? 'package' : 'file-text';
+            const title = project.title || `Task ${taskId}`;
+            // If this is a manual submission, prefer the description stored on user_projects
+            const description = task.type === 'manual'
+                ? (task.description || project.description || 'Manual Activity')
+                : (project.description || 'Mission');
+            const wasteInfo = `${project.waste_type || title} · ${description}`;
+
+            const card = document.createElement('div');
+            card.className = 'active-card';
+            card.id = `card-${taskId}`;
+            card.style.borderLeftColor = stateData.card;
+
+            card.innerHTML = `
+                <div class="card-top">
+                    <div>
+                        <div class="user-name">${profile.full_name || task.user_name || 'User'}</div>
+                        <span class="user-loc">${profile.address || task.location || 'Location not specified'}</span> 
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                        <span class="status-pill" id="pill-${taskId}" style="background:${stateData.bg}; color:${stateData.color};">${stateData.pill}</span>
+                        <a href="collector_message.html?openChat=${encodeURIComponent(task.user_id)}" style="background: var(--glass-bg); border: 1px solid var(--glass-border); width: 32px; height: 32px; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: var(--primary-green); text-decoration: none; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                            <i data-lucide="message-circle" style="width: 16px; height: 16px;"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="waste-info">
+                    <i data-lucide="${icon}" style="width: 28px; height: 28px; color:var(--primary-green)"></i>
+                    <div class="info-text">
+                        <b>${title}</b> 
+                        <span>${task.type === 'mission' ? 'Mission' : 'Manual Activity'} · ${description}</span>
+                    </div>
+                </div>
+                
+                <div class="card-actions">
+                    <button class="btn-proof" onclick="viewProof('${(task.submission_data && task.submission_data.photo) || task.proof_image || 'https://via.placeholder.com/400'}')">
+                        <i data-lucide="image"></i> Proof
+                    </button>
+                    
+                    <button class="btn-dynamic ${stateData.class}" id="btn-${taskId}" onclick="cycleStatus(${taskId})" ${buttonDisabled ? 'disabled' : ''}>
+                        ${statusState === 3 ? 'START COLLECTION' : stateData.btn} <i data-lucide="${stateData.icon}" style="width:18px; height:18px;"></i>
+                    </button>
+                </div>
+            `;
+
+            tasksList.appendChild(card);
+        });
+
+        lucide.createIcons();
+    }
+
+    async function cycleStatus(id) {
         const btn = document.getElementById('btn-' + id);
         const pill = document.getElementById('pill-' + id);
         const card = document.getElementById('card-' + id);
         
-        let currentState = taskStates[id];
+        let currentState = taskStates[id] || 0;
         
         // Final state -> Redirect to collection process
         if (currentState === 3) {
-            currentUploadTaskId = id;
+            // Pass the actual user_projects.id (UUID) to the scanner page
+            const taskRow = tasksData[id - 1];
+            currentUploadTaskId = taskRow?.id || id;
             document.getElementById('uploadProofModal').classList.add('active');
             startProofCamera();
+            return;
+        }
+
+        if (currentState >= 4) {
             return;
         }
         
         const nextState = currentState + 1;
         taskStates[id] = nextState;
         
+        const statusName = getStatusNameForState(nextState);
+        const taskRow = tasksData[id - 1];
+        if (taskRow && taskRow.id && statusName) {
+            await persistTaskStatus(taskRow.id, taskRow.user_id, statusName, taskRow);
+        }
+        
         const newStateData = statusMap[nextState];
         
         // Update UI
         btn.className = `btn-dynamic ${newStateData.class}`; 
-        btn.innerHTML = `${newStateData.btn} <i data-lucide="${newStateData.icon}" style="width:18px; height:18px;"></i>`;
+        btn.disabled = nextState === 4;
+        btn.innerHTML = `${nextState === 3 ? 'START COLLECTION' : newStateData.btn} <i data-lucide="${newStateData.icon}" style="width:18px; height:18px;"></i>`;
         
         pill.innerText = newStateData.pill;
         pill.style.background = newStateData.bg; 
@@ -335,6 +431,56 @@
         card.style.borderLeftColor = newStateData.card;
         
         lucide.createIcons();
+    }
+
+    function getStatusNameForState(state) {
+        if (state === 1) return 'accepted';
+        if (state === 2) return 'otw';
+        if (state === 3) return 'here';
+        return null;
+    }
+
+    function mapStatusToState(status) {
+        const normalized = String(status || '').toLowerCase();
+        if (normalized === 'accepted') return 1;
+        if (normalized === 'otw') return 2;
+        if (normalized === 'here') return 3;
+        if (normalized === 'completed' || normalized === 'approved') return 4;
+        return 0;
+    }
+
+    async function persistTaskStatus(taskId, userId, statusName, taskRow) {
+        try {
+            const { error: updateError } = await window.supabaseClient
+                .from('user_projects')
+                .update({ status: statusName })
+                .eq('id', taskId);
+
+            if (updateError) {
+                console.warn('Could not update task status:', updateError);
+            }
+
+            const payload = {
+                user_id: userId,
+                title: taskRow.type === 'mission'
+                    ? `Collection ${statusName === 'accepted' ? 'Accepted' : statusName === 'otw' ? 'On the Way' : 'Here'}!`
+                    : `Manual Pickup ${statusName === 'accepted' ? 'Accepted' : statusName === 'otw' ? 'On the Way' : 'Here'}!`,
+                description: taskRow.type === 'mission'
+                    ? `Your mission has been ${statusName.replace(/otw/, 'marked as on the way')}. The collector will ${statusName === 'here' ? 'arrived at your location.' : statusName === 'otw' ? 'arrive shortly.' : 'collect your mission soon.'}`
+                    : `Your manual pickup has been ${statusName.replace(/otw/, 'marked as on the way')}. The collector will ${statusName === 'here' ? 'arrived at your location.' : statusName === 'otw' ? 'arrive shortly.' : 'collect your manual submission soon.'}`,
+                type: 'task-update'
+            };
+
+            const { error: notifError } = await window.supabaseClient
+                .from('notifications')
+                .insert([payload]);
+
+            if (notifError) {
+                console.error('Could not create notification:', notifError);
+            }
+        } catch (e) {
+            console.error('Error persisting task status or notification:', e);
+        }
     }
 
     function viewProof(url) {
@@ -437,6 +583,9 @@
             window.location.href = 'process_collection.html?activity_id=' + currentUploadTaskId;
         }, 500);
     }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', initializeTasks);
 </script>
 </body>
 </html>

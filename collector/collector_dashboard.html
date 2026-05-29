@@ -129,15 +129,15 @@
         <main class="content-area">
             <div class="stats-grid">
                 <div class="glass-card">
-                    <div class="stat-value">12</div> 
+                    <div class="stat-value" id="stat-pickups">0</div>
                     <div class="stat-label">Pickups</div>
                 </div>
                 <div class="glass-card">
-                    <div class="stat-value">45.2<span style="font-size:0.9rem">kg</span></div>
+                    <div class="stat-value" id="stat-collected">0.0kg</div>
                     <div class="stat-label">Collected</div>
                 </div>
                 <div class="glass-card">
-                    <div class="stat-value" style="color:var(--pending-red)">3</div>
+                    <div class="stat-value" id="stat-pending" style="color:var(--pending-red)">0</div>
                     <div class="stat-label">Pending</div>
                 </div>
             </div>
@@ -151,36 +151,7 @@
 
             <div class="request-container">
                 <div class="section-title"><i data-lucide="map-pin" style="width: 20px; height: 20px;"></i> Nearby Requests</div>
-                
-                <!-- Static Placeholder Requests -->
-                <div class="task-card">
-                    <div class="card-header">
-                        <div class="user-name">Juan Dela Cruz</div>
-                        <div class="distance-badge">1.2 km</div>
-                    </div>
-                    <div class="card-details">
-                        <div><b>Mission:</b> 5.0kg Plastic Bottles</div>
-                        <span class="sub-text">Activity ID: #10042 | Just now</span>
-                    </div>
-                    <button class="btn-accept" onclick="acceptJob(10042)">
-                        <i data-lucide="chevron-right"></i>
-                    </button>
-                </div>
-
-                <div class="task-card">
-                    <div class="card-header">
-                        <div class="user-name">Maria Clara</div>
-                        <div class="distance-badge">2.5 km</div>
-                    </div>
-                    <div class="card-details">
-                        <div><b>Manual:</b> 2.3kg Paper/Cardboard</div>
-                        <span class="sub-text">Activity ID: #10041 | 2 hours ago</span>
-                    </div>
-                    <button class="btn-accept" onclick="acceptJob(10041)">
-                        <i data-lucide="chevron-right"></i>
-                    </button>
-                </div>
-
+                <div id="nearbyRequestsList"></div>
             </div>
         </main>
 
@@ -202,25 +173,113 @@
 <script>
     lucide.createIcons();
 
+    let collectionChart = null;
 
-
-    // --- Accept Job Flow ---
     function acceptJob(activityId) {
         console.log(`Accepting job with ID: ${activityId}`);
-        window.location.href = 'collector_tasks.html'; 
+        window.location.href = 'collector_tasks.html';
     }
 
-    // --- INITIALIZATION ---
-    document.addEventListener('DOMContentLoaded', () => {
-        // Initialization ng Chart
+    function parseKgFromDescription(text) {
+        if (!text) return 0;
+        const match = text.match(/([0-9]+(?:\.[0-9]+)?)\s*kg/i);
+        return match && match[1] ? Number(match[1]) : 0;
+    }
+
+    function formatElapsedTime(dateString) {
+        const date = new Date(dateString);
+        if (isNaN(date)) return 'Unknown time';
+
+        const diff = Date.now() - date.getTime();
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+
+        if (minutes < 1) return 'Just now';
+        if (minutes < 60) return `${minutes}m ago`;
+        if (hours < 24) return `${hours}h ago`;
+        return `${days}d ago`;
+    }
+
+    function getActivityLabel(task, project) {
+        const type = String(task.type || '').toLowerCase();
+        if (type === 'mission') {
+            return project?.title ? `Mission: ${project.title}` : 'Mission request';
+        }
+        if (type === 'manual') {
+            return task.description ? `Manual: ${task.description}` : 'Manual pickup request';
+        }
+        return `Activity: ${task.type || 'Unknown'}`;
+    }
+
+    function calculateCollectedKg(tasks, projectsMap) {
+        return tasks.reduce((total, task) => {
+            const type = String(task.type || '').toLowerCase();
+            if (type === 'mission') {
+                const project = projectsMap[task.project_id];
+                if (project && project.target_weight) {
+                    return total + Number(project.target_weight || 0);
+                }
+            }
+
+            if (type === 'manual') {
+                return total + parseKgFromDescription(task.description);
+            }
+
+            return total;
+        }, 0);
+    }
+
+    function renderNearbyRequests(tasks, profilesMap, projectsMap) {
+        const container = document.getElementById('nearbyRequestsList');
+        container.innerHTML = '';
+
+        if (!tasks.length) {
+            container.innerHTML = '<div class="task-card"><div class="card-details" style="text-align:center; color:var(--text-muted);">No nearby pending requests found.</div></div>';
+            lucide.createIcons();
+            return;
+        }
+
+        tasks.forEach(task => {
+            const user = profilesMap[task.user_id] || { full_name: 'Resident' };
+            const project = projectsMap[task.project_id] || {};
+            const activityLabel = getActivityLabel(task, project);
+            const elapsed = formatElapsedTime(task.submission_date);
+
+            const taskCard = document.createElement('div');
+            taskCard.className = 'task-card';
+            taskCard.innerHTML = `
+                <div class="card-header">
+                    <div class="user-name">${user.full_name || 'Resident'}</div>
+                    <div class="distance-badge">Nearby</div>
+                </div>
+                <div class="card-details">
+                    <div><b>${activityLabel}</b></div>
+                    <span class="sub-text">Activity ID: ${task.id} | ${elapsed}</span>
+                </div>
+                <button class="btn-accept" onclick="acceptJob('${task.id}')">
+                    <i data-lucide="chevron-right"></i>
+                </button>
+            `;
+            container.appendChild(taskCard);
+        });
+
+        lucide.createIcons();
+    }
+
+    function buildWeeklyChart(weeklyCounts) {
         const ctx = document.getElementById('collectionChart').getContext('2d');
-        new Chart(ctx, {
+        if (collectionChart) {
+            collectionChart.destroy();
+        }
+
+        collectionChart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
                 datasets: [{
                     label: 'Pickups',
-                    data: [2, 5, 3, 7, 4, 8, 12], 
+                    data: weeklyCounts,
                     backgroundColor: '#02451A',
                     borderRadius: 8,
                     barThickness: 18
@@ -232,10 +291,82 @@
                 plugins: { legend: { display: false } },
                 scales: {
                     y: { display: false, beginAtZero: true },
-                    x: { grid: { display: false }, border: {display: false} }
+                    x: { grid: { display: false }, border: { display: false } }
                 }
             }
         });
+    }
+
+    async function initializeCollectorDashboard() {
+        try {
+            const { data: { user }, error: authError } = await window.supabaseClient.auth.getUser();
+            if (authError || !user) {
+                console.error('Unable to fetch authenticated user:', authError);
+                return;
+            }
+
+            const collectorId = user.id;
+            const { data: tasks, error: tasksError } = await window.supabaseClient
+                .from('user_projects')
+                .select('id, user_id, project_id, status, type, description, submission_date, code, approved_by')
+                .order('submission_date', { ascending: false });
+
+            if (tasksError) {
+                console.error('Unable to fetch user_projects:', tasksError);
+                return;
+            }
+
+            const projectIds = Array.from(new Set(tasks.map(t => t.project_id).filter(Boolean)));
+            const { data: projects = [] } = projectIds.length
+                ? await window.supabaseClient.from('projects').select('id, title, target_weight, waste_type').in('id', projectIds)
+                : { data: [] };
+
+            const projectsMap = {};
+            projects.forEach(project => { projectsMap[project.id] = project; });
+
+            const pendingTasks = tasks.filter(task => String(task.status || '').toLowerCase() === 'pending');
+            const finishedTasks = tasks.filter(task => {
+                const status = String(task.status || '').toLowerCase();
+                return ['approved', 'completed'].includes(status) && String(task.approved_by || '') === collectorId;
+            });
+
+            const pendingUserIds = Array.from(new Set(pendingTasks.map(task => task.user_id).filter(Boolean)));
+            const { data: profiles = [] } = pendingUserIds.length
+                ? await window.supabaseClient.from('profiles').select('id, full_name').in('id', pendingUserIds)
+                : { data: [] };
+
+            const profilesMap = {};
+            profiles.forEach(profile => { profilesMap[profile.id] = profile; });
+
+            const pickupsCount = finishedTasks.length;
+            const collectedKg = calculateCollectedKg(finishedTasks, projectsMap);
+            const weeklyCounts = [0, 0, 0, 0, 0, 0, 0];
+
+            finishedTasks.forEach(task => {
+                const date = new Date(task.submission_date);
+                if (!isNaN(date)) {
+                    const day = (date.getDay() + 6) % 7;
+                    weeklyCounts[day] += 1;
+                }
+            });
+
+            document.getElementById('stat-pending').innerText = pendingTasks.length;
+            document.getElementById('stat-pickups').innerText = pickupsCount;
+            document.getElementById('stat-collected').innerText = `${collectedKg.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}kg`;
+
+            buildWeeklyChart(weeklyCounts);
+            renderNearbyRequests(pendingTasks, profilesMap, projectsMap);
+        } catch (error) {
+            console.error('Collector dashboard initialization failed:', error);
+            const container = document.getElementById('nearbyRequestsList');
+            if (container) {
+                container.innerHTML = '<div class="task-card"><div class="card-details" style="text-align:center; color:var(--text-muted);">Unable to load requests.</div></div>';
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initializeCollectorDashboard();
     });
 </script>
 </body>

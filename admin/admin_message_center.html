@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Message Center | EcoTrack</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase_config.js"></script>
+    <script src="../auth_guard.js"></script>
+
+    <style>
+        :root {
+            --primary-green: #02451A;
+            --bg-color: #f0fdf4;
+            --card-bg: #ffffff;
+            --border-color: #e5e7eb;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar Navigation Placeholder (To match existing admin dashboard) */
+        .sidebar {
+            width: 80px;
+            background: var(--primary-green);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            gap: 30px;
+        }
+
+        .sidebar a {
+            color: white;
+            text-decoration: none;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .sidebar a:hover, .sidebar a.active {
+            opacity: 1;
+        }
+
+        /* Main Application Area */
+        .app-main {
+            flex-grow: 1;
+            display: flex;
+            height: 100%;
+        }
+
+        /* Queue Sidebar */
+        .queue-sidebar {
+            width: 350px;
+            background: var(--card-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .queue-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .queue-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--primary-green);
+            margin: 0;
+        }
+
+        .queue-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            color: var(--primary-green);
+            border-bottom-color: var(--primary-green);
+        }
+
+        .queue-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .ticket-card {
+            padding: 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .ticket-card:hover {
+            border-color: var(--primary-green);
+            background-color: #f8fafc;
+        }
+
+        .ticket-card.active {
+            border-color: var(--primary-green);
+            background-color: #f0fdf4;
+        }
+
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .ticket-user {
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .ticket-time {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .ticket-status {
+            align-self: flex-start;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-active { background: #dcfce7; color: #166534; }
+
+        /* Notification Badge */
+        .unread-badge {
+            width: 10px;
+            height: 10px;
+            background-color: #ef4444;
+            border-radius: 50%;
+            display: inline-block;
+            margin-left: 8px;
+            flex-shrink: 0;
+            box-shadow: 0 0 0 2px white;
+            vertical-align: middle;
+        }
+
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Chat Area */
+        .chat-area {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-color);
+        }
+
+        .chat-header {
+            padding: 24px;
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .chat-user-name {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .claim-btn {
+            background: var(--primary-green);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .claim-btn:hover { opacity: 0.9; }
+        .claim-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+
+        .chat-messages {
+            flex-grow: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message {
+            max-width: 60%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .message.admin {
+            background: var(--primary-green);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.user {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.bot {
+            background: #f3f4f6;
+            border: 1px solid var(--border-color);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+            font-style: italic;
+        }
+
+        .message-meta {
+            font-size: 11px;
+            margin-top: 6px;
+            text-align: right;
+            opacity: 0.8;
+        }
+
+        .chat-input-area {
+            padding: 20px 24px;
+            background: var(--card-bg);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 12px;
+        }
+
+        .chat-input {
+            flex-grow: 1;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .chat-input:focus {
+            border-color: var(--primary-green);
+        }
+
+        .send-btn {
+            background: var(--primary-green);
+            color: white;
+            border: none;
+            width: 48px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .send-btn:hover { opacity: 0.9; }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-muted);
+            gap: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <a href="admin_dashboard.html" title="Dashboard"><i data-lucide="layout-dashboard"></i></a>
+        <a href="admin_users_hub.html" title="Users"><i data-lucide="users"></i></a>
+        <a href="admin_message_center.html" class="active" title="Message Center"><i data-lucide="message-square"></i></a>
+    </div>
+
+    <div class="app-main">
+        <!-- Queue Sidebar -->
+        <div class="queue-sidebar">
+            <div class="queue-header">
+                <h2 class="queue-title">Message Center</h2>
+            </div>
+            <div class="queue-tabs">
+                <button class="tab-btn active" id="tab-pending" onclick="switchTab('pending_human')">Pending</button>
+                <button class="tab-btn" id="tab-active" onclick="switchTab('active')">My Active</button>
+            </div>
+            <div class="queue-list" id="queueList">
+                <!-- Tickets will be populated here -->
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="chat-area" id="chatArea" style="display: none;">
+            <div class="chat-header">
+                <div class="chat-user-info">
+                    <i data-lucide="user" style="color: var(--primary-green);"></i>
+                    <span class="chat-user-name" id="chatUserName">User Name</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="claim-btn" id="claimBtn" onclick="claimTicket()">Claim Ticket</button>
+                    <button class="claim-btn" id="endChatBtn" style="background: #ef4444; display: none;" onclick="endChat()">End Chat</button>
+                </div>
+            </div>
+            <div class="chat-messages" id="chatMessages">
+                <!-- Messages will be populated here -->
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chatInput" class="chat-input" placeholder="Type a message..." disabled>
+                <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>
+                    <i data-lucide="send" style="width: 20px; height: 20px;"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="chat-area empty-state" id="emptyState">
+            <i data-lucide="inbox" style="width: 64px; height: 64px; opacity: 0.2;"></i>
+            <h3>Select a conversation to start messaging</h3>
+        </div>
+    </div>
+
+    <script src="admin_message_center.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

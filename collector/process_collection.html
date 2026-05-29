@@ -8,6 +8,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase_config.js"></script>
 
     <style>
         :root {
@@ -37,7 +40,16 @@
         }
 
         /* Fullscreen Scanner */
-        #reader { width: 100%; height: 100svh; position: absolute; top: 0; left: 0; z-index: 1; background: #000; }
+        #reader { width: 100%; height: 100svh; position: absolute; top: 0; left: 0; z-index: 1; background: #000; overflow: hidden; }
+        /* Ensure the camera element (video/canvas) covers the whole reader and maintains cover aspect */
+        #reader video, #reader canvas, #reader .html5-qrcode-video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+            display: block !important;
+        }
+        /* Make scanner controls invisible and let overlays sit above video */
+        #reader .html5-qrcode-toolbar, #reader .html5-qrcode-scanner__dashboard_section { display: none !important; }
 
         /* Overlay Header */
         .header { 
@@ -152,23 +164,81 @@
 <script>
     lucide.createIcons();
 
-    // Mock HTML5 QrCode Scanner
-    let scannerActive = true;
-    
-    // Simulate successful scan if clicking the scan frame
-    document.querySelector('.scan-frame').addEventListener('click', () => {
-        if(scannerActive) {
-            handleSuccessfulScan("ECO-MOCK-QR");
+    // Real HTML5 QR Code scanner using camera
+    let scannerActive = false;
+    let html5QrCode = null;
+
+    async function startScanner() {
+        if (html5QrCode) return;
+        try {
+            html5QrCode = new Html5Qrcode("reader");
+            const devices = await Html5Qrcode.getCameras();
+            const cameraId = (devices && devices.length)
+                ? (devices.find(d => /back|rear|environment/i.test(d.label)) || devices[0]).id
+                : null;
+
+            if (!cameraId) {
+                console.warn('No camera found');
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'Camera not found',
+                    text: 'No camera device is available for scanning QR codes.',
+                    confirmButtonColor: '#02451A'
+                });
+                return;
+            }
+
+            const qrboxSize = Math.min(window.innerWidth * 0.7, 400);
+            const config = {
+                fps: 10,
+                qrbox: { width: qrboxSize, height: qrboxSize },
+                videoConstraints: { facingMode: { ideal: 'environment' } }
+            };
+            scannerActive = true;
+            await html5QrCode.start(cameraId, config, (decodedText, decodedResult) => {
+                // On successful scan
+                stopScanner();
+                handleSuccessfulScan(decodedText);
+            }, (errorMessage) => {
+                // Ignore transient scan errors; scanner stays active.
+            });
+        } catch (e) {
+            console.error('Scanner start failed:', e);
+            scannerActive = false;
+            if (html5QrCode) html5QrCode.clear().catch(()=>{});
+            html5QrCode = null;
+            await Swal.fire({
+                icon: 'error',
+                title: 'Camera Access Required',
+                text: 'Unable to access camera for scanning. Please allow camera permission and try again.',
+                confirmButtonColor: '#02451A'
+            });
         }
-    });
+    }
+
+    async function stopScanner() {
+        if (!html5QrCode) return;
+        try {
+            if (scannerActive) {
+                await html5QrCode.stop();
+            }
+        } catch (e) {
+            console.warn('Error stopping scanner:', e);
+        }
+        try { await html5QrCode.clear(); } catch (e) {
+            console.warn('Error clearing scanner:', e);
+        }
+        html5QrCode = null;
+        scannerActive = false;
+    }
 
     function toggleManualInput() {
         const ui = document.getElementById('manualInputUI');
         ui.classList.toggle('active');
         if (ui.classList.contains('active')) {
-            scannerActive = false;
+            stopScanner();
         } else {
-            scannerActive = true;
+            startScanner();
         }
     }
 
@@ -186,16 +256,203 @@
         lucide.createIcons();
         btn.style.opacity = '0.8';
         
+        // Try immediate verification using manual code
         setTimeout(() => {
             handleSuccessfulScan(code);
             btn.innerHTML = originalContent;
             btn.style.opacity = '1';
-        }, 1500);
+        }, 600);
     }
 
-    function handleSuccessfulScan(codeText) {
-        alert("Success! Verifying code: " + codeText);
-        window.location.href = 'collector_tasks.html';
+    // Start scanner when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+        startScanner();
+    });
+
+    // Clean up scanner when leaving
+    window.addEventListener('beforeunload', () => {
+        stopScanner();
+    });
+
+    async function handleSuccessfulScan(codeText) {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const activityId = params.get('activity_id');
+            if (!activityId) {
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'No activity selected',
+                    text: 'Please start scanning from the task list.',
+                    confirmButtonColor: '#02451A'
+                });
+                return window.location.href = 'collector_tasks.html';
+            }
+
+            // Load the user_projects row
+            const { data: up, error: upErr } = await window.supabaseClient
+                .from('user_projects')
+                .select('id, user_id, type, project_id, code, status, points')
+                .eq('id', activityId)
+                .maybeSingle();
+
+            const { data: { user: currentUser }, error: authErr } = await window.supabaseClient.auth.getUser();
+            const approverId = currentUser?.id || null;
+
+            if (upErr || !up) {
+                console.error('Could not load activity:', upErr);
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'Unable to load task',
+                    text: 'The selected task could not be loaded. Please go back and try again.',
+                    confirmButtonColor: '#02451A'
+                });
+                return window.location.href = 'collector_tasks.html';
+            }
+
+            const normalizedStatus = String(up.status || '').toLowerCase();
+            if (normalizedStatus === 'completed' || normalizedStatus === 'approved') {
+                await Swal.fire({
+                    icon: 'info',
+                    title: 'Already completed',
+                    text: 'This task has already been completed and points have been awarded.',
+                    confirmButtonColor: '#02451A'
+                });
+                return window.location.href = 'collector_tasks.html';
+            }
+
+            if (up.type === 'mission') {
+                // For missions, scanned code must match a project.code and that project's id must equal user_projects.project_id
+                const { data: proj, error: projErr } = await window.supabaseClient
+                    .from('projects')
+                    .select('id, code, points')
+                    .eq('code', codeText)
+                    .maybeSingle();
+
+                if (projErr || !proj) {
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'Wrong mission code',
+                        text: 'Scanned code does not match this mission.',
+                        confirmButtonColor: '#02451A'
+                    });
+                    await resumeScannerIfNeeded();
+                    return;
+                }
+
+                if (String(proj.id) !== String(up.project_id)) {
+                    await Swal.fire({
+                        icon: 'warning',
+                        title: 'Task mismatch',
+                        text: 'This QR belongs to a different mission than the selected task.',
+                        confirmButtonColor: '#02451A'
+                    });
+                    await resumeScannerIfNeeded();
+                    return;
+                }
+
+                const earnedPoints = parseFloat(proj.points || 0);
+                const { error: completeErr } = await window.supabaseClient
+                    .from('user_projects')
+                    .update({ status: 'completed', points: earnedPoints, approved_by: approverId })
+                    .eq('id', up.id);
+
+                if (completeErr) {
+                    console.error('Could not complete mission task:', completeErr);
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'Could not complete task',
+                        text: 'There was an issue marking this mission completed. Please try again.',
+                        confirmButtonColor: '#02451A'
+                    });
+                    return window.location.href = 'collector_tasks.html';
+                }
+
+                await window.supabaseClient.from('notifications').insert([{
+                    user_id: up.user_id,
+                    title: 'Mission completed',
+                    description: `You earned ${earnedPoints} points for a completed mission.`,
+                    type: 'points-awarded'
+                }]);
+
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Mission completed',
+                    text: `Task verified and ${earnedPoints} points awarded to the user.`,
+                    confirmButtonColor: '#02451A'
+                });
+                return window.location.href = 'collector_tasks.html';
+            } else {
+                // manual type: scanned code must match user_projects.code and task must not already be approved
+                if (!up.code) {
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'No manual code found',
+                        text: 'This manual submission does not have a code to verify.',
+                        confirmButtonColor: '#02451A'
+                    });
+                    return window.location.href = 'collector_tasks.html';
+                }
+
+                if (String(up.code).trim() !== String(codeText).trim()) {
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'Wrong manual code',
+                        text: 'Scanned code does not match this manual submission.',
+                        confirmButtonColor: '#02451A'
+                    });
+                    await resumeScannerIfNeeded();
+                    return;
+                }
+
+                const earnedPoints = parseFloat(up.points || 0);
+                const { error: completeErr } = await window.supabaseClient
+                    .from('user_projects')
+                    .update({ status: 'approved', points: earnedPoints, approved_by: approverId })
+                    .eq('id', up.id);
+
+                if (completeErr) {
+                    console.error('Could not approve manual task:', completeErr);
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'Could not approve task',
+                        text: 'There was an issue marking this manual submission approved. Please try again.',
+                        confirmButtonColor: '#02451A'
+                    });
+                    return window.location.href = 'collector_tasks.html';
+                }
+
+                await window.supabaseClient.from('notifications').insert([{
+                    user_id: up.user_id,
+                    title: 'Manual submission approved',
+                    description: `You earned ${earnedPoints} points for an approved manual submission.`,
+                    type: 'points-awarded'
+                }]);
+
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Manual submission approved',
+                    text: `Task verified and ${earnedPoints} points awarded to the user.`,
+                    confirmButtonColor: '#02451A'
+                });
+                return window.location.href = 'collector_tasks.html';
+            }
+        } catch (e) {
+            console.error('Verification error:', e);
+            await Swal.fire({
+                icon: 'error',
+                title: 'Verification failed',
+                text: 'An error occurred while checking the code. Please try again.',
+                confirmButtonColor: '#02451A'
+            });
+            await resumeScannerIfNeeded();
+            return;
+        }
+    }
+
+    async function resumeScannerIfNeeded() {
+        if (!scannerActive) {
+            await startScanner();
+        }
     }
 
 </script>

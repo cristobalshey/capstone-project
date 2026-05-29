@@ -233,62 +233,9 @@
                 </div>
                 
                 <ul class="notif-list" id="notifList">
-                    
-                    <li class="notif-item unread" data-type="urgent">
-                        <div class="notif-icon icon-alert"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                        <div class="notif-content">
-                            <div class="notif-head">
-                                <span class="notif-tag" style="color:var(--danger)">Illegal Dumping</span>
-                                <span class="notif-time">2 mins ago</span>
-                            </div>
-                            <div class="notif-msg">Resident reported uncollected waste at Corner St., Purok 2. Image attached.</div>
-                            <div class="notif-actions">
-                                <button class="btn-link" onclick="window.location.href='admin_reports.html'">View Report</button>
-                                <button class="btn-link danger" onclick="markRead(this)">Mark Read</button>
-                            </div>
-                        </div>
+                    <li style="padding: 20px; text-align: center; color: #999;">
+                        <i class="fa-solid fa-spinner fa-spin"></i> Loading notifications...
                     </li>
-
-                    <li class="notif-item unread" data-type="normal">
-                        <div class="notif-icon icon-warn"><i class="fa-solid fa-wallet"></i></div>
-                        <div class="notif-content">
-                            <div class="notif-head">
-                                <span class="notif-tag">Budget Alert</span>
-                                <span class="notif-time">1 hr ago</span>
-                            </div>
-                            <div class="notif-msg">"Events & Seminars" budget is at 90% utilization. Review allocation.</div>
-                            <div class="notif-actions">
-                                <button class="btn-link" onclick="window.location.href='admin_budgets.html'">Check Budget</button>
-                                <button class="btn-link danger" onclick="markRead(this)">Dismiss</button>
-                            </div>
-                        </div>
-                    </li>
-
-                    <li class="notif-item" data-type="normal">
-                        <div class="notif-icon icon-success"><i class="fa-solid fa-gift"></i></div>
-                        <div class="notif-content">
-                            <div class="notif-head">
-                                <span class="notif-tag">Redemption</span>
-                                <span class="notif-time">3 hrs ago</span>
-                            </div>
-                            <div class="notif-msg">Juan Dela Cruz requested cash out of ₱500.00 via GCash.</div>
-                            <div class="notif-actions">
-                                <button class="btn-link" onclick="window.location.href='admin_rewards.html'">Process</button>
-                            </div>
-                        </div>
-                    </li>
-
-                    <li class="notif-item" data-type="normal">
-                        <div class="notif-icon icon-info"><i class="fa-solid fa-user-plus"></i></div>
-                        <div class="notif-content">
-                            <div class="notif-head">
-                                <span class="notif-tag">New User</span>
-                                <span class="notif-time">5 hrs ago</span>
-                            </div>
-                            <div class="notif-msg">Maria Santos (Purok 3) registered a new account.</div>
-                        </div>
-                    </li>
-
                 </ul>
                 <div style="padding: 15px; text-align: center; border-top: 1px solid #eee;">
                     <button class="btn-link" style="font-size: 0.9rem;" onclick="clearAll()">Clear All Notifications</button>
@@ -336,73 +283,236 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase_config.js"></script>
     <script>
+        let allNotifications = [];
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', loadNotificationsFromDB);
+
+        // --- Load Notifications from Database ---
+        async function loadNotificationsFromDB() {
+            if (!window.supabaseClient) {
+                console.error('Supabase client not initialized');
+                return;
+            }
+
+            try {
+                const { data: notifications, error } = await window.supabaseClient
+                    .from('notifications')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    console.error('Failed to load notifications:', error);
+                    renderNotifications([]);
+                    return;
+                }
+
+                allNotifications = notifications || [];
+                renderNotifications(allNotifications);
+            } catch (err) {
+                console.error('Unexpected error loading notifications:', err);
+                renderNotifications([]);
+            }
+        }
+
+        // --- Render Notifications ---
+        function renderNotifications(notifications) {
+            const list = document.getElementById('notifList');
+            
+            if (!notifications || notifications.length === 0) {
+                list.innerHTML = '<li style="padding: 20px; text-align: center; color: #999;">No notifications yet.</li>';
+                return;
+            }
+
+            list.innerHTML = notifications.map(notif => {
+                const createdAt = new Date(notif.created_at);
+                const timeAgo = formatTimeAgo(createdAt);
+                const icon = getIconForType(notif.type);
+
+                return `
+                    <li class="notif-item" data-notif-id="${notif.id}">
+                        <div class="notif-icon ${icon.class}"><i class="${icon.icon}"></i></div>
+                        <div class="notif-content">
+                            <div class="notif-head">
+                                <span class="notif-tag">${notif.broadcast_target ? getTargetLabel(notif.broadcast_target) : 'Broadcast'}</span>
+                                <span class="notif-time">${timeAgo}</span>
+                            </div>
+                            <div class="notif-msg"><b>${escapeHtml(notif.title)}</b>: ${escapeHtml(notif.description)}</div>
+                        </div>
+                    </li>
+                `;
+            }).join('');
+        }
+
+        // --- Helper: Get Icon for Type ---
+        function getIconForType(type) {
+            switch(type) {
+                case 'alert':
+                case 'urgent':
+                    return { icon: 'fa-solid fa-triangle-exclamation', class: 'icon-alert' };
+                case 'warning':
+                    return { icon: 'fa-solid fa-exclamation-circle', class: 'icon-warn' };
+                case 'success':
+                    return { icon: 'fa-solid fa-check-circle', class: 'icon-success' };
+                case 'broadcast':
+                default:
+                    return { icon: 'fa-solid fa-bullhorn', class: 'icon-info' };
+            }
+        }
+
+        // --- Helper: Get Target Label ---
+        function getTargetLabel(target) {
+            const labels = {
+                'all': 'All Residents',
+                'purok1': 'Purok 1',
+                'purok2': 'Purok 2',
+                'purok3': 'Purok 3',
+                'purok4': 'Purok 4',
+                'purok5': 'Purok 5',
+                'staff': 'Staff'
+            };
+            return labels[target] || target;
+        }
+
+        // --- Helper: Format Time Ago ---
+        function formatTimeAgo(date) {
+            const now = new Date();
+            const seconds = Math.floor((now - date) / 1000);
+
+            if (seconds < 60) return 'Just now';
+            if (seconds < 3600) return Math.floor(seconds / 60) + ' mins ago';
+            if (seconds < 86400) return Math.floor(seconds / 3600) + ' hrs ago';
+            return Math.floor(seconds / 86400) + ' days ago';
+        }
+
+        // --- Helper: Escape HTML ---
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         // --- 1. Filter Logic ---
         function filterNotifs(type) {
             // UI Update
             document.querySelectorAll('.filter-pill').forEach(el => el.classList.remove('active'));
             event.target.classList.add('active');
 
-            const items = document.querySelectorAll('.notif-item');
-            
-            items.forEach(item => {
-                if (type === 'all') {
-                    item.style.display = 'flex';
-                } else if (type === 'unread') {
-                    item.style.display = item.classList.contains('unread') ? 'flex' : 'none';
-                } else if (type === 'urgent') {
-                    item.style.display = item.dataset.type === 'urgent' ? 'flex' : 'none';
-                }
-            });
-        }
-
-        // --- 2. Mark as Read ---
-        function markRead(btn) {
-            const item = btn.closest('.notif-item');
-            item.classList.remove('unread');
-            // Optional: Remove the button itself or change text
-            btn.remove();
-        }
-
-        // --- 3. Clear All ---
-        function clearAll() {
-            if(confirm("Delete all notifications?")) {
-                document.getElementById('notifList').innerHTML = '<li style="padding:20px; text-align:center; color:#999;">No new notifications.</li>';
+            if (type === 'all') {
+                renderNotifications(allNotifications);
+            } else if (type === 'unread') {
+                // You can add read/unread logic later with a column in DB
+                renderNotifications(allNotifications);
+            } else if (type === 'urgent') {
+                renderNotifications(allNotifications.filter(n => n.type === 'urgent' || n.type === 'alert'));
             }
         }
 
-        // --- 4. Send Broadcast (Simulation) ---
-        function sendBroadcast(e) {
+        // --- 2. Clear All ---
+        async function clearAll() {
+            const result = await Swal.fire({
+                title: 'Delete All Notifications?',
+                text: 'This action cannot be undone. All notifications will be permanently deleted from the database.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d32f2f',
+                cancelButtonColor: '#757575',
+                confirmButtonText: 'Yes, Delete All',
+                cancelButtonText: 'Cancel'
+            });
+
+            if (!result.isConfirmed) return;
+
+            try {
+                // Delete all notifications from Supabase
+                const { error } = await window.supabaseClient
+                    .from('notifications')
+                    .delete()
+                    .gte('created_at', '1900-01-01T00:00:00Z');
+
+                if (error) {
+                    Swal.fire({
+                        title: 'Error',
+                        text: `Failed to clear notifications: ${error.message}`,
+                        icon: 'error',
+                        confirmButtonColor: '#d32f2f'
+                    });
+                    console.error('Delete error:', error);
+                    return;
+                }
+
+                allNotifications = [];
+                renderNotifications([]);
+                
+                Swal.fire({
+                    title: 'Deleted!',
+                    text: 'All notifications have been permanently removed.',
+                    icon: 'success',
+                    confirmButtonColor: '#2e7d32'
+                });
+            } catch (err) {
+                console.error('Error clearing notifications:', err);
+                Swal.fire({
+                    title: 'Error',
+                    text: `Unexpected error: ${err.message}`,
+                    icon: 'error',
+                    confirmButtonColor: '#d32f2f'
+                });
+            }
+        }
+
+        // --- 3. Send Broadcast ---
+        async function sendBroadcast(e) {
             e.preventDefault();
             
+            if (!window.supabaseClient) {
+                Swal.fire('Error', 'Supabase client not initialized', 'error');
+                return;
+            }
+
             const title = document.getElementById('notifTitle').value;
             const msg = document.getElementById('notifMessage').value;
-            const target = document.getElementById('targetAudience').options[document.getElementById('targetAudience').selectedIndex].text;
+            const targetValue = document.getElementById('targetAudience').value;
+            const targetText = document.getElementById('targetAudience').options[document.getElementById('targetAudience').selectedIndex].text;
 
-            // Show Toast
-            const toast = document.getElementById('toast');
-            toast.innerHTML = `<i class="fa-solid fa-circle-check"></i> Sent to ${target}!`;
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 3000);
+            try {
+                // Insert into notifications table
+                const { data, error } = await window.supabaseClient
+                    .from('notifications')
+                    .insert({
+                        user_id: null,  // NULL for broadcasts
+                        title: title,
+                        description: msg,
+                        type: 'broadcast',
+                        broadcast_target: targetValue === 'all' ? 'all' : targetValue,
+                        created_at: new Date().toISOString()
+                    });
 
-            // Add to the list (Simulating that the system logs the outgoing msg)
-            const list = document.getElementById('notifList');
-            const newItem = document.createElement('li');
-            newItem.className = 'notif-item';
-            newItem.innerHTML = `
-                <div class="notif-icon icon-info"><i class="fa-solid fa-bullhorn"></i></div>
-                <div class="notif-content">
-                    <div class="notif-head">
-                        <span class="notif-tag">Broadcast Sent</span>
-                        <span class="notif-time">Just now</span>
-                    </div>
-                    <div class="notif-msg"><b>${title}</b>: ${msg}</div>
-                </div>
-            `;
-            list.prepend(newItem);
+                if (error) {
+                    Swal.fire('Error', `Failed to send broadcast: ${error.message}`, 'error');
+                    console.error('Broadcast error:', error);
+                    return;
+                }
 
-            // Reset Form
-            e.target.reset();
+                // Show Success Toast
+                const toast = document.getElementById('toast');
+                toast.innerHTML = `<i class="fa-solid fa-circle-check"></i> Sent to ${targetText}!`;
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 3000);
+
+                // Reload notifications
+                loadNotificationsFromDB();
+
+                // Reset Form
+                e.target.reset();
+            } catch (err) {
+                Swal.fire('Error', `Unexpected error: ${err.message}`, 'error');
+                console.error('Broadcast error:', err);
+            }
         }
 
         async function logout() {

@@ -282,8 +282,7 @@
             <p class="page-subtitle">Log in to access your dashboard</p>
         </div>
 
-        <form class="login-form" onsubmit="handleLogin(event)">
-
+        <form class="login-form" id="loginForm">
             <div class="input-group">
                 <label for="email">Email</label>
                 <input type="email" id="email" class="input-field" placeholder="collector@example.com" required>
@@ -303,7 +302,7 @@
 
             <a href="#" class="forgot-link">Forgot password?</a>
 
-            <button type="submit" class="btn-action">Log In</button>
+            <button type="submit" class="btn-action" id="loginBtn">Log In</button>
         </form>
 
     </div>
@@ -313,10 +312,6 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
-        // Security Lockout Configuration
-        const MAX_ATTEMPTS = 3;
-        const LOCKOUT_DURATION = 24 * 60 * 60 * 1000; // 24 Hours in ms
-
         function togglePassword() {
             const passwordInput = document.getElementById('password');
             const eyeIcon = document.getElementById('eyeIcon');
@@ -336,83 +331,99 @@
             }
         }
 
-        async function handleLogin(e) {
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
+            const email = document.getElementById('email').value.trim().toLowerCase();
+            const password = document.getElementById('password').value.trim();
+            const loginBtn = document.getElementById('loginBtn');
 
-            // 1. Check for Lockout
-            const lockoutTimestamp = localStorage.getItem('collector_lockout');
-            if (lockoutTimestamp) {
-                const remainingTime = parseInt(lockoutTimestamp) - Date.now();
-                if (remainingTime > 0) {
-                    const hours = Math.ceil(remainingTime / (1000 * 60 * 60));
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Account Locked',
-                        text: `Too many failed attempts. Try again in ${hours} hours.`,
-                    });
-                    return;
-                } else {
-                    localStorage.removeItem('collector_lockout');
-                    localStorage.removeItem('login_attempts');
-                }
+            if (!email || !password) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Missing Credentials',
+                    text: 'Please enter both email and password before logging in.',
+                });
+                return;
             }
 
-            // 2. Perform Supabase Auth
+            // Provide visual feedback during loading
+            loginBtn.innerText = 'Verifying...';
+            loginBtn.disabled = true;
+
+            // 1. Perform Supabase Auth
             const { data: authData, error: authError } = await window.supabaseClient.auth.signInWithPassword({
                 email,
                 password
             });
 
             if (authError) {
-                handleLoginFailure(authError.message);
+                console.error('Collector login authError:', authError);
+                
+                // Enhanced error handling to point out verification issues
+                let errorMessage = authError.message || 'Login failed.';
+                if (errorMessage.toLowerCase().includes('invalid login credentials')) {
+                    errorMessage = 'Invalid email/password, OR your account is not verified yet. Please check your Supabase dashboard.';
+                }
+                
+                handleLoginFailure(errorMessage);
+                loginBtn.innerText = 'Log In';
+                loginBtn.disabled = false;
                 return;
             }
 
-            // 3. Check Role in Profiles
+            // 2. Check Role and pass_code in Profiles
+            const userId = authData.user?.id;
+            if (!userId) {
+                handleLoginFailure('Unable to verify user after login.');
+                loginBtn.innerText = 'Log In';
+                loginBtn.disabled = false;
+                return;
+            }
+
             const { data: profile, error: profileError } = await window.supabaseClient
                 .from('profiles')
-                .select('role')
-                .eq('id', authData.user.id)
+                .select('role, pass_code')
+                .eq('id', userId)
                 .single();
 
-            if (profileError || profile.role !== 'collector') {
+            const isCollector = profile && profile.role && profile.role.toString().toLowerCase().trim() === 'collector';
+            const passCodeMatches = profile && profile.pass_code === password;
+
+            if (profileError || !profile || !isCollector || !passCodeMatches) {
                 await window.supabaseClient.auth.signOut();
+                
+                const message = profileError?.message ||
+                    (!profile ? 'No profile found for this user.' :
+                        !isCollector ? 'This portal is only available to Collector accounts.' :
+                            'Password mismatch for collector profile.');
+
                 Swal.fire({
                     icon: 'warning',
                     title: 'Access Denied',
-                    text: 'This portal is for Collectors only. Please use the Resident or Admin login.',
+                    text: message,
                 });
+                
+                loginBtn.innerText = 'Log In';
+                loginBtn.disabled = false;
                 return;
             }
 
-            // 4. Success - Reset attempts and redirect
-            localStorage.removeItem('login_attempts');
-            localStorage.removeItem('collector_lockout');
-
+            // Success Animation and Redirect
+            loginBtn.innerText = 'Success!';
             document.getElementById('loginCard').classList.add('outro');
             setTimeout(() => {
                 window.location.href = "collector_dashboard.html";
             }, 500);
-        }
+        });
 
         function handleLoginFailure(message) {
-            let attempts = parseInt(localStorage.getItem('login_attempts') || '0');
-            attempts++;
-            localStorage.setItem('login_attempts', attempts);
-
             Swal.fire({
                 icon: 'error',
                 title: 'Login Failed',
-                text: `Incorrect email or password. Attempt ${attempts} of 3.`,
+                text: message,
                 confirmButtonColor: '#02451A'
             });
-
-            if (attempts >= 3) {
-                localStorage.setItem('login_attempts', '0');
-            }
         }
     </script>
 </body>

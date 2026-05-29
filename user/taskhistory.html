@@ -11,6 +11,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
     
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase_config.js"></script>
 
     <style>
         :root {
@@ -111,6 +113,15 @@
             font-size: 14px; font-weight: 800; color: var(--primary-green); background: rgba(2, 69, 26, 0.05); padding: 4px 8px; border-radius: 8px;
         }
 
+        .activity-meta {
+            display: none; margin-top: 10px; font-size: 12px; color: var(--text-muted); line-height: 1.5;
+            border-top: 1px solid rgba(2, 69, 26, 0.08); padding-top: 10px;
+        }
+        .activity-item.expanded .activity-meta {
+            display: block;
+        }
+        .activity-item.expanded { background: rgba(2, 69, 26, 0.03); }
+
         @keyframes slideIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
@@ -138,75 +149,21 @@
         <main class="history-content">
             
             <div class="filter-row">
-                <button class="filter-chip active">All Tasks</button>
-                <button class="filter-chip">Missions</button>
-                <button class="filter-chip">Manual</button>
-                <button class="filter-chip">Quizzes</button>
+                <button class="filter-chip active" data-filter="all">All Tasks</button>
+                <button class="filter-chip" data-filter="mission">Missions</button>
+                <button class="filter-chip" data-filter="manual">Manual</button>
+                <button class="filter-chip" data-filter="quiz">Quizzes</button>
             </div>
 
-            <!-- Today -->
-            <div class="date-divider">Today</div>
-            <div class="activity-list">
-                <div class="activity-item">
-                    <div class="act-icon mission"><i data-lucide="target"></i></div>
-                    <div class="act-details">
-                        <div class="act-title">Beach Cleanup Mission</div>
-                        <div class="act-time">10:30 AM</div>
+            <div id="taskHistoryContainer">
+                <div class="date-divider">Recent Tasks</div>
+                <div id="taskHistoryList" class="activity-list">
+                    <div class="activity-item">
+                        <div class="act-icon manual"><i data-lucide="loader"></i></div>
+                        <div class="act-details">
+                            <div class="act-title">Loading task history...</div>
+                        </div>
                     </div>
-                    <div class="act-points">+150</div>
-                </div>
-            </div>
-
-            <!-- Yesterday -->
-            <div class="date-divider">Yesterday</div>
-            <div class="activity-list">
-                <div class="activity-item">
-                    <div class="act-icon manual"><i data-lucide="hand"></i></div>
-                    <div class="act-details">
-                        <div class="act-title">Recycled 5 PET Bottles</div>
-                        <div class="act-time">2:15 PM</div>
-                    </div>
-                    <div class="act-points">+25</div>
-                </div>
-
-                <div class="activity-item">
-                    <div class="act-icon manual"><i data-lucide="hand"></i></div>
-                    <div class="act-details">
-                        <div class="act-title">Composted Kitchen Waste</div>
-                        <div class="act-time">11:00 AM</div>
-                    </div>
-                    <div class="act-points">+50</div>
-                </div>
-            </div>
-
-            <!-- This Week -->
-            <div class="date-divider">This Week</div>
-            <div class="activity-list">
-                <div class="activity-item">
-                    <div class="act-icon quiz"><i data-lucide="brain"></i></div>
-                    <div class="act-details">
-                        <div class="act-title">Carbon Footprint Quiz</div>
-                        <div class="act-time">Tuesday, 9:00 AM</div>
-                    </div>
-                    <div class="act-points">+10</div>
-                </div>
-
-                <div class="activity-item">
-                    <div class="act-icon mission"><i data-lucide="target"></i></div>
-                    <div class="act-details">
-                        <div class="act-title">Planted a Tree</div>
-                        <div class="act-time">Monday, 4:30 PM</div>
-                    </div>
-                    <div class="act-points">+300</div>
-                </div>
-                
-                <div class="activity-item">
-                    <div class="act-icon quiz"><i data-lucide="brain"></i></div>
-                    <div class="act-details">
-                        <div class="act-title">Energy Savings Quiz</div>
-                        <div class="act-time">Sunday, 8:00 AM</div>
-                    </div>
-                    <div class="act-points">+10</div>
                 </div>
             </div>
 
@@ -216,13 +173,177 @@
     <script>
         lucide.createIcons();
 
-        // Simple mock functionality for filter chips
-        document.querySelectorAll('.filter-chip').forEach(chip => {
-            chip.addEventListener('click', () => {
-                document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-                chip.classList.add('active');
+        async function initTaskHistory() {
+            const $chips = document.querySelectorAll('.filter-chip');
+            let currentFilter = 'all';
+
+            $chips.forEach(chip => {
+                chip.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
+                    currentFilter = chip.dataset.filter || 'all';
+                    renderTaskHistory(filteredTasks(currentFilter));
+                });
             });
-        });
+
+            try {
+                if (!window.supabaseClient) {
+                    console.error("EcoTrack Error: 'window.supabaseClient' not found. Ensure supabase_config.js is loaded above this script.");
+                    return;
+                }
+
+                const { data: { session }, error: sessionError } = await window.supabaseClient.auth.getSession();
+                if (sessionError || !session?.user?.id) {
+                    console.error('Unable to determine logged in user for task history', sessionError);
+                    return;
+                }
+
+                const userId = session.user.id;
+                const { data: history, error } = await window.supabaseClient
+                    .from('user_projects')
+                    .select('id, project_id, type, points, submission_date, approved_by, status, description')
+                    .eq('user_id', userId)
+                    .in('status', ['completed', 'approved'])
+                    .order('submission_date', { ascending: false });
+
+                if (error) {
+                    console.error('Failed to fetch task history:', error);
+                    return;
+                }
+
+                const tasks = history || [];
+                const projectIds = Array.from(new Set(tasks.filter(task => task.project_id).map(task => task.project_id)));
+                const projectMap = {};
+
+                if (projectIds.length > 0) {
+                    const { data: projects, error: projectError } = await window.supabaseClient
+                        .from('projects')
+                        .select('id, title')
+                        .in('id', projectIds);
+
+                    if (!projectError && projects) {
+                        projects.forEach(project => {
+                            projectMap[project.id] = project;
+                        });
+                    } else {
+                        console.warn('Unable to fetch project metadata for task history:', projectError);
+                    }
+                }
+
+                const approvedByIds = Array.from(new Set(tasks.filter(task => task.approved_by).map(task => task.approved_by)));
+                const collectorMap = {};
+
+                if (approvedByIds.length > 0) {
+                    const { data: collectors, error: collectorError } = await window.supabaseClient
+                        .from('profiles')
+                        .select('*')
+                        .in('id', approvedByIds);
+
+                    if (!collectorError && collectors) {
+                        collectors.forEach(profile => {
+                            collectorMap[profile.id] = profile;
+                        });
+                    } else {
+                        console.warn('Unable to fetch collector profiles for task history:', collectorError);
+                    }
+                }
+
+                window.__taskHistoryItems = tasks.map(task => ({
+                    ...task,
+                    project: projectMap[task.project_id] || null,
+                    title: deriveTaskTitle({ ...task, project: projectMap[task.project_id] || null }),
+                    collector: formatCollector(collectorMap[task.approved_by]),
+                    submittedAt: formatSubmissionDate(task.submission_date),
+                    displayType: (projectMap[task.project_id]?.title ? 'mission' : task.type || 'manual').toLowerCase()
+                }));
+
+                renderTaskHistory(window.__taskHistoryItems);
+            } catch (err) {
+                console.error('Task history init failed:', err);
+            }
+        }
+
+        function deriveTaskTitle(task) {
+            if (task.project && task.project.title) return task.project.title;
+            if (task.description) {
+                const cleaned = String(task.description).replace(/kg/gi, '').trim();
+                const parts = cleaned.split(/[-,:]/);
+                if (parts.length > 0 && parts[0].trim()) {
+                    return parts[0].trim();
+                }
+                return cleaned;
+            }
+            return 'Manual Submission';
+        }
+
+        function formatCollector(profile) {
+            if (!profile) return 'Unknown collector';
+            const keys = ['full_name', 'fullName', 'name', 'display_name', 'displayName', 'first_name', 'firstname', 'last_name', 'lastname'];
+            for (const key of keys) {
+                if (profile[key]) return String(profile[key]);
+            }
+            if (profile.role) return `Collector (${profile.role})`;
+            return `Collector ${profile.id?.slice(0, 8) || ''}`.trim();
+        }
+
+        function formatSubmissionDate(value) {
+            if (!value) return 'Unknown date';
+            const date = new Date(value);
+            if (isNaN(date.getTime())) return String(value);
+            return date.toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+        }
+
+        function filteredTasks(filter) {
+            const allTasks = window.__taskHistoryItems || [];
+            if (filter === 'all') return allTasks;
+            return allTasks.filter(task => task.displayType === filter);
+        }
+
+        function renderTaskHistory(tasks) {
+            const list = document.getElementById('taskHistoryList');
+            if (!list) return;
+
+            if (!tasks || tasks.length === 0) {
+                list.innerHTML = '<div class="activity-item"><div class="act-details"><div class="act-title">No tasks found.</div></div></div>';
+                lucide.createIcons();
+                return;
+            }
+
+            list.innerHTML = tasks.map(task => {
+                const iconType = task.displayType === 'quiz' ? 'brain' : task.displayType === 'mission' ? 'target' : 'hand';
+                const iconClass = task.displayType === 'quiz' ? 'quiz' : task.displayType === 'mission' ? 'mission' : 'manual';
+                return `
+                    <div class="activity-item" data-task-id="${task.id}">
+                        <div class="act-icon ${iconClass}"><i data-lucide="${iconType}"></i></div>
+                        <div class="act-details">
+                            <div class="act-title">${escapeHtml(task.title)}</div>
+                            <div class="act-time">${task.submittedAt}</div>
+                            <div class="activity-meta">
+                                <div><strong>Collector:</strong> ${escapeHtml(task.collector)}</div>
+                                <div><strong>Status:</strong> ${escapeHtml(task.status || 'unknown')}</div>
+                            </div>
+                        </div>
+                        <div class="act-points">+${Number(task.points || 0)}</div>
+                    </div>
+                `;
+            }).join('');
+
+            list.querySelectorAll('.activity-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    item.classList.toggle('expanded');
+                });
+            });
+
+            lucide.createIcons();
+        }
+
+        function escapeHtml(text) {
+            return String(text || '').replace(/[&<>"]+/g, match => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'
+            })[match]);
+        }
+
+        document.addEventListener('DOMContentLoaded', initTaskHistory);
     </script>
 </body>
 

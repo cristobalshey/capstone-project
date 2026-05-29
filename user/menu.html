@@ -13,8 +13,8 @@
     <!-- Using Lucide Icons for a modern, chill vibe -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase_config.js"></script>
-    <script src="auth_guard.js"></script>
+    <script src="../supabase_config.js"></script>
+    <script src="../auth_guard.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
@@ -100,7 +100,7 @@
         .profile-pic {
             width: 45px;
             height: 45px;
-            border-radius: 16px;
+            border-radius: 50%;
             background: none;
             color: black;
             display: flex;
@@ -613,88 +613,25 @@
                 </div>
                 <div class="status-buttons">
                     <button class="status-btn" title="Coins" onclick="window.location.href='redeem.html'">
-                        <i data-lucide="coins" class="icon-sm coin-icon"></i> 150 
+                        <i data-lucide="coins" class="icon-sm coin-icon"></i> <span id="userCoinsDisplay">0</span>
                         <div class="plus-icon"><i data-lucide="plus"></i></div>
                     </button>
-                    <button class="status-btn" title="Notifications" style="padding: 8px 10px;" onclick="window.location.href='notification.html'">
+                    <button class="status-btn" title="Notifications" style="padding: 8px 10px; position: relative;" onclick="window.location.href='notification.html'">
                         <i data-lucide="bell" class="icon-sm"></i>
+                        <span id="notifBadge" style="display: none; position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; background: #ef4444; border-radius: 50%;"></span>
                     </button>
-                    <button class="status-btn" title="Chat" style="padding: 8px 10px;" onclick="window.location.href='message.html'">
+                    <button class="status-btn" title="Chat" style="padding: 8px 10px; position: relative;" onclick="window.location.href='message.html'">
                         <i data-lucide="message-square" class="icon-sm"></i>
+                        <span id="messageBadge" style="display: none; position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; background: #ef4444; border-radius: 50%;"></span>
                     </button>
                 </div>
             </div>
         </header>
 
         <!-- FYP Content -->
-        <main class="fyp-content">
-            
-            <div class="feed-card">
-                <div class="post-header">
-                    <div class="post-author-pic">A</div>
-                    <div class="post-author-info">
-                        <span class="post-author-name">Admin</span>
-                        <span class="post-time">2 hours ago</span>
-                    </div>
-                </div>
-                <div class="post-content">
-                    <p>Welcome to our new community hub! We are organizing a massive beach cleanup event this weekend. Let's make a difference together! 🌊</p>
-                    <div class="post-image-placeholder">
-                        <i data-lucide="image" style="width: 32px; height: 32px; opacity: 0.5;"></i>
-                    </div>
-                </div>
-                <div class="post-actions">
-                    <button class="action-btn like-btn" onclick="this.classList.toggle('liked')">
-                        <i data-lucide="heart" class="action-icon"></i> <span>24</span>
-                    </button>
-                    <button class="action-btn comment-btn">
-                        <i data-lucide="message-circle" class="action-icon"></i> <span>Comment</span>
-                    </button>
-                </div>
-            </div>
-
-            <div class="feed-card">
-                <div class="post-header">
-                    <!-- Adjusted avatar colors to fit strictly White/Green theme -->
-                    <div class="post-author-pic" style="background: var(--primary-green); color: white;">E</div>
-                    <div class="post-author-info">
-                        <span class="post-author-name">EcoTracker Update</span>
-                        <span class="post-time">5 hours ago</span>
-                    </div>
-                </div>
-                <div class="post-content">
-                    <p>Did you know? Recycling just one aluminum can saves enough energy to run a TV for three hours. Keep logging those activities.</p>
-                </div>
-                <div class="post-actions">
-                    <button class="action-btn like-btn" onclick="this.classList.toggle('liked')">
-                        <i data-lucide="heart" class="action-icon"></i> <span>112</span>
-                    </button>
-                    <button class="action-btn comment-btn">
-                        <i data-lucide="message-circle" class="action-icon"></i> <span>5</span>
-                    </button>
-                </div>
-            </div>
-
-            <div class="feed-card">
-                <div class="post-header">
-                    <!-- Adjusted avatar colors to fit strictly White/Green theme -->
-                    <div class="post-author-pic" style="background: rgba(2, 69, 26, 0.2);">C</div>
-                    <div class="post-author-info">
-                        <span class="post-author-name">Community Highlight</span>
-                        <span class="post-time">1 day ago</span>
-                    </div>
-                </div>
-                <div class="post-content">
-                    <p>Shoutout to @GreenHero for reaching Tree Planter Level 5 today! They have recycled over 500 items this month. 🪴</p>
-                </div>
-                <div class="post-actions">
-                    <button class="action-btn like-btn" onclick="this.classList.toggle('liked')">
-                        <i data-lucide="heart" class="action-icon"></i> <span>89</span>
-                    </button>
-                    <button class="action-btn comment-btn">
-                        <i data-lucide="message-circle" class="action-icon"></i> <span>12</span>
-                    </button>
-                </div>
+        <main class="fyp-content" id="feedContainer">
+            <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+                <i data-lucide="loader-2" class="lucide-spin"></i> Loading community updates...
             </div>
         </main>
 
@@ -795,6 +732,17 @@
             if (params.get('error') === 'unverified') {
                 protectedNavigate('', 'the requested feature');
             }
+
+            // Update coins dynamically
+            const coinsInterval = setInterval(() => {
+                if (window.currentUserProfile) {
+                    const display = document.getElementById('userCoinsDisplay');
+                    if (display) {
+                        display.innerText = window.currentUserProfile.points || 0;
+                    }
+                    clearInterval(coinsInterval);
+                }
+            }, 100);
         });
 
         const gameMenu = document.getElementById('gameMenu');
@@ -939,18 +887,22 @@
 
                 const { data: profile, error } = await window.supabaseClient
                     .from('profiles')
-                    .select('full_name')
+                    .select('full_name, status')
                     .eq('id', session.user.id)
                     .single();
 
-                if (error) {
-                    console.error("Error fetching profile:", error);
+                if (profile) {
+                    window.currentStatus = profile.status; // Save for protected navigation
                 }
 
                 if (profile && profile.full_name) {
                     const firstName = profile.full_name.split(' ')[0];
                     document.getElementById('userGreeting').innerText = `Hello, ${firstName}.`;
                 }
+                
+                // Fetch unread badges for notifications and messages
+                await updateNotifBadge();
+                await updateMessageBadge();
                 
                 // Small delay to ensure all DOM elements are rendered for highlighting
                 setTimeout(() => startTutorial(), 800);
@@ -960,9 +912,158 @@
             }
         }
 
+        function notificationReadsAvailable() {
+            return localStorage.getItem('ecotrack_notification_reads_available') !== 'false';
+        }
+
+        function disableNotificationReads() {
+            localStorage.setItem('ecotrack_notification_reads_available', 'false');
+        }
+
+        async function updateNotifBadge() {
+            try {
+                const { data: { session } } = await window.supabaseClient.auth.getSession();
+                if (!session) return;
+
+                const { data: notifs, error } = await window.supabaseClient
+                    .from('notifications')
+                    .select('id')
+                    .or('user_id.is.null,user_id.eq.' + session.user.id);
+
+                if (error) {
+                    console.error("Error checking unread notifications:", error);
+                    return;
+                }
+
+                // Prefer server-side read receipts when available
+                let readNotifIds = JSON.parse(localStorage.getItem('ecotrack_read_notifs') || '[]');
+                if (notificationReadsAvailable()) {
+                    try {
+                        const { data: rr, error: rrErr } = await window.supabaseClient
+                            .from('notification_reads')
+                            .select('notification_id')
+                            .eq('user_id', session.user.id);
+                        if (rrErr) {
+                            if (rrErr.status === 404) disableNotificationReads();
+                        } else if (rr) {
+                            readNotifIds = rr.map(r => r.notification_id);
+                        }
+                    } catch (e) {
+                        disableNotificationReads();
+                    }
+                }
+
+                const unreadNotifs = notifs.filter(n => !readNotifIds.includes(n.id));
+
+                const badge = document.getElementById('notifBadge');
+                if (badge) {
+                    badge.style.display = unreadNotifs.length > 0 ? 'block' : 'none';
+                }
+            } catch (err) {
+                console.error("Failed to update notification badge:", err);
+            }
+        }
+
+        async function updateMessageBadge() {
+            try {
+                const { data: { session } } = await window.supabaseClient.auth.getSession();
+                if (!session) return;
+
+                const { data: messages, error } = await window.supabaseClient
+                    .from('direct_messages')
+                    .select('id')
+                    .eq('receiver_id', session.user.id)
+                    .eq('is_read', false);
+
+                if (error) {
+                    console.error("Error checking unread messages:", error);
+                    return;
+                }
+
+                const badge = document.getElementById('messageBadge');
+                if (badge) {
+                    badge.style.display = messages && messages.length > 0 ? 'block' : 'none';
+                }
+            } catch (err) {
+                console.error("Failed to update message badge:", err);
+            }
+        }
+
+        async function fetchCommunityPosts() {
+            try {
+                const { data: posts, error } = await window.supabaseClient
+                    .from('community_posts')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                const container = document.getElementById('feedContainer');
+                
+                if (error || !posts || posts.length === 0) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+                            <p style="font-weight:600;">No community updates yet.</p>
+                        </div>`;
+                    return;
+                }
+
+                container.innerHTML = '';
+                posts.forEach((post, index) => {
+                    const timeAgo = formatTimeAgo(post.created_at);
+                    const initial = post.full_name ? post.full_name.charAt(0).toUpperCase() : 'A';
+                    
+                    const imgHtml = post.image_url ? `
+                        <div class="post-image-placeholder" style="border: none; background: transparent; height: auto;">
+                            <img src="${post.image_url}" alt="Post Image" style="width: 100%; height: auto; max-height: 300px; object-fit: cover; border-radius: 16px;">
+                        </div>` : '';
+
+                    container.innerHTML += `
+                        <div class="feed-card" style="animation-delay: ${index * 0.1}s">
+                            <div class="post-header">
+                                <div class="post-author-pic" style="background: var(--primary-green); color: white;">${initial}</div>
+                                <div class="post-author-info">
+                                    <span class="post-author-name">${post.full_name}</span>
+                                    <span class="post-time">${timeAgo}</span>
+                                </div>
+                            </div>
+                            <div class="post-content">
+                                <p style="white-space: pre-wrap;">${post.content}</p>
+                                ${imgHtml}
+                            </div>
+                            <div class="post-actions">
+                                <button class="action-btn like-btn" onclick="this.classList.toggle('liked')">
+                                    <i data-lucide="heart" class="action-icon"></i> <span>Like</span>
+                                </button>
+                                <button class="action-btn comment-btn">
+                                    <i data-lucide="message-circle" class="action-icon"></i> <span>Comment</span>
+                                </button>
+                            </div>
+                        </div>`;
+                });
+                
+                lucide.createIcons();
+            } catch (err) {
+                console.error("Failed to load posts", err);
+            }
+        }
+
+        function formatTimeAgo(dateStr) {
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMins / 60);
+            const diffDays = Math.floor(diffHours / 24);
+
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays === 1) return 'Yesterday';
+            return `${diffDays} days ago`;
+        }
 
         // Run on load
         loadUserData();
+        fetchCommunityPosts();
     </script>
 </body>
 

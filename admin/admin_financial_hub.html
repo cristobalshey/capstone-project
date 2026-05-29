@@ -148,12 +148,16 @@
         .amount-info .peso-val { color: var(--success-green); font-weight: 800; font-size: 1.1rem; display: block; }
         .amount-info .pts-val { color: var(--danger-red); font-size: 0.8rem; font-weight: 600; }
         .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
-        .status-pending { background-color: #FFF3E0; color: #E65100; }
+        .status-pending  { background-color: #FFF3E0; color: #E65100; }
         .status-completed { background-color: #E8F5E9; color: #2E7D32; }
+        .status-approved { background-color: #E8F5E9; color: #2E7D32; }
+        .status-rejected { background-color: #FFEBEE; color: #C62828; }
 
         /* Modals */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(8px); }
         .modal-overlay.active { display: flex; }
+        .swal2-container { z-index: 10001 !important; }
+        .swal2-popup { z-index: 10002 !important; }
         .modal-box { background: var(--card-bg); width: 95%; max-width: 480px; padding: 32px; border-radius: var(--radius-lg); box-shadow: 0 20px 50px rgba(0,0,0,0.1); }
         .security-input { border: 1px solid #f59e0b !important; background: #fff9e6 !important; border-radius: 50px !important; padding: 12px 20px; width: 100%; text-align: center; font-weight: 700; color: #92400e; margin-top: 10px; }
         .modal-box input, .modal-box select { width: 100%; padding: 10px 14px; border: 1px solid var(--border-soft); border-radius: var(--radius-md); margin-top: 8px; font-family: inherit; outline: none; background: var(--bg-soft); font-size: 0.9rem; }
@@ -323,7 +327,7 @@
                 <div class="profile-user-card">
                     <div class="user-item">
                         <div class="user-avatar-circle"><i class="fa-solid fa-user"></i></div>
-                        <div class="user-name-text">Hershey Cristobal</div>
+                        <div class="user-name-text" id="adminNameDisplay">Loading...</div>
                     </div>
                 </div>
 
@@ -430,8 +434,21 @@
     <div class="modal-box">
         <h2 style="margin-bottom: 20px;">Add Budget Category</h2>
         <form id="budgetForm">
-            <div class="form-group"><label>Category Name</label><input type="text" id="catName" required></div>
-            <div class="form-group"><label>Initial Limit (₱)</label><input type="number" id="catLimit" required></div>
+            <div class="form-group">
+                <label>Category</label>
+                <select id="catName" required style="width:100%; padding:10px 14px; border:1px solid var(--border-soft); border-radius:var(--radius-md); font-family:inherit; font-size:0.95rem; outline:none; background:var(--bg-soft); color:var(--text-main); margin-top:8px;">
+                    <option value="" disabled selected>— Select a category —</option>
+                    <option value="Waste Collection"> Waste Collection — Collection operations</option>
+                    <option value="Recycling Center"> Recycling Center — Recycling management</option>
+                    <option value="Rewards & Redemption">Rewards &amp; Redemption — User rewards</option>
+                    <option value="Community Programs"> Community Programs — Events &amp; campaigns</option>
+                    <option value="System Maintenance"> System Maintenance — App &amp; server expenses</option>
+                    <option value="Equipment & Supplies"> Equipment & Supplies — Materials &amp; tools</option>
+                    <option value="Staff & Moderators"> Staff & Moderators — Personnel</option>
+                    <option value="Emergency Fund"> Emergency Fund — Backup budget</option>
+                </select>
+            </div>
+            <div class="form-group"><label>Initial Limit (₱)</label><input type="number" id="catLimit" required min="1" step="0.01" placeholder="e.g. 50000"></div>
             <div class="form-group"><label style="color: var(--warning-orange);">Admin Security Key</label><input type="password" id="budgetMasterKey" class="security-input" required></div>
             <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
                 <button type="button" class="btn-action-pill" onclick="closeModal('budgetModal')">Cancel</button>
@@ -485,7 +502,8 @@
         <div id="modalSummary" class="summary-box"></div>
         <form id="payoutForm">
             <input type="hidden" id="pId">
-            <div class="form-group"><label>GCash Reference Number</label><input type="text" id="refId" required placeholder="Paste Ref ID from GCash app"></div>
+            <input type="hidden" id="pPesos">
+            <div class="form-group"><label>Reference Number</label><input type="text" id="refId" required placeholder="e.g. 1234567890"></div>
             <div class="form-group"><label style="color: var(--warning-orange);">Admin Security Key</label><input type="password" id="redemptionSecurityKey" class="security-input" required placeholder="ENTER MASTER KEY"></div>
             <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 32px;">
                 <button type="button" class="btn-action-pill" onclick="closeModal('processModal')">Cancel</button>
@@ -544,28 +562,53 @@
         document.getElementById('profileQuickModal').classList.toggle('active');
     }
 
-    // --- State ---
-    let budgets = [
-        { id: '1', category: 'Operational Expenses', limit: 100000, spent: 45000, created_at: new Date().toISOString() },
-        { id: '2', category: 'User Payouts (Rewards)', limit: 50000, spent: 12500, created_at: new Date().toISOString() }
-    ];
-    let budgetHistory = [
-        { date: new Date().toISOString(), category: 'User Payouts (Rewards)', type: 'Initial Allocation', amount: 50000 },
-        { date: new Date().toISOString(), category: 'User Payouts (Rewards)', type: 'Expense Added', amount: 12500 }
-    ];
-    let redemptions = [
-        { id: 'log1', date: '2026-10-14T14:20:00Z', user_id: 'user1', resident: 'Juan Dela Cruz', address: 'Purok 1', provider: 'GCash', account: '09123456789', pts: 1000, pesos: 100.00, status: 'completed', ref: 'GC77881122', paid_at: '2026-10-15T09:00:00Z' },
-        { id: 'log2', date: '2026-10-16T10:15:00Z', user_id: 'user2', resident: 'Maria Clara', address: 'Purok 4', provider: 'GCash', account: '09987654321', pts: 500, pesos: 50.00, status: 'pending' },
-        { id: 'log3', date: '2026-10-16T11:45:00Z', user_id: 'user3', resident: 'Carlos Yulo', address: 'Purok 2', provider: 'Maya', account: '09171234567', pts: 2500, pesos: 250.00, status: 'pending' }
-    ];
+    // ── State ──────────────────────────────────────────────────────────────
+    let budgets               = [];
+    let budgetHistory         = [];
+    let validSecurityKeys     = [];
+    let redemptions           = [];
     let currentRedemptionFilter = 'all';
+
+    // ── Security Keys ──────────────────────────────────────────────────────
+    async function fetchSecurityKeys() {
+        const { data, error } = await window.supabaseClient
+            .from('security_keys')
+            .select('key_value');
+        if (!error && data) validSecurityKeys = data.map(k => k.key_value);
+    }
+
+    // ── Budget Categories ──────────────────────────────────────────────────
+    async function fetchBudgets() {
+        const { data, error } = await window.supabaseClient
+            .from('budget_categories')
+            .select('*')
+            .order('created_at', { ascending: true });
+        if (error) { console.error('fetchBudgets:', error.message); return; }
+        budgets = (data || []).map(b => ({ ...b, limit: parseFloat(b.limit), spent: parseFloat(b.spent) }));
+        renderBudgets();
+    }
+
+    // ── Budget Transactions ────────────────────────────────────────────────
+    async function fetchBudgetHistory() {
+        const { data, error } = await window.supabaseClient
+            .from('budget_transactions')
+            .select('*')
+            .order('created_at', { ascending: false });
+        if (error) { console.error('fetchBudgetHistory:', error.message); return; }
+        budgetHistory = (data || []).map(h => ({ ...h, date: h.created_at, amount: parseFloat(h.amount) }));
+    }
 
     // --- Tab Switching ---
     function switchTab(tab) {
         document.querySelectorAll('.hub-tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.hub-section').forEach(s => s.classList.remove('active'));
-        if (tab === 'budget') { document.getElementById('budgetTabBtn').classList.add('active'); document.getElementById('budgetSection').classList.add('active'); }
-        else { document.getElementById('redemptionTabBtn').classList.add('active'); document.getElementById('redemptionSection').classList.add('active'); }
+        if (tab === 'budget') { 
+            document.getElementById('budgetTabBtn').classList.add('active'); 
+            document.getElementById('budgetSection').classList.add('active'); 
+        } else { 
+            document.getElementById('redemptionTabBtn').classList.add('active'); 
+            document.getElementById('redemptionSection').classList.add('active'); 
+        }
     }
 
     // --- Budget Logic ---
@@ -593,6 +636,66 @@
         tbody.innerHTML = filtered.map(h => `<tr><td>${new Date(h.date).toLocaleDateString()}</td><td><b>${h.category}</b></td><td><span class="badge" style="background:${h.type.includes('Expense')?'#ffebee':'#e8f5e9'}; color:${h.type.includes('Expense')?'#d32f2f':'#2e7d32'}">${h.type}</span></td><td style="text-align:right; font-weight:700; color:${h.type.includes('Expense')?'#d32f2f':'#2e7d32'}">${h.type.includes('Expense')?'-':'+'} ₱${h.amount.toLocaleString()}</td></tr>`).join('');
     }
 
+    // ── Fetch Redemptions ──────────────────────────────────────────────────
+    async function fetchRedemptions() {
+        console.log('[fetchRedemptions] Starting fetch...');
+
+        const { data: rows, error } = await window.supabaseClient
+            .from('redemptions')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('[fetchRedemptions] ERROR:', error);
+            Swal.fire('Fetch Error', `Could not fetch redemptions: ${error.message}`, 'error');
+            return;
+        }
+
+        console.log('[fetchRedemptions] Received rows:', rows ? rows.length : 0, rows);
+
+        // Extract unique profile/user IDs
+        const userIds = [...new Set(rows.map(r => r.user_id))];
+        console.log('[fetchRedemptions] Unique user IDs:', userIds);
+
+        // Fetch matched resident profiles
+        const { data: profiles, error: profileError } = await window.supabaseClient
+            .from('profiles')
+            .select('id, full_name, address')
+            .in('id', userIds);
+
+        if (profileError) {
+            console.error('[fetchRedemptions] Profile fetch error:', profileError.message);
+        } else {
+            console.log('[fetchRedemptions] Profiles fetched:', profiles ? profiles.length : 0, profiles);
+        }
+
+        // Map profiles array to a lookup object
+        const profileMap = {};
+        (profiles || []).forEach(profile => {
+            profileMap[profile.id] = profile;
+        });
+
+        // Map structural array data safely
+        redemptions = (rows || []).map(r => {
+            const profile = profileMap[r.user_id] || {};
+            return {
+                id: r.id,
+                date: r.created_at,
+                resident: profile.full_name || 'Unknown Resident',
+                address: profile.address || 'No Address',
+                acc_name: r.acc_name || '--',
+                acc_num: r.acc_num || '--',
+                pesos: Number(r.amount_php) || 0,
+                pts: Number(r.points_redeemed) || 0,
+                status: String(r.status || 'pending').toLowerCase(), // Normalize text casing safely
+                user_id: r.user_id
+            };
+        });
+
+        console.log('[fetchRedemptions] Final formatted array:', redemptions);
+        renderRedemptions();
+    }
+
     // --- Redemption Logic ---
     function openRedemptionHistoryModal() {
         renderRedemptionHistoryTable();
@@ -605,124 +708,280 @@
         const end = document.getElementById('rEndDate').value;
         
         const filtered = redemptions.filter(r => {
-            if (r.status !== 'completed') return false;
-            const d = new Date(r.paid_at);
+            if (r.status !== 'completed' && r.status !== 'approved') return false;
+            const d = new Date(r.date);
             return (!start || d >= new Date(start)) && (!end || d <= new Date(end + 'T23:59:59'));
         });
 
-        tbody.innerHTML = filtered.map(r => `
-            <tr>
-                <td>${new Date(r.paid_at).toLocaleDateString()}</td>
-                <td><b>${r.resident}</b></td>
-                <td><span class="badge" style="background:#FFF3E0; color:var(--warning-orange); padding:4px 8px; border-radius:4px; font-weight:800;">${r.ref}</span></td>
-                <td style="text-align:right; font-weight:700; color:var(--success-green);">₱${r.pesos.toLocaleString()}</td>
-            </tr>
-        `).join('');
-
-        if (filtered.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:30px; color:var(--text-muted);">No processed payouts found for this period.</td></tr>';
-        }
+        tbody.innerHTML = filtered.length === 0
+            ? '<tr><td colspan="4" style="text-align:center; padding:30px; color:var(--text-muted);">No completed payouts found for this period.</td></tr>'
+            : filtered.map(r => `<tr>
+                <td>${new Date(r.date).toLocaleDateString()}</td>
+                <td><b>${r.resident}</b><br><span style="font-size:0.8rem;color:var(--text-muted);">${r.acc_name || r.acc_num || '--'}</span></td>
+                <td>${r.acc_num}</td>
+                <td style="text-align:right; font-weight:700; color:var(--success-green);">&#8369;${r.pesos.toLocaleString()}<br><span style="font-size:0.75rem;color:var(--text-muted);">${r.pts.toLocaleString()} pts</span></td>
+            </tr>`).join('');
     }
 
     function renderRedemptions() {
         const tbody = document.getElementById('redemptionTableBody');
-        const query = document.getElementById('redemptionSearch').value.toUpperCase();
+        if (!tbody) return;
         
+        // Dynamic search input extraction check
+        const searchInput = document.getElementById('redemptionSearch');
+        const query = searchInput ? searchInput.value.trim().toUpperCase() : '';
+
         const filtered = redemptions.filter(r => {
-            const matchesStatus = currentRedemptionFilter === 'all' || r.status === currentRedemptionFilter;
-            const matchesSearch = r.resident.toUpperCase().includes(query) || r.account.toUpperCase().includes(query);
+            // Filter match parameters against state configurations
+            const currentStatus = r.status;
+            let matchesStatus = false;
+
+            if (currentRedemptionFilter === 'all') {
+                matchesStatus = currentStatus === 'pending' || currentStatus === 'completed';
+            } else {
+                matchesStatus = currentStatus === currentRedemptionFilter;
+            }
+
+            // Ignore structural processing if query is entirely blank
+            if (query === '') {
+                return matchesStatus;
+            }
+
+            const matchesSearch =
+                (r.resident || '').toUpperCase().includes(query) ||
+                (r.acc_num || '').toUpperCase().includes(query) ||
+                (r.acc_name || '').toUpperCase().includes(query);
+
             return matchesStatus && matchesSearch;
         });
 
-        tbody.innerHTML = filtered.map(r => `
-            <tr>
-                <td>${new Date(r.date).toLocaleDateString()} ${r.paid_at ? `<br><span style="font-size:0.7rem; color:var(--text-muted);">Paid on ${new Date(r.paid_at).toLocaleDateString()}</span>` : ''}</td>
-                <td><div class="resident-info"><h4>${r.resident}</h4><span>${r.address}</span></div></td>
-                <td><div class="account-info"><b>${r.provider}</b><br><span>${r.account}</span>${r.ref ? `<br><span style="color:var(--warning-orange); font-size:0.75rem; font-weight:800; background:#FFF3E0; padding:2px 8px; border-radius:4px;">REF: ${r.ref}</span>` : ''}</div></td>
-                <td><div class="amount-info"><span class="peso-val">₱${r.pesos.toLocaleString()}</span><span class="pts-val">-${r.pts.toLocaleString()} PTS</span></div></td>
-                <td><span class="status-badge status-${r.status}">${r.status}</span></td>
-                <td>${r.status === 'pending' ? `<button class="btn-action-pill" onclick="openPayoutModal('${r.id}', '${r.resident}', '${r.account}', ${r.pts}, ${r.pesos})"><i class="fa-solid fa-bolt"></i> Process</button>` : `<div style="color:var(--success-green); font-weight:800; font-size:0.85rem;"><i class="fa-solid fa-circle-check"></i> DISBURSED</div>`}</td>
-            </tr>
-        `).join('');
+        if (filtered.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align:center; padding:40px; color:var(--text-muted);">
+                        <i class="fa-solid fa-inbox" style="font-size:2rem; margin-bottom:10px; display:block;"></i>
+                        No redemption requests found.
+                    </td>
+                </tr>
+            `;
+        } else {
+            tbody.innerHTML = filtered.map(r => `
+                <tr>
+                    <td>
+                        ${new Date(r.date).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' })}
+                        <br>
+                        <span style="font-size:0.75rem; color:var(--text-muted);">
+                            ${new Date(r.date).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                    </td>
 
-        // Stats
-        document.getElementById('rPending').innerText = redemptions.filter(r => r.status === 'pending').length;
-        document.getElementById('rCompleted').innerText = redemptions.filter(r => r.status === 'completed').length;
-        const totalPesos = redemptions.filter(r => r.status === 'completed').reduce((acc, curr) => acc + curr.pesos, 0);
-        document.getElementById('rDisbursed').innerText = '₱' + totalPesos.toLocaleString();
-        const totalPts = redemptions.filter(r => r.status === 'completed').reduce((acc, curr) => acc + curr.pts, 0);
-        document.getElementById('rTotalPts').innerText = totalPts.toLocaleString();
+                    <td>
+                        <div class="resident-info">
+                            <h4>${r.resident}</h4>
+                            <span>${r.address}</span>
+                        </div>
+                    </td>
+
+                    <td>
+                        <div style="line-height:1.7;">
+                            <b>${r.acc_name}</b>
+                            <br>
+                            <span style="font-size:0.85rem; color:var(--text-muted);">${r.acc_num}</span>
+                        </div>
+                    </td>
+
+                    <td>
+                        <div class="amount-info">
+                            <span class="peso-val">₱${r.pesos.toLocaleString()}</span>
+                            <span class="pts-val">-${r.pts.toLocaleString()} PTS</span>
+                        </div>
+                    </td>
+
+                    <td>
+                        <span class="status-badge status-${r.status}">
+                            ${r.status.toUpperCase()}
+                        </span>
+                    </td>
+
+                    <td style="text-align:center;">
+                        ${r.status === 'pending'
+                            ? `<button class="btn-action-pill btn-add" onclick="openPayoutModal('${r.id}', '${r.resident.replace(/'/g, "\\'")}', '${r.acc_num}', ${r.pts}, ${r.pesos})"><i class="fa-solid fa-bolt"></i> Process</button>`
+                            : `<div style="color:var(--success-green); font-weight:800; font-size:0.85rem;"><i class="fa-solid fa-circle-check"></i> COMPLETED</div>`
+                        }
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Card Metrics Updates with defensive safety layers
+        if (document.getElementById('rPending')) {
+            document.getElementById('rPending').innerText = redemptions.filter(r => r.status === 'pending').length;
+        }
+        if (document.getElementById('rCompleted')) {
+            document.getElementById('rCompleted').innerText = redemptions.filter(r => r.status === 'completed').length;
+        }
+        
+        const totalPesos = redemptions.filter(r => r.status === 'completed').reduce((sum, r) => sum + r.pesos, 0);
+        if (document.getElementById('rDisbursed')) {
+            document.getElementById('rDisbursed').innerText = '₱' + totalPesos.toLocaleString();
+        }
+
+        const totalPts = redemptions.filter(r => r.status === 'completed').reduce((sum, r) => sum + r.pts, 0);
+        if (document.getElementById('rTotalPts')) {
+            document.getElementById('rTotalPts').innerText = totalPts.toLocaleString();
+        }
     }
 
-    function filterRedemption(status) {
-        currentRedemptionFilter = status;
-        renderRedemptions();
+    function filterRedemption(status) { 
+        currentRedemptionFilter = status; 
+        renderRedemptions(); 
     }
-
-    function searchRedemption() {
-        renderRedemptions();
+    
+    function searchRedemption() { 
+        renderRedemptions(); 
     }
 
     function openPayoutModal(id, name, acc, pts, pesos) {
         document.getElementById('pId').value = id;
+        document.getElementById('pPesos').value = pesos;
         document.getElementById('modalSummary').innerHTML = `<b>Resident:</b> ${name}<br><b>Account:</b> ${acc}<br><b>Payout:</b> <span style="color:var(--success-green);">₱${pesos.toLocaleString()}</span><br><b>Points:</b> ${pts.toLocaleString()} PTS`;
+        document.getElementById('refId').value = '';
         document.getElementById('processModal').classList.add('active');
     }
 
-    document.getElementById('payoutForm').onsubmit = (e) => {
+    document.getElementById('payoutForm').onsubmit = async (e) => {
         e.preventDefault();
-        if(document.getElementById('redemptionSecurityKey').value !== window.currentPassCode) return Swal.fire('Error', 'Invalid Admin Key', 'error');
-        const log = redemptions.find(r => r.id === document.getElementById('pId').value);
-        if(log) {
-            log.status = 'completed';
-            log.ref = document.getElementById('refId').value;
-            log.paid_at = new Date().toISOString();
-            // Also deduct from budget if linked
-            const rewardsBudget = budgets.find(b => b.category.includes('Payouts'));
-            if(rewardsBudget) rewardsBudget.spent += log.pesos;
+        const key = document.getElementById('redemptionSecurityKey').value.trim();
+        if (!validSecurityKeys.length) await fetchSecurityKeys();
+        if (!validSecurityKeys.includes(key)) return Swal.fire('Unauthorized', 'Invalid Admin Security Key!', 'error');
+
+        const pesos = parseFloat(document.getElementById('pPesos').value) || 0;
+        
+        // Find Rewards & Redemption category dynamically
+        const targetCat = budgets.find(b => b.category.toLowerCase().includes('reward') && b.category.toLowerCase().includes('redemption'));
+        
+        if (!targetCat) {
+            return Swal.fire('Missing Budget', 'You have not allocated a budget for "Rewards & Redemption". Please allocate funds in the Budget Management tab first.', 'warning');
         }
-        Swal.fire('Success', 'Payout recorded!', 'success');
-        closeModal('processModal'); renderRedemptions(); renderBudgets();
+
+        const remaining = targetCat.limit - targetCat.spent;
+        if (remaining < pesos) {
+            return Swal.fire('Insufficient Funds', `The Rewards & Redemption budget only has ₱${remaining.toLocaleString()} left, but this payout requires ₱${pesos.toLocaleString()}. Please allocate more funds.`, 'error');
+        }
+
+        const btn = document.getElementById('confirmPayoutBtn');
+        btn.disabled = true; btn.innerText = 'Processing...';
+
+        const { error: updErr } = await window.supabaseClient
+            .from('redemptions')
+            .update({ status: 'completed' })
+            .eq('id', document.getElementById('pId').value);
+
+        if (updErr) {
+            btn.disabled = false; btn.innerText = 'Verify & Complete';
+            return Swal.fire('Error', updErr.message, 'error');
+        }
+        
+        // Deduct from budget (increase spent) and log transaction
+        await window.supabaseClient.from('budget_categories').update({ spent: targetCat.spent + pesos }).eq('id', targetCat.id);
+        await window.supabaseClient.from('budget_transactions').insert({ 
+            category_id: targetCat.id, 
+            category: targetCat.category, 
+            type: 'Payout Processed', 
+            amount: pesos 
+        });
+
+        btn.disabled = false; btn.innerText = 'Verify & Complete';
+        closeModal('processModal');
+        await fetchRedemptions();
+        await fetchBudgets(); // Refresh budget UI to reflect deduction
+        Swal.fire({ title: 'Payout Processed!', icon: 'success', timer: 2000, showConfirmButton: false });
     };
 
-    // --- Global Actions ---
-    function openBudgetModal() { document.getElementById('budgetModal').classList.add('active'); }
-    function openExpenseModal(id, cat) { document.getElementById('targetLogId').value = id; document.getElementById('expenseTitle').innerText = "Update: " + cat; document.getElementById('expenseModal').classList.add('active'); }
-    function openHistoryModal() { renderHistoryTable(); document.getElementById('historyModal').classList.add('active'); }
+    // --- Helpers ---
+    function openBudgetModal() { document.getElementById('budgetForm').reset(); document.getElementById('budgetModal').classList.add('active'); }
+    function openExpenseModal(id, cat) { document.getElementById('targetLogId').value = id; document.getElementById('expenseTitle').innerText = 'Update: ' + cat; document.getElementById('expenseForm').reset(); document.getElementById('expenseModal').classList.add('active'); }
+    async function openHistoryModal() { await fetchBudgetHistory(); renderHistoryTable(); document.getElementById('historyModal').classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-    document.getElementById('budgetForm').onsubmit = (e) => {
+
+    document.getElementById('budgetForm').onsubmit = async (e) => {
         e.preventDefault();
-        if(document.getElementById('budgetMasterKey').value !== window.currentPassCode) return Swal.fire('Error', 'Invalid Admin Key', 'error');
+        const key = document.getElementById('budgetMasterKey').value.trim();
+        if (!validSecurityKeys.includes(key)) return Swal.fire('Unauthorized', 'Invalid Key', 'error');
         const cat = document.getElementById('catName').value;
         const amt = parseFloat(document.getElementById('catLimit').value);
-        budgets.push({ id: Date.now().toString(), category: cat, limit: amt, spent: 0, created_at: new Date().toISOString() });
-        budgetHistory.unshift({ date: new Date().toISOString(), category: cat, type: 'Initial Allocation', amount: amt });
-        renderBudgets(); closeModal('budgetModal');
+        
+        const { data: catData } = await window.supabaseClient.from('budget_categories').insert({ category: cat, limit: amt, spent: 0 }).select().single();
+        await window.supabaseClient.from('budget_transactions').insert({ category_id: catData.id, category: cat, type: 'Initial Allocation', amount: amt });
+        closeModal('budgetModal');
+        await fetchBudgets();
     };
 
-    document.getElementById('expenseForm').onsubmit = (e) => {
+    document.getElementById('expenseForm').onsubmit = async (e) => {
         e.preventDefault();
-        if(document.getElementById('expenseMasterKey').value !== window.currentPassCode) return Swal.fire('Error', 'Invalid Admin Key', 'error');
+        const key = document.getElementById('expenseMasterKey').value.trim();
+        if (!validSecurityKeys.includes(key)) return Swal.fire('Unauthorized', 'Invalid Key', 'error');
         const amt = parseFloat(document.getElementById('addAmount').value);
-        const item = budgets.find(b => b.id === document.getElementById('targetLogId').value);
-        if(item) { item.spent += amt; budgetHistory.unshift({ date: new Date().toISOString(), category: item.category, type: 'Expense Added', amount: amt }); }
-        renderBudgets(); closeModal('expenseModal');
+        const catId = document.getElementById('targetLogId').value;
+        const item = budgets.find(b => b.id === catId);
+        
+        await window.supabaseClient.from('budget_categories').update({ spent: item.spent + amt }).eq('id', catId);
+        await window.supabaseClient.from('budget_transactions').insert({ category_id: catId, category: item.category, type: 'Expense Added', amount: amt });
+        closeModal('expenseModal');
+        await fetchBudgets();
     };
 
-    async function deleteBudget(id, name) { if((await Swal.fire({ title: `Delete ${name}?`, input: 'password', showCancelButton: true })).value === window.currentPassCode) { budgets = budgets.filter(b => b.id !== id); renderBudgets(); } }
+    async function deleteBudget(id, name) {
+        const { isConfirmed } = await Swal.fire({ title: `Delete "${name}"?`, icon: 'warning', showCancelButton: true });
+        if (isConfirmed) {
+            await window.supabaseClient.from('budget_categories').delete().eq('id', id);
+            await fetchBudgets();
+        }
+    }
 
     function exportPDF() { const doc = new jspdf.jsPDF(); doc.text("Financial History", 14, 15); doc.autoTable({ head: [['Date', 'Category', 'Type', 'Amount']], body: budgetHistory.map(h => [new Date(h.date).toLocaleDateString(), h.category, h.type, `₱${h.amount.toLocaleString()}`]), startY: 20 }); doc.save("Financial_History.pdf"); }
     function exportExcel() { const ws = XLSX.utils.json_to_sheet(budgetHistory); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "History"); XLSX.writeFile(wb, "Financial_History.xlsx"); }
 
-    function exportRedemptionPDF() { const doc = new jspdf.jsPDF(); doc.text("Redemption History", 14, 15); doc.autoTable({ head: [['Paid Date', 'Resident', 'Amount', 'Ref #']], body: redemptions.filter(r=>r.status==='completed').map(r => [new Date(r.paid_at).toLocaleDateString(), r.resident, `₱${r.pesos.toLocaleString()}`, r.ref]), startY: 20 }); doc.save("Redemption_Report.pdf"); }
-    function exportRedemptionExcel() { const ws = XLSX.utils.json_to_sheet(redemptions.filter(r=>r.status==='completed')); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "History"); XLSX.writeFile(wb, "Redemption_Report.xlsx"); }
+    function exportRedemptionPDF() {
+        const completed = redemptions.filter(r => r.status === 'completed');
+        const doc = new jspdf.jsPDF();
+        doc.text("Redemption History", 14, 15);
+        doc.autoTable({
+            head: [['Date', 'Resident', 'Account Name', 'Account No.', 'Points', 'Amount (PHP)', 'Status']],
+            body: completed.map(r => [
+                new Date(r.date).toLocaleDateString(),
+                r.resident,
+                r.acc_name || '--',
+                r.acc_num  || '--',
+                r.pts.toLocaleString(),
+                '\u20b1' + r.pesos.toLocaleString(),
+                r.status
+            ]),
+            startY: 20
+        });
+        doc.save("Redemption_Report.pdf");
+    }
+
+    function exportRedemptionExcel() {
+        const completed = redemptions.filter(r => r.status === 'completed');
+        const sheetData = completed.map(r => ({
+            id: r.id,
+            user_id: r.user_id,
+            resident_name: r.resident,
+            acc_name: r.acc_name || '--',
+            acc_num: r.acc_num || '--',
+            points_redeemed: r.pts,   // Fixed mapping reference
+            amount_php: r.pesos,       // Fixed mapping reference
+            status: r.status,
+            created_at: r.date
+        }));
+        const ws = XLSX.utils.json_to_sheet(sheetData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "History");
+        XLSX.writeFile(wb, "Redemption_Report.xlsx");
+    }
 
     async function logout() { if((await Swal.fire({ title: 'Logout?', showCancelButton: true })).isConfirmed) window.location.href="login.html"; }
-
-    function toggleProfileDropdown(e) {
-        e.stopPropagation();
-        document.getElementById('profileDropdown').classList.toggle('active');
-    }
 
     function toggleProfileDropdown(e) {
         e.stopPropagation();
@@ -766,21 +1025,43 @@
             const dropdown = document.getElementById('profileDropdown');
             if(dropdown) dropdown.classList.remove('active');
         }
-        if (event.target.closest('.modal-overlay')) {
-             // Keep existing modal click outside logic if any
-        }
-    }
-
-    window.onclick = function(event) {
-        if (!event.target.closest('.admin-profile')) {
-            const dropdown = document.getElementById('profileDropdown');
-            if(dropdown) dropdown.classList.remove('active');
-        }
         if (event.target.classList.contains('modal-overlay')) event.target.classList.remove('active');
     }
 
-    renderBudgets();
-    renderRedemptions();
+    // Load logged-in admin's full name
+    async function loadAdminName() {
+        try {
+            const { data: { user }, error: authError } = await window.supabaseClient.auth.getUser();
+            if (authError || !user) {
+                console.error('Unable to get logged-in user:', authError);
+                return;
+            }
+
+            const { data: profile, error: profileError } = await window.supabaseClient
+                .from('profiles')
+                .select('full_name')
+                .eq('id', user.id)
+                .single();
+
+            if (profileError) {
+                console.error('Failed to fetch profile:', profileError);
+                return;
+            }
+
+            const nameDisplay = document.getElementById('adminNameDisplay');
+            if (nameDisplay) {
+                nameDisplay.textContent = profile?.full_name || user.email || 'Admin';
+            }
+        } catch (err) {
+            console.error('Error loading admin name:', err);
+        }
+    }
+
+    // ── Initial Load ────────────────────────────────────────────────────────
+    loadAdminName();
+    fetchSecurityKeys();
+    fetchBudgets();
+    fetchRedemptions();
 </script>
 </body>
 </html>

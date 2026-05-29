@@ -7,6 +7,8 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase_config.js"></script>
 
     <style>
         :root {
@@ -121,49 +123,9 @@
             </div>
 
             <div id="history-list">
-                
-                <!-- Static History 1 -->
-                <div class="history-card">
-                    <div class="card-top">
-                        <div class="user-name">Juan Dela Cruz</div>
-                        <span class="status-badge">Collected</span>
-                    </div>
-                    <div class="card-details">
-                        <span><b>Location:</b> 123 Rizal St. Brgy. San Jose</span>
-                        <span><b>Points Awarded:</b> 50</span>
-                        <div class="waste-type"><i data-lucide="package" style="width:14px;height:14px;"></i> 5.0kg Plastic Bottles</div>
-                    </div>
-                    <div class="timestamp">Today at 2:30 PM</div>
+                <div style="padding: 40px; text-align: center; color: var(--text-muted);">
+                    Loading completed collections...
                 </div>
-
-                <!-- Static History 2 -->
-                <div class="history-card">
-                    <div class="card-top">
-                        <div class="user-name">Maria Clara</div>
-                        <span class="status-badge">Collected</span>
-                    </div>
-                    <div class="card-details">
-                        <span><b>Location:</b> 45 Mabini Ave, Brgy. Poblacion</span>
-                        <span><b>Points Awarded:</b> 23</span>
-                        <div class="waste-type"><i data-lucide="file-text" style="width:14px;height:14px;"></i> 2.3kg Paper/Cardboard</div>
-                    </div>
-                    <div class="timestamp">Yesterday at 10:15 AM</div>
-                </div>
-
-                <!-- Static History 3 -->
-                <div class="history-card">
-                    <div class="card-top">
-                        <div class="user-name">Pedro Penduko</div>
-                        <span class="status-badge">Collected</span>
-                    </div>
-                    <div class="card-details">
-                        <span><b>Location:</b> 78 Bonifacio St, Brgy. San Antonio</span>
-                        <span><b>Points Awarded:</b> 120</span>
-                        <div class="waste-type"><i data-lucide="battery" style="width:14px;height:14px;"></i> 1.2kg E-Waste</div>
-                    </div>
-                    <div class="timestamp">Oct 24, 2023 at 4:45 PM</div>
-                </div>
-
             </div>
 
         </main>
@@ -172,6 +134,70 @@
 
 <script>
     lucide.createIcons();
+    loadHistory();
+
+    async function loadHistory() {
+        const historyList = document.getElementById('history-list');
+        try {
+            const { data: tasks, error } = await window.supabaseClient
+                .from('user_projects')
+                .select('id, user_id, type, status, points, description, submission_date, submission_data, project_id')
+                .in('type', ['mission', 'manual'])
+                .in('status', ['completed', 'approved'])
+                .order('submission_date', { ascending: false });
+
+            if (error) throw error;
+
+            if (!tasks || tasks.length === 0) {
+                historyList.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--text-muted);">No completed collection history yet.</div>`;
+                return;
+            }
+
+            const userIds = Array.from(new Set(tasks.map(task => task.user_id).filter(Boolean)));
+            const profiles = userIds.length > 0
+                ? await window.supabaseClient.from('profiles').select('id, full_name, address').in('id', userIds)
+                : { data: [], error: null };
+
+            const profileMap = {};
+            if (!profiles.error) {
+                profiles.data.forEach(profile => {
+                    profileMap[profile.id] = profile;
+                });
+            }
+
+            historyList.innerHTML = '';
+            tasks.forEach(task => {
+                const profile = profileMap[task.user_id] || { full_name: 'User', address: 'Location not specified' };
+                const title = task.type === 'mission' ? 'Mission' : 'Manual Activity';
+                const detailText = task.type === 'manual'
+                    ? (task.description || task.submission_data?.waste_name || 'Manual submission')
+                    : (task.description || 'Mission collection');
+                const points = parseFloat(task.points || 0);
+                const time = new Date(task.submission_date || Date.now());
+                const timestamp = time.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+
+                historyList.insertAdjacentHTML('beforeend', `
+                    <div class="history-card">
+                        <div class="card-top">
+                            <div class="user-name">${profile.full_name}</div>
+                            <span class="status-badge">${task.status.toUpperCase()}</span>
+                        </div>
+                        <div class="card-details">
+                            <span><b>Location:</b> ${profile.address}</span>
+                            <span><b>Points Awarded:</b> ${points}</span>
+                            <div class="waste-type"><i data-lucide="${task.type === 'mission' ? 'package' : 'file-text'}" style="width:14px;height:14px;"></i> ${detailText}</div>
+                        </div>
+                        <div class="timestamp">${timestamp}</div>
+                    </div>
+                `);
+            });
+
+            lucide.createIcons();
+        } catch (err) {
+            console.error('Error loading history:', err);
+            historyList.innerHTML = `<div style="padding: 40px; text-align: center; color: var(--danger);">Failed to load completed collections.</div>`;
+        }
+    }
 
     function downloadHistory() {
         const btn = document.querySelector('.btn-download');

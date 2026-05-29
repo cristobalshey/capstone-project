@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase_config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
@@ -395,7 +396,7 @@
                     <div class="profile-user-card">
                         <div class="user-item">
                             <div class="user-avatar-circle"><i class="fa-solid fa-user"></i></div>
-                            <div class="user-name-text">Hershey Cristobal</div>
+                            <div class="user-name-text" id="adminNameDisplay">Loading...</div>
                         </div>
                     </div>
 
@@ -472,9 +473,12 @@
 
     <!-- Chat Popup -->
     <div class="chat-popup" id="chatPopup">
-        <div class="chat-head" onclick="closeChat()">
+        <div class="chat-head">
             <span id="chatUser">Name</span>
-            <i class="fa-solid fa-xmark"></i>
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <button onclick="endConversation(event)" style="background: white; color: var(--primary); border: none; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 700; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">End Chat</button>
+                <i class="fa-solid fa-xmark" onclick="closeChat()" style="cursor: pointer; font-size: 1.1rem;"></i>
+            </div>
         </div>
         <div class="chat-body" id="chatBody"></div>
         <form class="chat-input-area" onsubmit="sendMessage(event)">
@@ -485,21 +489,56 @@
 
     <script>
         let selectedImage = null;
-        let currentUser = { id: 'admin_id', user_metadata: { full_name: 'Admin EcoTrack' } };
-        let currentChatId = null;
+        let currentUser = null;
+        let adminProfileId = null;
+        let currentTargetId = null;
+        let currentTargetName = null;
+        let posts = [];
+        let directMessages = [];
 
-        let posts = [
-            { id: '1', user_id: 'admin_id', full_name: 'Admin EcoTrack', created_at: new Date().toISOString(), content: 'Welcome to the EcoTrack Community!', image_url: null },
-            { id: '2', user_id: 'u1', full_name: 'Juan Dela Cruz', created_at: new Date(Date.now() - 3600000).toISOString(), content: 'Just recycled 5kg of plastic today!', image_url: null }
-        ];
-
-        let directMessages = [
-            { id: '1', sender_id: 'u1', sender_name: 'Juan Dela Cruz', receiver_id: 'admin_id', message: 'Hello admin, I need help with my account.', created_at: new Date().toISOString() }
-        ];
-
-        function initPage() {
+        async function initPage() {
+            await initAuth();
             fetchPosts();
             fetchMessageList();
+        }
+
+        async function initAuth() {
+            try {
+                const { data: { session }, error } = await window.supabaseClient.auth.getSession();
+                if (error || !session) {
+                    console.warn('No admin session found:', error);
+                    return;
+                }
+
+                currentUser = session.user;
+                const { data: profile } = await window.supabaseClient
+                    .from('profiles')
+                    .select('full_name')
+                    .eq('id', currentUser.id)
+                    .single();
+
+                currentUser.fullName = profile?.full_name || currentUser.user_metadata?.full_name || 'Admin EcoTrack';
+                
+                // Update the admin name display in the header
+                const nameDisplay = document.getElementById('adminNameDisplay');
+                if (nameDisplay) {
+                    nameDisplay.textContent = profile?.full_name || currentUser.email || 'Admin';
+                }
+
+                // Fetch the admin profile ID to properly identify bot/admin messages
+                const { data: adminProfile } = await window.supabaseClient
+                    .from('profiles')
+                    .select('id')
+                    .eq('role', 'admin')
+                    .limit(1)
+                    .single();
+
+                if (adminProfile) {
+                    adminProfileId = adminProfile.id;
+                }
+            } catch (err) {
+                console.error('Admin auth initialization failed:', err);
+            }
         }
 
         function previewImage() {
@@ -529,31 +568,84 @@
             btn.innerText = 'Posting...';
             btn.disabled = true;
 
-            setTimeout(() => {
+            setTimeout(async () => {
                 let imageUrl = null;
-                if (selectedImage) { imageUrl = URL.createObjectURL(selectedImage); }
-
-                posts.unshift({
-                    id: Date.now().toString(),
-                    user_id: currentUser.id,
-                    full_name: 'Admin EcoTrack',
-                    content: content,
-                    image_url: imageUrl,
-                    created_at: new Date().toISOString()
-                });
-
-                document.getElementById('postInput').value = '';
-                clearImage();
-                fetchPosts();
                 
-                Swal.fire({ icon: 'success', title: 'Announcement Posted!', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
-                btn.innerText = 'Post';
-                btn.disabled = false;
-            }, 500);
+                try {
+                    if (selectedImage) {
+                        const fileExt = selectedImage.name.split('.').pop();
+                        const fileName = `${Date.now()}.${fileExt}`;
+                        
+                        const { data, error: uploadError } = await window.supabaseClient
+                            .storage
+                            .from('announcements')
+                            .upload(fileName, selectedImage);
+                            
+                        if (uploadError) throw uploadError;
+                        
+                        const { data: publicUrlData } = window.supabaseClient
+                            .storage
+                            .from('announcements')
+                            .getPublicUrl(fileName);
+                            
+                        imageUrl = publicUrlData.publicUrl;
+                    }
+
+                    const { data: newPost, error: postErr } = await window.supabaseClient
+                        .from('community_posts')
+                        .insert([{
+                            user_id: currentUser?.id || adminProfileId,
+                            full_name: currentUser?.fullName || 'Admin EcoTrack',
+                            content: content,
+                            image_url: imageUrl
+                        }])
+                        .select()
+                        .single();
+
+                    if (postErr) throw postErr;
+
+                    // Send broadcast notification (user_id = null)
+                    const { error: notifErr } = await window.supabaseClient
+                        .from('notifications')
+                        .insert([{
+                            user_id: null,
+                            title: 'New Announcement',
+                            description: content.substring(0, 50) + (content.length > 50 ? '...' : ''),
+                            type: 'Announcement'
+                        }]);
+                    
+                    if (notifErr) console.error('Notification error:', notifErr);
+
+                    document.getElementById('postInput').value = '';
+                    clearImage();
+                    fetchPosts();
+                    
+                    Swal.fire({ icon: 'success', title: 'Announcement Posted!', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
+                } catch (err) {
+                    console.error("Error creating post:", err);
+                    Swal.fire({ icon: 'error', title: 'Failed to post announcement' });
+                } finally {
+                    btn.innerText = 'Post';
+                    btn.disabled = false;
+                }
+            }, 100);
         }
 
-        function fetchPosts() {
+        async function fetchPosts() {
             const container = document.getElementById('feedContainer');
+            
+            const { data: fetchedPosts, error } = await window.supabaseClient
+                .from('community_posts')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error("Error loading posts:", error);
+                return;
+            }
+
+            posts = fetchedPosts || [];
+
             if (posts.length === 0) { 
                 container.innerHTML = `<div class="empty-feed"><p>No posts yet.</p></div>`; 
                 return; 
@@ -563,14 +655,14 @@
             posts.forEach(post => {
                 const date = new Date(post.created_at).toLocaleDateString() + ' ' + new Date(post.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 const imgHTML = post.image_url ? `<img src="${post.image_url}" class="post-img" onclick="window.open(this.src)">` : '';
-                const deleteBtn = (post.user_id === currentUser.id) ? `<button class="btn-action-pill danger" style="padding: 4px 12px; font-size: 0.75rem; margin-left: auto;" onclick="deletePost('${post.id}')"><i class="fa-solid fa-trash"></i></button>` : '';
+                const deleteBtn = (post.user_id === currentUser?.id || post.user_id === adminProfileId) ? `<button class="btn-action-pill danger" style="padding: 4px 12px; font-size: 0.75rem; margin-left: auto;" onclick="deletePost('${post.id}')"><i class="fa-solid fa-trash"></i></button>` : '';
 
                 container.innerHTML += `
                     <div class="post-card">
                         <div class="post-user">
                             <img src="https://ui-avatars.com/api/?name=${post.full_name}&background=random" class="u-avatar">
                             <div class="u-info">
-                                <h4>${post.full_name} ${post.user_id === 'admin_id' ? '<span class="badge-admin">Admin</span>' : ''}</h4>
+                                <h4>${post.full_name} <span class="badge-admin">Admin</span></h4>
                                 <span>${date}</span>
                             </div>
                             ${deleteBtn}
@@ -587,79 +679,228 @@
         async function deletePost(id) {
             const result = await Swal.fire({ title: 'Delete announcement?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33' });
             if(result.isConfirmed) {
-                posts = posts.filter(p => p.id !== id);
-                fetchPosts();
+                const { error } = await window.supabaseClient
+                    .from('community_posts')
+                    .delete()
+                    .eq('id', id);
+                if (!error) fetchPosts();
             }
         }
 
-        function fetchMessageList() {
+        async function fetchMessageList() {
             const listContainer = document.getElementById('msgList');
-            const data = directMessages.filter(m => m.sender_id !== currentUser.id);
+            listContainer.innerHTML = '<div class="empty-msgs"><i class="fa-solid fa-spinner fa-spin"></i> Loading messages...</div>';
 
-            if(data.length === 0) {
-                listContainer.innerHTML = '<div class="empty-msgs">No messages yet.</div>';
+            // Fetch all user messages sent through support tickets (has ticket_id, excluding bot sender)
+            const BOT_ID = '00000000-0000-0000-0000-000000000000';
+            const { data: messages, error } = await window.supabaseClient
+                .from('direct_messages')
+                .select('sender_id, sender_name, receiver_name, content, created_at, is_read, ticket_id')
+                .not('ticket_id', 'is', null)
+                .neq('sender_id', BOT_ID)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Failed to load direct messages:', error);
+                listContainer.innerHTML = '<div class="empty-msgs">Unable to load messages.</div>';
                 return;
             }
 
-            const senders = {};
-            data.forEach(msg => { if (!senders[msg.sender_id]) senders[msg.sender_id] = msg; });
+            if (!messages || messages.length === 0) {
+                listContainer.innerHTML = '<div class="empty-msgs" style="padding:20px; text-align:center; color:#888;">No messages yet.</div>';
+                return;
+            }
+
+            // Group by the user (counterpart) — one thread per unique user
+            const threads = {};
+            messages.forEach(msg => {
+                // Determine the other person in the conversation
+                const isAdminSender = (currentUser && msg.sender_id === currentUser.id) || (adminProfileId && msg.sender_id === adminProfileId);
+                const counterpartId = isAdminSender ? msg.receiver_id : msg.sender_id;
+                const counterpartName = isAdminSender ? msg.receiver_name : msg.sender_name;
+
+                if (!counterpartId) return;
+
+                if (!threads[counterpartId]) {
+                    threads[counterpartId] = {
+                        id: counterpartId,
+                        name: counterpartName || 'Unknown User',
+                        preview: msg.content,
+                        created_at: msg.created_at,
+                        unread: !isAdminSender && !msg.is_read // Only count as unread if user sent it
+                    };
+                } else if (!isAdminSender && !msg.is_read) {
+                    threads[counterpartId].unread = true;
+                }
+            });
 
             listContainer.innerHTML = '';
-            Object.values(senders).forEach(msg => {
+            Object.values(threads).forEach(thread => {
+                const initials = thread.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                const unreadDot = thread.unread
+                    ? `<span style="width:9px;height:9px;background:#02451A;border-radius:50%;flex-shrink:0;margin-left:4px;"></span>`
+                    : '';
                 listContainer.innerHTML += `
-                    <div class="msg-item" onclick="openChat('${msg.sender_id}', '${msg.sender_name}')">
+                    <div class="msg-item" onclick="openChat('${thread.id}', '${thread.name.replace(/'/g, "\\'")}')">
                         <div class="msg-avatar-wrap">
-                            <img src="https://ui-avatars.com/api/?name=${msg.sender_name}&background=random" class="u-avatar">
+                            <div style="width:40px;height:40px;border-radius:50%;background:#02451A;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;flex-shrink:0;">
+                                ${initials}
+                            </div>
                             <div class="status-dot online"></div>
                         </div>
                         <div class="msg-details">
-                            <span class="msg-name">${msg.sender_name}</span>
-                            <span class="msg-preview">${msg.message}</span>
+                            <span class="msg-name" style="font-weight:${thread.unread ? '700' : '600'}; color: var(--text-main);">${thread.name}</span>
+                            <span class="msg-preview" style="font-weight:${thread.unread ? '600' : '400'}; color:${thread.unread ? '#02451A' : '#888'};">${thread.preview}</span>
                         </div>
+                        ${unreadDot}
                     </div>`;
             });
         }
 
-        function openChat(userId, userName) {
+        async function openChat(userId, userName) {
             document.getElementById('chatPopup').classList.add('active');
             document.getElementById('chatUser').innerText = userName;
-            currentChatId = userId;
-            loadChatMessages(userId);
+            currentTargetId = userId;
+            currentTargetName = userName;
+            await markThreadAsRead(userId);
+            await loadChatMessages(userId);
+            await fetchMessageList();
         }
 
         function closeChat() {
             document.getElementById('chatPopup').classList.remove('active');
-            currentChatId = null;
+            currentTargetId = null;
         }
 
-        function loadChatMessages(targetId) {
+        async function endConversation(event) {
+            if (event) event.stopPropagation();
+            if (!currentTargetId) return;
+            
+            const result = await Swal.fire({ 
+                title: 'End Conversation?', 
+                text: "This will resolve the user's support ticket.",
+                icon: 'warning', 
+                showCancelButton: true, 
+                confirmButtonColor: '#02451A' 
+            });
+            
+            if (result.isConfirmed) {
+                // Find active ticket and resolve
+                const { error } = await window.supabaseClient
+                    .from('support_tickets')
+                    .update({ status: 'resolved' })
+                    .eq('user_id', currentTargetId)
+                    .neq('status', 'resolved');
+                    
+                if (!error) {
+                    Swal.fire({ icon: 'success', title: 'Resolved!', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
+                    closeChat();
+                } else {
+                    console.error('Error resolving ticket:', error);
+                    Swal.fire({ icon: 'error', title: 'Failed to resolve conversation' });
+                }
+            }
+        }
+
+        async function loadChatMessages(targetId) {
             const chatBody = document.getElementById('chatBody');
-            const data = directMessages.filter(m => (m.sender_id === currentUser.id && m.receiver_id === targetId) || (m.sender_id === targetId && m.receiver_id === currentUser.id));
+            chatBody.innerHTML = '<div style="text-align:center;padding:20px;color:#aaa;"><i class="fa-solid fa-spinner fa-spin"></i></div>';
+
+            const BOT_ID = '00000000-0000-0000-0000-000000000000';
+
+            // First get the ticket for this user
+            const { data: tickets } = await window.supabaseClient
+                .from('support_tickets')
+                .select('id')
+                .eq('user_id', targetId)
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+            let messages = [];
+            if (tickets && tickets.length > 0) {
+                const ticketId = tickets[0].id;
+                const { data: ticketMsgs, error: ticketError } = await window.supabaseClient
+                    .from('direct_messages')
+                    .select('sender_id, sender_name, content, created_at')
+                    .eq('ticket_id', ticketId)
+                    .order('created_at', { ascending: true });
+
+                if (!ticketError) messages = ticketMsgs || [];
+            }
+
             chatBody.innerHTML = '';
-            data.forEach(msg => {
-                const type = (msg.sender_id === currentUser.id) ? 'bubble-out' : 'bubble-in';
-                chatBody.innerHTML += `<div class="bubble ${type}">${msg.message}</div>`;
+            if (messages.length === 0) {
+                chatBody.innerHTML = '<div class="bubble bubble-in">No messages yet.</div>';
+                return;
+            }
+
+            messages.forEach(msg => {
+                const isAdmin = (currentUser && msg.sender_id === currentUser.id) || (adminProfileId && msg.sender_id === adminProfileId);
+                const isBot = msg.sender_id === BOT_ID || (msg.sender_id === adminProfileId && msg.sender_name === 'EcoBot');
+                const type = (isAdmin && !isBot) ? 'bubble-out' : (isBot ? 'bubble-out' : 'bubble-in'); // Admin & Bot show as outgoing from admin perspective
+                const senderLabel = isBot ? '<small style="display:block;font-size:0.7rem;opacity:0.6;margin-bottom:2px;">EcoBot</small>' : '';
+                chatBody.innerHTML += `<div class="bubble ${type}">${senderLabel}${msg.content}</div>`;
             });
             chatBody.scrollTop = chatBody.scrollHeight;
         }
 
-        function sendMessage(e) {
+
+        async function markThreadAsRead(userId) {
+            if (!userId) return;
+            // Mark all messages in user's ticket as read
+            const { data: tickets } = await window.supabaseClient
+                .from('support_tickets')
+                .select('id')
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+            if (tickets && tickets.length > 0) {
+                await window.supabaseClient
+                    .from('direct_messages')
+                    .update({ is_read: true })
+                    .eq('ticket_id', tickets[0].id)
+                    .neq('sender_id', currentUser?.id);
+            }
+        }
+
+        async function sendMessage(e) {
             e.preventDefault();
             const input = document.getElementById('chatInput');
             const msg = input.value.trim();
-            if(!msg || !currentChatId) return;
+            if (!msg || !currentTargetId || !currentUser) return;
 
-            directMessages.push({
-                id: Date.now().toString(),
+            // Get the user's active ticket so we can link the reply
+            const { data: tickets } = await window.supabaseClient
+                .from('support_tickets')
+                .select('id')
+                .eq('user_id', currentTargetId)
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+            const ticketId = tickets && tickets.length > 0 ? tickets[0].id : null;
+
+            const payload = {
                 sender_id: currentUser.id,
-                sender_name: 'Admin',
-                receiver_id: currentChatId,
-                message: msg,
-                created_at: new Date().toISOString()
-            });
+                receiver_id: currentTargetId,
+                sender_name: currentUser.fullName || 'EcoTrack Admin',
+                receiver_name: currentTargetName || 'User',
+                content: msg
+            };
 
-            loadChatMessages(currentChatId);
+            if (ticketId) payload.ticket_id = ticketId;
+
+            const { error } = await window.supabaseClient
+                .from('direct_messages')
+                .insert([payload]);
+
+            if (error) {
+                console.error('Failed to send admin message:', error);
+                return;
+            }
+
             input.value = '';
+            await loadChatMessages(currentTargetId);
         }
 
         async function logout() { if((await Swal.fire({ title: 'Logout?', showCancelButton: true })).isConfirmed) window.location.href="login.html"; }

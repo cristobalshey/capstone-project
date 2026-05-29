@@ -13,7 +13,7 @@
     <!-- Using Lucide Icons for a modern, chill vibe -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase_config.js"></script>
+    <script src="../supabase_config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
@@ -712,7 +712,7 @@
                 <canvas id="selfieCanvas" style="display: none;"></canvas>
 
                 <!-- Top Overlay -->
-                <button class="back-immersive" onclick="nextPage(2)">
+                <button class="back-immersive" onclick="nextPage(1)">
                     <i data-lucide="chevron-left"></i>
                 </button>
 
@@ -792,8 +792,8 @@
             </div>
 
             <div class="action-row">
-                <button class="btn-secondary" onclick="nextPage(3)">
-                    Back
+                <button class="btn-secondary" onclick="nextPage(1)">
+                    Back to Info
                 </button>
                 <button class="btn-primary" onclick="submitVerification()">
                     Submit Now <i data-lucide="shield-check"></i>
@@ -864,6 +864,13 @@
                             </p>
                         </div>
                     `;
+                    
+                    const actionRow = document.querySelector('#page1 .action-row');
+                    actionRow.innerHTML = `
+                        <button class="btn-primary" onclick="window.location.href='menu.html'" style="width: 100%; flex: none;">
+                            Return to Menu <i data-lucide="home"></i>
+                        </button>
+                    `;
                     lucide.createIcons();
                 } else if (status === 'verified') {
                     // Verified users can edit Address and Contact
@@ -872,7 +879,10 @@
                     
                     const actionRow = document.querySelector('#page1 .action-row');
                     actionRow.innerHTML = `
-                        <button class="btn-primary" onclick="triggerReverification()" style="width: 100%; flex: none;">
+                        <button class="btn-secondary" onclick="window.location.href='menu.html'">
+                            <i data-lucide="chevron-left"></i> Back
+                        </button>
+                        <button class="btn-primary" onclick="triggerReverification()" style="flex: 2;">
                             Update Info (Requires Re-verify) <i data-lucide="refresh-cw"></i>
                         </button>
                     `;
@@ -993,7 +1003,8 @@
             }
 
             if (currentPage > 1) {
-                nextPage(currentPage - 1);
+                // Return to the first step (Personal Info)
+                nextPage(1);
             } else {
                 window.location.href = 'menu.html';
             }

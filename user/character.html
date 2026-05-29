@@ -10,6 +10,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
     
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase_config.js"></script>
+    <script src="../auth_guard.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
         :root {
@@ -499,12 +503,44 @@
             setTimeout(() => el.remove(), 800);
         }
 
-        function endGame() {
+        async function endGame() {
             isPlaying = false;
             clearTimeout(spawnTimeoutId);
             cancelAnimationFrame(animationFrameId);
             
-            finalScoreDisplay.innerText = score.toFixed(1);
+            const finalScore = parseFloat(score.toFixed(1));
+            finalScoreDisplay.innerText = finalScore;
+
+            // Save score to database
+            try {
+                const { data: { user } } = await window.supabaseClient.auth.getUser();
+                if (user) {
+                    const { error } = await window.supabaseClient
+                        .from('user_projects')
+                        .insert([{
+                            user_id: user.id,
+                            project_id: null,
+                            type: 'game',
+                            status: 'approved',
+                            score: finalScore,
+                            points: finalScore,
+                            submission_data: { game_name: 'Eco Sorter' }
+                        }]);
+
+                    if (error) {
+                        console.error('Error saving game score:', error);
+                    } else {
+                        const currentPoints = window.currentUserProfile ? (parseFloat(window.currentUserProfile.points) || 0) : 0;
+                        const newPoints = parseFloat((currentPoints + finalScore).toFixed(2));
+                        await window.supabaseClient
+                            .from('profiles')
+                            .update({ points: newPoints })
+                            .eq('id', user.id);
+                    }
+                }
+            } catch (dbErr) {
+                console.error('Database connection error:', dbErr);
+            }
 
             setTimeout(() => {
                 gameOverScreen.classList.remove('hidden');
